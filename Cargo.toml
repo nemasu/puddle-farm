@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rocket = { git = "https://github.com/rwf2/Rocket" }
+rocket = { git = "https://github.com/rwf2/Rocket", features=["json"] }
 diesel = { version = "2.2.3", features = ["postgres", "chrono"] }
 diesel-async = { version = "0.5.0", features = ["postgres"] }
 rocket_db_pools = { git = "https://github.com/rwf2/Rocket", features = ["diesel_postgres"] }

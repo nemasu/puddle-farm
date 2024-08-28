@@ -7,7 +7,7 @@ use lazy_static::lazy_static;
 use crate::ggst_api;
 
 use crate::schema::games::dsl::*;
-use crate::schema::player_ratings;
+use crate::schema::{player_ratings, players, player_names};
 use diesel::dsl::*;
 use chrono::NaiveDateTime;
 
@@ -56,7 +56,65 @@ pub async fn pull_and_update_continuous() {
             error!("update_ratings failed: {e}");
         }
 
+        if let Err(e) = update_player_info(&mut connection, &new_games).await {
+            error!("update_ratings failed: {e}");
+        }
+
     }
+}
+
+async fn update_player_info(connection: &mut AsyncPgConnection, new_games: &Vec<Game>) -> Result<(), String> {
+    for g in new_games {
+        //Update player name in the player table
+        insert_into(players::table)
+            .values(&Player {
+                id: g.id_a,
+                name: g.name_a.clone(),
+                platform: g.platform_a,
+            })
+            .on_conflict(players::id)
+            .do_update()
+            .set((players::name.eq(g.name_a.clone()), players::platform.eq(g.platform_a)))
+            .execute(connection)
+            .await
+            .unwrap();
+
+        insert_into(players::table)
+            .values(&Player {
+                id: g.id_b,
+                name: g.name_b.clone(),
+                platform: g.platform_b,
+            })
+            .on_conflict(players::id)
+            .do_update()
+            .set((players::name.eq(g.name_b.clone()), players::platform.eq(g.platform_b)))
+            .execute(connection)
+            .await
+            .unwrap();
+
+        //Update player names in the player_names table
+        insert_into(player_names::table)
+            .values(&PlayerName {
+                id: g.id_a,
+                name: g.name_a.clone(),
+            })
+            .on_conflict_do_nothing()
+            .execute(connection)
+            .await
+            .unwrap();
+
+        insert_into(player_names::table)
+            .values(&PlayerName {
+                id: g.id_b,
+                name: g.name_b.clone(),
+            })
+            .on_conflict_do_nothing()
+            .execute(connection)
+            .await
+            .unwrap();
+    }
+
+    Ok(())
 }
 
 async fn grab_games(connection: &mut AsyncPgConnection) -> Result<Vec<Game>, String> {

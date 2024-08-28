@@ -23,7 +23,7 @@ pub struct Game {
     pub game_floor: i16,
 }
 
-#[derive(Queryable, Debug, Identifiable)]
+#[derive(Queryable, Debug, Identifiable, Insertable)]
 #[diesel(primary_key(id, name))]
 pub struct PlayerName {
     pub id: i64,
@@ -51,7 +51,7 @@ pub struct PlayerRating {
     pub top_defeated_timestamp: Option<NaiveDateTime>,
 }
 
-#[derive(Queryable, Debug)]
+#[derive(Queryable, Debug, Insertable)]
 pub struct Player {
     pub id: i64,
     pub name: String,
