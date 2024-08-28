@@ -1,0 +1,25 @@
+[package]
+name = "puddle-farm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rocket = { git = "https://github.com/rwf2/Rocket" }
+diesel = { version = "2.2.3", features = ["postgres", "chrono"] }
+diesel-async = { version = "0.5.0", features = ["postgres"] }
+rocket_db_pools = { git = "https://github.com/rwf2/Rocket", features = ["diesel_postgres"] }
+dotenv = "0.15.0"
+tokio = { version = "1.39.3", features = ["time"] }
+lazy_static = "1.5.0"
+log = "0.4.22"
+simplelog = { version = "0.12.2", features = ["paris"] }
+steamworks = { git = "https://github.com/Noxime/steamworks-rs.git"}
+serde = { version = "1", features = ["derive"] }
+serde_derive = "1"
+aes-gcm = "0.10"
+rmp-serde = "1"
+reqwest = "0.11"
+hex = "0.4"
+base64-url = "1.4"
+chrono = "0.4"
+rstat = "0.6.0"

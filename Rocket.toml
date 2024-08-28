@@ -1,0 +1,11 @@
+[default]
+address = "0.0.0.0"
+workers = 16
+
+[debug]
+loglevel = "debug"
+cli_colors = true
+
+[release]
+loglevel = "critical"
+cli_colors = false
