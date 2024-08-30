@@ -114,24 +114,21 @@ pub async fn get_replays() -> Result<Vec<responses::Replay>, String> {
         let response = match form.send().await {
             Ok(resp) => resp,
             Err(err) => {
-                error!("get_replay send() error: {}", err);
-                panic!(); //force crash to restart server
+                panic!("get_replay send() error: {}", err); //force crash to restart server
             }
         };
 
         let response_bytes = match response.bytes().await {
             Ok(resp_bytes) => resp_bytes,
             Err(err) => {
-                error!("get_replay bytes() error: {}", err);
-                panic!(); //force crash to restart server
+                panic!("get_replay bytes() error: {}", err); //force crash to restart server
             }
         };
 
         match decrypt_response::<responses::Replays>(&response_bytes) {
             Ok(r) => replays.extend_from_slice(&r.body.replays),
             Err(err) => {
-                error!("get_replay decrypt_response() error: {}", err);
-                panic!(); //force crash to restart server
+                panic!("get_replay decrypt_response() error: {}", err); //force crash to restart server
             }
         };
     }

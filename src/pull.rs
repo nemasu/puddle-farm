@@ -6,8 +6,7 @@ use tokio::time;
 use lazy_static::lazy_static;
 use crate::ggst_api;
 
-use crate::schema::games::dsl::*;
-use crate::schema::{player_ratings, players, player_names};
+use crate::schema::{player_ratings, players, player_names, games};
 use diesel::dsl::*;
 use chrono::NaiveDateTime;
 
@@ -32,8 +31,8 @@ pub async fn pull_and_update_continuous() {
     loop {
         interval.tick().await;
 
-        let game_count_results = games
-            .select(count(id_a))
+        let game_count_results = games::table
+            .select(count(games::id_a))
             .load::<i64>(&mut connection)
             .await.unwrap();
         let game_count_before = game_count_results[0];
@@ -46,8 +45,8 @@ pub async fn pull_and_update_continuous() {
             }
         };
 
-        let game_count_results = games
-            .select(count(id_a))
+        let game_count_results = games::table
+            .select(count(games::id_a))
             .load::<i64>(&mut connection)
             .await.unwrap();
         info!("New games: {:?}", game_count_results[0] - game_count_before);
@@ -148,9 +147,13 @@ async fn grab_games(connection: &mut AsyncPgConnection) -> Result<Vec<Game>, Str
             platform_b: i16::try_from(r.player2.platform).ok().unwrap(),
             winner: i16::try_from(r.winner).ok().unwrap(),
             game_floor: i16::try_from(r.floor).ok().unwrap(),
+            value_a: None,
+            deviation_a: None,
+            value_b: None,
+            deviation_b: None,
         };
 
-        let count = insert_into(games)
+        let count = insert_into(games::table)
             .values(&new_game)
             .on_conflict_do_nothing()
             .execute(connection)
@@ -161,6 +164,10 @@ async fn grab_games(connection: &mut AsyncPgConnection) -> Result<Vec<Game>, Str
             new_games.push(new_game);
         }
     }
+
+    //Sort new_games by timestamp in ascending order
+    //This is so that we process older games first
+    new_games.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
 
     Ok(new_games)
 }
@@ -244,6 +251,26 @@ async fn update_ratings(connection: &mut AsyncPgConnection, new_games: &Vec<Game
                 new_player_rating
             }
         };
+
+
+        //Update game table with player ratings
+        diesel::update(games::table)
+            .filter(games::timestamp.eq(g.timestamp))
+            .filter(games::id_a.eq(g.id_a))
+            .filter(games::char_a.eq(g.char_a))
+            .filter(games::platform_a.eq(g.platform_a))
+            .filter(games::id_b.eq(g.id_b))
+            .filter(games::char_b.eq(g.char_b))
+            .filter(games::platform_b.eq(g.platform_b))
+            .set((
+                games::value_a.eq(player_rating_a.value),
+                games::deviation_a.eq(player_rating_a.deviation),
+                games::value_b.eq(player_rating_b.value),
+                games::deviation_b.eq(player_rating_b.deviation),
+            ))
+            .execute(connection)
+            .await
+            .unwrap();
 
         //Calculate value and deviation
         let (value_a, value_b, deviation_a, deviation_b) = update_mean_and_variance(

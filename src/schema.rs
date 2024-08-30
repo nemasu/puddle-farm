@@ -13,6 +13,10 @@ diesel::table! {
         platform_b -> Int2,
         winner -> Int2,
         game_floor -> Int2,
+        value_a -> Nullable<Float4>,
+        deviation_a -> Nullable<Float4>,
+        value_b -> Nullable<Float4>,
+        deviation_b -> Nullable<Float4>,
     }
 }
 

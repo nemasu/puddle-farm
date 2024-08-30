@@ -45,5 +45,14 @@ CREATE TABLE games (
     platform_b SMALLINT NOT NULL,
     winner SMALLINT NOT NULL,
     game_floor SMALLINT NOT NULL,
+    value_a REAL,
+    deviation_a REAL,
+    value_b REAL,
+    deviation_b REAL,
     PRIMARY KEY (timestamp, id_a, id_b)
 );
+
+CREATE INDEX games_value_a ON games(value_a);
+CREATE INDEX games_value_b ON games(value_b);
+CREATE INDEX games_deviation_a ON games(deviation_a);
+CREATE INDEX games_deviation_b ON games(deviation_b);
