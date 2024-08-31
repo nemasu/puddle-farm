@@ -24,6 +24,8 @@ mod requests;
 mod responses;
 mod models;
 
+mod migrate;
+
 #[derive(Database)]
 #[database("ratings")]
 struct Db(PgPool);
@@ -266,7 +268,10 @@ async fn main() {
     match args.get(0).map(|r| r.deref()) {
         Some("pull") => {
             pull::pull_and_update_continuous().await;
-        }
+        },
+        Some("migrate") => {
+            migrate::migrate(args.get(1).unwrap());
+        },
         _ => {
             run().await;
         }

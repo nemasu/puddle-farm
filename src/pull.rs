@@ -15,6 +15,8 @@ use crate::models::*;
 use rstat::univariate;
 use rstat::Distribution;
 
+use diesel_async::scoped_futures::ScopedFutureExt;
+
 lazy_static! {
     pub static ref DB_NAME: String = dotenv::var("DATABASE_PATH").expect("DATABASE_PATH must be set.");
 }
@@ -31,34 +33,37 @@ pub async fn pull_and_update_continuous() {
     loop {
         interval.tick().await;
 
-        let game_count_results = games::table
-            .select(count(games::id_a))
-            .load::<i64>(&mut connection)
-            .await.unwrap();
-        let game_count_before = game_count_results[0];
+        connection.transaction::<_, diesel::result::Error, _>(|conn| async move {
+            let game_count_results = games::table
+                .select(count(games::id_a))
+                .load::<i64>(conn)
+                .await.unwrap();
+            let game_count_before = game_count_results[0];
 
-        let new_games = match grab_games(&mut connection).await {
-            Ok(g) => g,
-            Err(e) => {
-                error!("grab_games failed: {e}");
-                continue;
-            }
-        };
+            match grab_games(conn).await {
+                Ok(new_games) => {
+                    let game_count_results = games::table
+                    .select(count(games::id_a))
+                    .load::<i64>(conn)
+                    .await.unwrap();
+                    info!("New games: {:?}", game_count_results[0] - game_count_before);
 
-        let game_count_results = games::table
-            .select(count(games::id_a))
-            .load::<i64>(&mut connection)
-            .await.unwrap();
-        info!("New games: {:?}", game_count_results[0] - game_count_before);
+                    if let Err(e) = update_ratings(conn, &new_games).await {
+                        error!("update_ratings failed: {e}");
+                    }
 
-        if let Err(e) = update_ratings(&mut connection, &new_games).await {
-            error!("update_ratings failed: {e}");
-        }
-
-        if let Err(e) = update_player_info(&mut connection, &new_games).await {
-            error!("update_ratings failed: {e}");
-        }
-
+                    if let Err(e) = update_player_info(conn, &new_games).await {
+                        error!("update_ratings failed: {e}");
+                    }
+                },
+                Err(e) => {
+                    error!("grab_games failed: {e}");
+                }
+            };
+            
+            Ok(())
+            }.scope_boxed()
+        ).await.unwrap();
     }
 }
 
@@ -310,7 +315,7 @@ async fn update_ratings(connection: &mut AsyncPgConnection, new_games: &Vec<Game
     Ok(())
 }
 
-fn update_mean_and_variance(mean_a: f64, sigma_a: f64, mean_b: f64, sigma_b: f64, a_wins: bool) -> (f64, f64, f64, f64) {
+pub fn update_mean_and_variance(mean_a: f64, sigma_a: f64, mean_b: f64, sigma_b: f64, a_wins: bool) -> (f64, f64, f64, f64) {
     //### Calculate some helpful values. ###
     
     let rating_diff = mean_a - mean_b; //#This can be negative, that is intended.
