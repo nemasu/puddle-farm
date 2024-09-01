@@ -16,6 +16,8 @@ use diesel::Connection;
 
 use diesel::prelude::*;
 
+const DB_LIMIT: i64 = 100000;
+
 pub fn establish_connection_nosync() -> PgConnection {
     PgConnection::establish(&DB_NAME).unwrap()
 }
@@ -37,24 +39,28 @@ pub fn migrate(sqlite_db: &str) {
     let mut offset = schema::games::table
         .select(count(schema::games::id_a))
         .load::<i64>(&mut connection)
-        .unwrap()[0] - 100000;
+        .unwrap()[0] - DB_LIMIT;
+    
+    //If offset is less than 0, make it 0
+    if offset < 0 {
+        offset = 0;
+    }
 
     while offset < game_count {
 
-        connection.transaction::<_, diesel::result::Error, _>(|conn| {
+        let game_count_results = schema::games::table
+            .select(count(schema::games::id_a))
+            .load::<i64>(&mut connection)
+            .unwrap();
+        let date = chrono::Local::now();
+        println!("{}: Psql games total: {:?}", date.format("%H:%M:%S"), game_count_results[0]);
 
-            let game_count_results = schema::games::table
-                .select(count(schema::games::id_a))
-                .load::<i64>(conn)
-                .unwrap();
-            let date = chrono::Local::now();
-            println!("{}: Psql games total: {:?}", date.format("%H:%M:%S"), game_count_results[0]);
+        connection.transaction::<_, diesel::result::Error, _>(|conn| {
             
             let mut new_games = Vec::new();
 
-            //let mut stmt = sqlite_connection.prepare("SELECT timestamp, id_a, name_a, char_a, platform_a, id_b, name_b, char_b, platform_b, winner, game_floor FROM games WHERE timestamp < datetime(timestamp,'-3 month') ORDER BY timestamp ASC LIMIT 10000 OFFSET ? ").unwrap();
-            let mut stmt = sqlite_connection.prepare("SELECT timestamp, id_a, name_a, char_a, platform_a, id_b, name_b, char_b, platform_b, winner, game_floor FROM games ORDER BY timestamp ASC LIMIT 100000 OFFSET ? ").unwrap();
-            let mut rows = stmt.query([offset]).unwrap();
+            let mut stmt = sqlite_connection.prepare("SELECT timestamp, id_a, name_a, char_a, platform_a, id_b, name_b, char_b, platform_b, winner, game_floor FROM games ORDER BY timestamp ASC LIMIT ? OFFSET ? ").unwrap();
+            let mut rows = stmt.query([DB_LIMIT, offset]).unwrap();
             while let Some(row) = rows.next().unwrap() {
                 
                 let unix_timestamp = row.get(0).unwrap();
@@ -99,7 +105,7 @@ pub fn migrate(sqlite_db: &str) {
                 error!("update_ratings failed: {e}");
             }
             
-            offset += 100000;
+            offset += DB_LIMIT;
             
             Ok(())
         }).unwrap();
@@ -286,9 +292,3 @@ fn migrate_update_ratings(connection: &mut PgConnection, new_games: &Vec<Game>) 
     info!("Updating ratings - done.");
     Ok(())
 }
-    
-    
-
-
-
-
