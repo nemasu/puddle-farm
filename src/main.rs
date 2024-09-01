@@ -70,10 +70,38 @@ struct PlayerResponse  {
     rating: f32,
     deviation: f32,
 }
-#[get("/api/player/<player_id>")]
-async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse> {
+#[get("/api/player/<player_id>/<char_id>")] 
+async fn player(mut db: Connection<Db>, player_id: &str, char_id: &str) -> Json<PlayerResponse> {
 
-    let id = i64::from_str_radix(player_id, 10).expect("Invalid id");
+    let id = match i64::from_str_radix(player_id, 10) {
+        Ok(id) => id,
+        Err(_) => {
+            // Log the error for debugging
+            log::error!("Invalid player_id: {}", player_id);
+            // Return an empty JSON response
+            return Json(PlayerResponse {
+                id: 0,
+                name: "".to_string(),
+                rating: 0.0,
+                deviation: 0.0,
+            });
+        }
+    };
+
+    let char_id = match CHAR_NAMES.iter().position(|(c, _)| *c == char_id) {
+        Some(id) => {
+            id as i16
+        },
+        None => {
+            // Return an empty JSON response
+            return Json(PlayerResponse {
+                id: 0,
+                name: "".to_string(),
+                rating: 0.0,
+                deviation: 0.0,
+            });
+        }
+    };
 
     let player: Vec<Player> = schema::players::table
         .select(Player::as_select())
@@ -94,9 +122,19 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
     let player_rating: Vec<PlayerRating> = schema::player_ratings::table
         .select(PlayerRating::as_select())
         .filter(schema::player_ratings::id.eq(id))
+        .filter(schema::player_ratings::char_id.eq(char_id))
         .load(&mut db)
         .await
         .expect("Error loading player rating");
+
+    if player_rating.len() == 0 {
+        return Json(PlayerResponse {
+            id: 0,
+            name: "Not found".to_string(),
+            rating: 0.0,
+            deviation: 0.0,
+        });
+    }
 
     let context = PlayerResponse {
         id: player[0].id,

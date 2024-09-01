@@ -49,7 +49,7 @@ const App = () => {
     const fetchPlayer = async () => {
       try {
         
-        const response = await fetch(API_ENDPOINT + '/player/' + params.get('player'));
+        const response = await fetch(API_ENDPOINT + '/player/' + params.get('player') +'/' + params.get('char_short'));
         const result = await response.json();
         setPlayer(result);
         console.log(result);
