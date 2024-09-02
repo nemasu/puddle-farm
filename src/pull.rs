@@ -4,11 +4,11 @@ use diesel::prelude::*;
 use diesel_async::{RunQueryDsl, AsyncConnection, AsyncPgConnection};
 use tokio::time;
 use lazy_static::lazy_static;
-use crate::ggst_api;
+use crate::{ggst_api, CHAR_NAMES};
 
-use crate::schema::{player_ratings, players, player_names, games};
+use crate::schema::{player_ratings, players, player_names, games, constants, global_ranks, character_ranks};
 use diesel::dsl::*;
-use chrono::NaiveDateTime;
+use chrono::{NaiveDateTime, Utc};
 
 use crate::models::*;
 
@@ -16,6 +16,10 @@ use rstat::univariate;
 use rstat::Distribution;
 
 use diesel_async::scoped_futures::ScopedFutureExt;
+
+use diesel::sql_types::Integer;
+
+pub const ONE_HOUR: i64 = 1 * 60 * 60;
 
 lazy_static! {
     pub static ref DB_NAME: String = dotenv::var("DATABASE_PATH").expect("DATABASE_PATH must be set.");
@@ -64,7 +68,99 @@ pub async fn pull_and_update_continuous() {
             Ok(())
             }.scope_boxed()
         ).await.unwrap();
+
+        connection.transaction::<_, diesel::result::Error, _>(|conn| async move {
+            //Hourly update ranks
+            let last_hourly_update = &constants::table
+            .select(constants::value)
+            .filter(constants::key.eq("last_rank_update"))
+            .load::<String>(conn)
+            .await.unwrap()[0];
+
+            //Convert String last_hourly_update to i64
+            let last_hourly_update = last_hourly_update.parse::<i64>().unwrap();
+            let current_time = Utc::now().timestamp();
+            if current_time - last_hourly_update >= ONE_HOUR-10 { //Give 10 seconds leeway
+                do_hourly_update(conn).await.unwrap();
+            }
+            
+            Ok(())
+            }.scope_boxed()
+        ).await.unwrap();
     }
+}
+
+pub async fn do_hourly_update_once() {
+    let mut connection = establish_connection().await;
+    connection.transaction::<_, diesel::result::Error, _>(|conn| async move {
+        do_hourly_update(conn).await.unwrap();
+        Ok(())
+    }.scope_boxed()).await.unwrap();
+}
+
+async fn do_hourly_update(conn: &mut AsyncPgConnection) -> Result<(), String> {
+    if let Err(e) = update_ranks(conn).await {
+        error!("update_ranks failed: {e}");
+    }
+
+    //Update last_rank_update in the constants table
+    diesel::update(constants::table)
+        .filter(constants::key.eq("last_rank_update"))
+        .set(constants::value.eq(Utc::now().timestamp().to_string()))
+        .execute(conn)
+        .await
+        .unwrap();
+    Ok(())
+}
+
+#[derive(QueryableByName)]
+struct InsertedRankRowId {
+    #[sql_type = "Integer"]
+    rank: i32
+}
+async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> {
+
+    //Delete all rows in the global_ranks and character_ranks tables
+    diesel::delete(global_ranks::table)
+        .execute(connection)
+        .await
+        .unwrap();
+    diesel::delete(character_ranks::table)
+        .execute(connection)
+        .await
+        .unwrap();
+
+    let results = sql_query("
+        INSERT INTO global_ranks (rank, id, char_id)
+        SELECT ROW_NUMBER()
+        OVER (ORDER BY value DESC) as rank, player_ratings.id, char_id
+        FROM player_ratings
+        WHERE deviation < 75.0
+        ORDER BY value DESC
+        LIMIT 1000
+        RETURNING rank
+    ");
+    let results: Vec<InsertedRankRowId> = results.get_results(connection).await.unwrap();
+
+    info!("Inserted {} rows into global_ranks", results.len());
+
+    for c in 0..CHAR_NAMES.len() {
+        let results = sql_query("
+            INSERT INTO character_ranks (rank, id, char_id)
+            SELECT ROW_NUMBER() 
+            OVER (ORDER BY value DESC) as rank, player_ratings.id, char_id
+            FROM player_ratings
+            WHERE deviation < 75.0 AND char_id = $1
+            ORDER BY value DESC
+            LIMIT 1000
+            RETURNING rank
+        ");
+        let results: Vec<InsertedRankRowId> = results.bind::<Integer, _>(i32::try_from(c).unwrap()).get_results(connection).await.unwrap();
+
+        info!("Inserted {} rows into character_ranks for character {}", results.len(), CHAR_NAMES[c].1);
+    }
+
+    Ok(())
 }
 
 async fn update_player_info(connection: &mut AsyncPgConnection, new_games: &Vec<Game>) -> Result<(), String> {

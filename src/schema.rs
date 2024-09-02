@@ -1,6 +1,21 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    character_ranks (rank, char_id) {
+        rank -> Int4,
+        id -> Int8,
+        char_id -> Int2,
+    }
+}
+
+diesel::table! {
+    constants (key) {
+        key -> Text,
+        value -> Text,
+    }
+}
+
+diesel::table! {
     games (timestamp, id_a, id_b) {
         timestamp -> Timestamp,
         id_a -> Int8,
@@ -17,6 +32,14 @@ diesel::table! {
         deviation_a -> Nullable<Float4>,
         value_b -> Nullable<Float4>,
         deviation_b -> Nullable<Float4>,
+    }
+}
+
+diesel::table! {
+    global_ranks (rank) {
+        rank -> Int4,
+        id -> Int8,
+        char_id -> Int2,
     }
 }
 
@@ -57,7 +80,10 @@ diesel::table! {
 }
 
 diesel::allow_tables_to_appear_in_same_query!(
+    character_ranks,
+    constants,
     games,
+    global_ranks,
     player_names,
     player_ratings,
     players,

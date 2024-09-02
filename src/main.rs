@@ -321,6 +321,9 @@ async fn main() {
         Some("migrate") => {
             migrate::migrate(args.get(1).unwrap());
         },
+        Some("hourly") => {
+            pull::do_hourly_update_once().await
+        },
         _ => {
             run().await;
         }

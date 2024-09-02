@@ -2,9 +2,24 @@
 #![allow(clippy::all)]
 
 use rocket_db_pools::diesel::{QueryResult, PgPool, prelude::*};
-use crate::schema::{games, player_names, players, player_ratings};
+use crate::schema::{games, player_names, players, player_ratings, character_ranks, global_ranks, constants};
 
 use chrono::NaiveDateTime;
+#[derive(Selectable, Insertable, Queryable, Identifiable)]
+#[diesel(primary_key(rank, char_id))]
+pub struct CharacterRank {
+    pub rank: i32,
+    pub id: i64,
+    pub char_id: i16
+}
+
+#[derive(Selectable, Insertable, Queryable, Identifiable)]
+#[diesel(primary_key(key))]
+pub struct Constant {
+    pub key: String,
+    pub value: String,
+}
+
 #[derive(Selectable, Insertable, Queryable, Identifiable)]
 #[diesel(primary_key(timestamp, id_a, id_b))]
 pub struct Game {
@@ -23,6 +38,14 @@ pub struct Game {
     pub deviation_a: Option<f32>,
     pub value_b: Option<f32>,
     pub deviation_b: Option<f32>,
+}
+
+#[derive(Selectable, Insertable, Queryable, Identifiable)]
+#[diesel(primary_key(rank))]
+pub struct GlobalRank {
+    pub rank: i32,
+    pub id: i64,
+    pub char_id: i16
 }
 
 #[derive(Selectable, Insertable, Queryable, Identifiable)]
