@@ -183,7 +183,18 @@ async fn player_games(mut db: Connection<Db>,
     offset: Option<i64>,) -> Json<PlayerGamesResponse> {
 
         if let Ok(id) = i64::from_str_radix(player_id, 10) {
-            let char_id = CHAR_NAMES.iter().position(|(c, _)| *c == char_id).unwrap() as i16;
+            let char_id = match CHAR_NAMES.iter().position(|(c, _)| *c == char_id) {
+                Some(id) => {
+                    id as i16
+                },
+                None => {
+                    // Return an empty JSON response
+                    return Json(PlayerGamesResponse {
+                        history: vec![],
+                    });
+                }
+            };
+            
             let game_count = game_count.unwrap_or(100);
             let offset = offset.unwrap_or(0);
     
