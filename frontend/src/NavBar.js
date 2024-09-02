@@ -11,7 +11,10 @@ import MenuItem from '@mui/material/MenuItem';
 import { Button } from '@mui/material';
 import { Link } from "react-router-dom";
 
-const pages = [{name:'Top 100', link:'./top100'}, {name:'History', link:'./history'}];
+const pages = [
+  {name:'Top 100', link:'./top100'},
+  {name:'History', link:'./history'}
+];
 
 function NavBar() {
   const [anchorElNav, setAnchorElNav] = React.useState(null);

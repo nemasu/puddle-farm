@@ -49,7 +49,7 @@ const App = () => {
               />
 
               <Route
-                  path="/history"
+                  path="/history/:player_id/:char_short/:game_count?"
                   element={<History />}
               />
 

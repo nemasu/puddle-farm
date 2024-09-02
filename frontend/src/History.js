@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -6,9 +7,8 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
+import { useParams } from 'react-router-dom';
 /* global BigInt */
-
-import React, { useState, useEffect } from 'react';
 
 const History = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
@@ -19,15 +19,16 @@ const History = () => {
   const urlSearchString = window.location.search;
   const params = new URLSearchParams(urlSearchString);
 
+  let { player_id, char_short, game_count } = useParams();
+
+  if (player_id.match(/[a-zA-Z]/)) {
+    player_id = BigInt('0x' + player_id);
+  } 
+
   useEffect(() => {
     const fetchPlayer = async () => {
       try {
-        var player_id = params.get('player');
-        if (player_id.match(/[a-zA-Z]/)) {
-          player_id = BigInt('0x' + player_id);
-        } 
-
-        const response = await fetch(API_ENDPOINT + '/player/' + player_id +'/' + params.get('char_short'));
+        const response = await fetch(API_ENDPOINT + '/player/' + player_id +'/' + char_short);
         const result = await response.json();
         setPlayer(result);
         console.log(result);
@@ -38,12 +39,7 @@ const History = () => {
 
     const fetchHistory = async () => {
       try {
-        var player_id = params.get('player');
-        if (player_id.match(/[a-zA-Z]/)) {
-          player_id = BigInt('0x' + player_id);
-        }
-
-        const response = await fetch(API_ENDPOINT + '/player/' + player_id +'/' + params.get('char_short') + '/history?game_count='+params.get('game_count'));
+        const response = await fetch(API_ENDPOINT + '/player/' + player_id +'/' + char_short + '/history?game_count='+ game_count);
         const result = await response.json();
         setHistory(result.history);
         console.log(result.history);
