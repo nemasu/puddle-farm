@@ -1,10 +1,11 @@
 extern crate simplelog;
 
-use models::{Player, PlayerRating};
+use log::LevelFilter;
+use models::{Player, PlayerRating, GlobalRank};
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::Header;
 use rocket::{Request, Response};
-use simplelog::*;
+use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode, WriteLogger};
 
 use std::fs::File;
 
@@ -64,22 +65,163 @@ pub const CHAR_NAMES: &[(&str, &str)] = &[
 ];
 
 #[derive(Serialize)]
+struct RankResponse  {
+    rank: Vec<PlayerRankResponse>,
+}
+
+#[derive(Serialize)]
+struct PlayerRankResponse  {
+    rank: i32,
+    id: i64,
+    name: String,
+    rating: f32,
+    deviation: f32,
+    char_short: String,
+}
+#[get("/api/top?<game_count>&<offset>")]
+async fn top_all(mut db: Connection<Db>,
+    game_count: Option<i64>,
+    offset: Option<i64>,) -> Json<RankResponse> {
+    
+    let game_count = game_count.unwrap_or(100);
+    let offset = offset.unwrap_or(0);
+
+    let games: Vec<(GlobalRank, Player, PlayerRating)> = schema::global_ranks::table
+        .inner_join(schema::players::table)
+        .inner_join(schema::player_ratings::table.on(schema::players::id.eq(schema::player_ratings::id)))
+        .select((GlobalRank::as_select(), Player::as_select(), PlayerRating::as_select()))
+        .order(schema::global_ranks::rank.asc())
+        .limit(game_count)
+        .offset(offset)
+        .load(&mut db)
+        .await
+        .expect("Error loading games");
+    
+    //Create response from games
+    let rank: Vec<PlayerRankResponse> = games.iter().map(|p| {
+        PlayerRankResponse {
+            rank: p.0.rank,
+            id: p.1.id,
+            name: p.1.name.clone(),
+            rating: p.2.value,
+            deviation: p.2.deviation,
+            char_short: CHAR_NAMES[ p.2.char_id as usize].0.to_string(),
+        }
+    }).collect();
+    
+    Json(RankResponse { rank })
+}
+
+#[get("/api/top_char?<char_id>&<game_count>&<offset>")]
+async fn top_char(mut db: Connection<Db>,
+    char_id: &str,
+    game_count: Option<i64>,
+    offset: Option<i64>,) -> Json<RankResponse> {
+
+    let game_count = game_count.unwrap_or(100);
+    let offset = offset.unwrap_or(0);
+
+    let char_id = match CHAR_NAMES.iter().position(|(c, _)| *c == char_id) {
+        Some(id) => {
+            id as i16
+        },
+        None => {
+            return Json(RankResponse { rank: vec![] });
+        }
+    };
+
+    let games: Vec<(GlobalRank, Player, PlayerRating)> = schema::global_ranks::table
+        .inner_join(schema::players::table)
+        .inner_join(schema::player_ratings::table.on(schema::players::id.eq(schema::player_ratings::id)))
+        .select((GlobalRank::as_select(), Player::as_select(), PlayerRating::as_select()))
+        .filter(schema::global_ranks::char_id.eq(char_id))
+        .order(schema::global_ranks::rank.asc())
+        .limit(game_count)
+        .offset(offset)
+        .load(&mut db)
+        .await
+        .expect("Error loading games");
+    
+    let rank: Vec<PlayerRankResponse> = games.iter().map(|p| {
+        PlayerRankResponse {
+            rank: p.0.rank,
+            id: p.1.id,
+            name: p.1.name.clone(),
+            rating: p.2.value,
+            deviation: p.2.deviation,
+            char_short: CHAR_NAMES[ p.2.char_id as usize].0.to_string(),
+        }
+    }).collect();
+    
+    Json(RankResponse { rank })
+    
+}
+
+#[derive(Serialize)]
 struct PlayerResponse  {
+    player: Vec<PlayerResponsePlayer>,
+}
+
+#[derive(Serialize)]
+struct PlayerResponsePlayer  {
+    id: i64,
+    name: String,
+    rating: f32,
+    deviation: f32,
+    char_id: String,
+}
+#[get("/api/player/<player_id>")]
+async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse> {
+    
+    let id = match i64::from_str_radix(player_id, 10) {
+        Ok(id) => id,
+        Err(_) => {
+            return Json(PlayerResponse { player: vec![] });
+        }
+    };
+
+    let player_char: Vec<(Player, PlayerRating)> = schema::players::table
+        .inner_join(schema::player_ratings::table)
+        .filter(schema::players::id.eq(id))
+        .select((Player::as_select(), PlayerRating::as_select()))
+        .load(&mut db)
+        .await
+        .expect("Error loading player");
+
+    if player_char.len() == 0 {
+        return Json(PlayerResponse { player: vec![] });
+    }
+
+    let player: Vec<PlayerResponsePlayer> = player_char.iter().map(|p| {
+        PlayerResponsePlayer {
+            id: p.0.id,
+            name: p.0.name.clone(),
+            rating: p.1.value,
+            deviation: p.1.deviation,
+            char_id: CHAR_NAMES[ p.1.char_id as usize].0.to_string(),
+        }
+    }).collect();
+
+    Json(PlayerResponse {
+        player: player,
+    })
+}
+
+
+#[derive(Serialize)]
+struct PlayerCharResponse  {
     id: i64,
     name: String,
     rating: f32,
     deviation: f32,
 }
 #[get("/api/player/<player_id>/<char_id>")] 
-async fn player(mut db: Connection<Db>, player_id: &str, char_id: &str) -> Json<PlayerResponse> {
+async fn player_char(mut db: Connection<Db>, player_id: &str, char_id: &str) -> Json<PlayerCharResponse> {
 
     let id = match i64::from_str_radix(player_id, 10) {
         Ok(id) => id,
         Err(_) => {
-            // Log the error for debugging
-            log::error!("Invalid player_id: {}", player_id);
-            // Return an empty JSON response
-            return Json(PlayerResponse {
+            return Json(PlayerCharResponse {
                 id: 0,
                 name: "".to_string(),
                 rating: 0.0,
@@ -93,8 +235,7 @@ async fn player(mut db: Connection<Db>, player_id: &str, char_id: &str) -> Json<
             id as i16
         },
         None => {
-            // Return an empty JSON response
-            return Json(PlayerResponse {
+            return Json(PlayerCharResponse {
                 id: 0,
                 name: "".to_string(),
                 rating: 0.0,
@@ -103,15 +244,17 @@ async fn player(mut db: Connection<Db>, player_id: &str, char_id: &str) -> Json<
         }
     };
 
-    let player: Vec<Player> = schema::players::table
-        .select(Player::as_select())
+    let player_char: Vec<(Player, PlayerRating)> = schema::players::table
+        .inner_join(schema::player_ratings::table)
         .filter(schema::players::id.eq(id))
+        .filter(schema::player_ratings::char_id.eq(char_id))
+        .select((Player::as_select(), PlayerRating::as_select()))
         .load(&mut db)
         .await
         .expect("Error loading player");
 
-    if player.len() == 0 {
-        return Json(PlayerResponse {
+    if player_char.len() == 0 {
+        return Json(PlayerCharResponse {
             id: 0,
             name: "Not found".to_string(),
             rating: 0.0,
@@ -119,28 +262,11 @@ async fn player(mut db: Connection<Db>, player_id: &str, char_id: &str) -> Json<
         });
     }
 
-    let player_rating: Vec<PlayerRating> = schema::player_ratings::table
-        .select(PlayerRating::as_select())
-        .filter(schema::player_ratings::id.eq(id))
-        .filter(schema::player_ratings::char_id.eq(char_id))
-        .load(&mut db)
-        .await
-        .expect("Error loading player rating");
-
-    if player_rating.len() == 0 {
-        return Json(PlayerResponse {
-            id: 0,
-            name: "Not found".to_string(),
-            rating: 0.0,
-            deviation: 0.0,
-        });
-    }
-
-    let context = PlayerResponse {
-        id: player[0].id,
-        name: player[0].name.clone(),
-        rating: player_rating[0].value,
-        deviation: player_rating[0].deviation,
+    let context = PlayerCharResponse {
+        id: player_char[0].0.id,
+        name: player_char[0].0.name.clone(),
+        rating: player_char[0].1.value,
+        deviation: player_char[0].1.deviation,
     };
 
     Json(context)
@@ -188,7 +314,6 @@ async fn player_games(mut db: Connection<Db>,
                     id as i16
                 },
                 None => {
-                    // Return an empty JSON response
                     return Json(PlayerGamesResponse {
                         history: vec![],
                     });
@@ -198,9 +323,10 @@ async fn player_games(mut db: Connection<Db>,
             let game_count = game_count.unwrap_or(100);
             let offset = offset.unwrap_or(0);
     
-            //Grab games where player is either player A or player B
+            log::info!("id: {}, char_id: {}, game_count: {}, offset: {}", id, char_id, game_count, offset);
+
             let games: Vec<models::Game> = schema::games::table
-                .filter(schema::games::id_a.eq(id).and(schema::games::char_a.eq(char_id as i16))
+                .filter((schema::games::id_a.eq(id).and(schema::games::char_a.eq(char_id as i16)))
                     .or(schema::games::id_b.eq(id).and(schema::games::char_b.eq(char_id as i16))))
                 .order(schema::games::timestamp.desc())
                 .limit(game_count)
@@ -213,7 +339,6 @@ async fn player_games(mut db: Connection<Db>,
                 history: vec![],
             };
 
-            //Fill response with game data
             for game in games {
                 let own_rating_value = if game.id_a == id { game.value_a.unwrap() } else { game.value_b.unwrap() };
                 let own_rating_deviation = if game.id_a == id { game.deviation_a.unwrap() } else { game.deviation_b.unwrap() };
@@ -276,29 +401,37 @@ async fn player_games(mut db: Connection<Db>,
 }
 
 pub async fn run() {
-        if cfg!(debug_assertions) {//Cors only used for development
-            rocket::build()
-                .attach(Db::init())
-                .attach(Cors)
-                //.register("/", catchers![catch_404, catch_500, catch_503])
-                .mount("/", routes![player, player_games])
-                .ignite()
-                .await
-                .unwrap()
-                .launch()
-                .await
-                .unwrap();
-        } else {
-            rocket::build()
-                .attach(Db::init())
-                //.register("/", catchers![catch_404, catch_500, catch_503])
-                .mount("/", routes![player, player_games])
-                .ignite()
-                .await
-                .unwrap()
-                .launch()
-                .await
-                .unwrap();
+    let routes = routes![
+        player,
+        player_char,
+        player_games,
+        top_all,
+        top_char
+    ];
+
+    if cfg!(debug_assertions) {//Cors only used for development
+        rocket::build()
+            .attach(Db::init())
+            .attach(Cors)
+            //.register("/", catchers![catch_404, catch_500, catch_503])
+            .mount("/", routes)
+            .ignite()
+            .await
+            .unwrap()
+            .launch()
+            .await
+            .unwrap();
+    } else {
+        rocket::build()
+            .attach(Db::init())
+            //.register("/", catchers![catch_404, catch_500, catch_503])
+            .mount("/", routes)
+            .ignite()
+            .await
+            .unwrap()
+            .launch()
+            .await
+            .unwrap();
         }
 }
 
@@ -315,12 +448,19 @@ async fn main() {
 
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     match args.get(0).map(|r| r.deref()) {
+        //This runs the timed jobs: grab replay, update ratings, update ranking, etc.
         Some("pull") => {
             pull::pull_and_update_continuous().await;
         },
+        //This migrates a halvnykterist sqlite3 database to a postgres database.
         Some("migrate") => {
-            migrate::migrate(args.get(1).unwrap());
+            let mut count = 100000;
+            if args.len() > 1 {
+                count = args.get(2).unwrap().parse().unwrap();
+            }
+            migrate::migrate(args.get(1).unwrap(), count);
         },
+        //This skips checking last_rank_update, but it does set it.
         Some("hourly") => {
             pull::do_hourly_update_once().await
         },

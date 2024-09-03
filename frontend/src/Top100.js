@@ -1,39 +1,87 @@
-import { createTheme } from '@mui/material/styles';
+import React, { useState, useEffect } from 'react';
+import AppBar from '@mui/material/AppBar';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Paper from '@mui/material/Paper';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import TextButton from '@mui/material/Button';
+import { Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { JSONParse, JSONStringify } from 'json-with-bigint';
 
-import React, { useEffect } from 'react';
+/* global BigInt */
 
 const Top100 = () => {
-  const defaultTheme = createTheme({
-    palette: {
-      mode: 'dark',
-      primary: {
-        main: '#811104',
-      },
-      secondary: {
-        main: '#c00000',
-      },
-      background: {
-        default: '#171717',
-      },
-    },
-    components: {
-      MuiAppBar: {
-        styleOverrides: {
-          root: {
-            backgroundColor: '#C00000',
-          },
-        },
-      },
-    },
-  });
+  const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
-  //const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
+  const [ranking, setRanking] = useState([]);
+  
+  let { game_count, offset } = useParams();
   useEffect(() => {
+    const fetchRanking = async () => {
+      try {
+        const response = await fetch(API_ENDPOINT
+          + '/top?'
+          + 'game_count=' + (game_count ? game_count : '100')
+          + '&offset=' + (offset ? offset : '0'));
+        await response.text().then(body => {
+          
+          var parsed = JSONParse(body);
+          console.log(parsed.rank);
+          setRanking(parsed.rank);
+
+          return parsed;
+        });
+
+      } catch (error) {
+        console.error('Error fetching player data:', error);
+      }
+    };
+
+    fetchRanking();
   }, []);
 
   return (
     <React.Fragment>
-
+      <AppBar position="static"
+        style={{backgroundImage: "none"}}
+        sx={{backgroundColor:"secondary.main"}}
+      >
+        <Box sx={{minHeight:100, paddingTop:'30px'}}>
+        <Typography align='center' variant="h4">
+          Top 100 Players
+        </Typography>
+        </Box>
+      </AppBar>
+      <Box maxWidth="700px" m={5}>
+        <TableContainer component={Paper}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Rank</TableCell>
+                <TableCell>Player</TableCell>
+                <TableCell>Character</TableCell>
+                <TableCell>Rating</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {ranking.map((player, index) => (
+                <TableRow key={index}>
+                  <TableCell>{player.rank}</TableCell>
+                  <TableCell><TextButton component={Link} variant="link" to={`/history/${player.id}/${player.char_short}`}>{player.name}</TextButton></TableCell>
+                  <TableCell>{player.char_short}</TableCell>
+                  <TableCell>{player.rating} ±{player.deviation}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
     </React.Fragment>
   );
 };

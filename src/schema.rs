@@ -2,9 +2,9 @@
 
 diesel::table! {
     character_ranks (rank, char_id) {
-        rank -> Int4,
         id -> Int8,
         char_id -> Int2,
+        rank -> Int4,
     }
 }
 
@@ -78,6 +78,11 @@ diesel::table! {
         platform -> Int2,
     }
 }
+
+diesel::joinable!(character_ranks -> players (id));
+diesel::joinable!(global_ranks -> players (id));
+diesel::joinable!(player_names -> players (id));
+diesel::joinable!(player_ratings -> players (id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     character_ranks,

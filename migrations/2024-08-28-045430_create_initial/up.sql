@@ -5,13 +5,13 @@ CREATE TABLE players  (
 );
 
 CREATE TABLE player_names (
-    id BIGINT NOT NULL,
+    id BIGINT NOT NULL REFERENCES players(id),
     name TEXT NOT NULL,
     PRIMARY KEY(id, name)
 );
 
 CREATE TABLE player_ratings (
-    id BIGINT NOT NULL,
+    id BIGINT NOT NULL REFERENCES players(id),
     char_id SMALLINT NOT NULL,
     wins INTEGER NOT NULL,
     losses INTEGER NOT NULL,
@@ -35,11 +35,11 @@ CREATE TABLE player_ratings (
 
 CREATE TABLE games (
     timestamp TIMESTAMP NOT NULL,
-    id_a BIGINT NOT NULL,
+    id_a BIGINT NOT NULL REFERENCES players(id),
     name_a TEXT NOT NULL,
     char_a SMALLINT NOT NULL,
     platform_a SMALLINT NOT NULL,
-    id_b BIGINT NOT NULL,
+    id_b BIGINT NOT NULL REFERENCES players(id),
     name_b TEXT NOT NULL,
     char_b SMALLINT NOT NULL,
     platform_b SMALLINT NOT NULL,
@@ -51,8 +51,28 @@ CREATE TABLE games (
     deviation_b REAL,
     PRIMARY KEY (timestamp, id_a, id_b)
 );
+CREATE INDEX games_id_char_a ON games(id_a, char_a);
+CREATE INDEX games_id_char_b ON games(id_b, char_b);
 
-CREATE INDEX games_value_a ON games(value_a);
-CREATE INDEX games_value_b ON games(value_b);
-CREATE INDEX games_deviation_a ON games(deviation_a);
-CREATE INDEX games_deviation_b ON games(deviation_b);
+CREATE INDEX games_value_deviation_a ON games(value_a, deviation_a);
+CREATE INDEX games_value_deviation_b ON games(value_b, deviation_b);
+
+CREATE TABLE global_ranks (
+    rank INT NOT NULL PRIMARY KEY,
+    id BIGINT NOT NULL REFERENCES players(id),
+    char_id SMALLINT NOT NULL
+);
+
+CREATE TABLE character_ranks (
+    id BIGINT NOT NULL REFERENCES players(id),
+    char_id SMALLINT NOT NULL,
+    rank INT NOT NULL,
+    PRIMARY KEY (rank, char_id)
+);
+
+CREATE TABLE constants (
+    key TEXT NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+INSERT INTO constants (key, value) VALUES ('last_ranking_period', '1725291382');

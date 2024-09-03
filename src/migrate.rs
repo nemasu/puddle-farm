@@ -16,14 +16,12 @@ use diesel::Connection;
 
 use diesel::prelude::*;
 
-const DB_LIMIT: i64 = 100000;
-
 pub fn establish_connection_nosync() -> PgConnection {
     PgConnection::establish(&DB_NAME).unwrap()
 }
 
 //These method below are to migrate the old sqlite3 database into the new postgres one. They can be removed later
-pub fn migrate(sqlite_db: &str) {
+pub fn migrate(sqlite_db: &str, transaction_amount: i64) {
     let mut connection = establish_connection_nosync();
     let sqlite_connection = rusqlite::Connection::open(sqlite_db.to_owned()).unwrap();
 
@@ -39,7 +37,7 @@ pub fn migrate(sqlite_db: &str) {
     let mut offset = schema::games::table
         .select(count(schema::games::id_a))
         .load::<i64>(&mut connection)
-        .unwrap()[0] - DB_LIMIT;
+        .unwrap()[0] - transaction_amount;
     
     //If offset is less than 0, make it 0
     if offset < 0 {
@@ -60,7 +58,7 @@ pub fn migrate(sqlite_db: &str) {
             let mut new_games = Vec::new();
 
             let mut stmt = sqlite_connection.prepare("SELECT timestamp, id_a, name_a, char_a, platform_a, id_b, name_b, char_b, platform_b, winner, game_floor FROM games ORDER BY timestamp ASC LIMIT ? OFFSET ? ").unwrap();
-            let mut rows = stmt.query([DB_LIMIT, offset]).unwrap();
+            let mut rows = stmt.query([transaction_amount, offset]).unwrap();
             while let Some(row) = rows.next().unwrap() {
                 
                 let unix_timestamp = row.get(0).unwrap();
@@ -82,6 +80,10 @@ pub fn migrate(sqlite_db: &str) {
                     value_b: None,
                     deviation_b: None};
             
+                if let Err(e) = migrate_update_player_info(conn, &new_game) {
+                    error!("update_ratings failed: {e}");
+                }
+
                 let count = insert_into(schema::games::table)
                     .values(&new_game)
                     .on_conflict_do_nothing()
@@ -100,64 +102,58 @@ pub fn migrate(sqlite_db: &str) {
             if let Err(e) = migrate_update_ratings(conn, &new_games) {
                 error!("update_ratings failed: {e}");
             }
-
-            if let Err(e) = migrate_update_player_info(conn, &new_games) {
-                error!("update_ratings failed: {e}");
-            }
-            
-            offset += DB_LIMIT;
+  
+            offset += transaction_amount;
             
             Ok(())
         }).unwrap();
     }
 }
 
-fn migrate_update_player_info(connection: &mut PgConnection, new_games: &Vec<Game>) -> Result<(), String> {
-    for g in new_games {
-        //Update player name in the player table
-        insert_into(schema::players::table)
-            .values(&Player {
-                id: g.id_a,
-                name: g.name_a.clone(),
-                platform: g.platform_a,
-            })
-            .on_conflict(schema::players::id)
-            .do_update()
-            .set((schema::players::name.eq(g.name_a.clone()), schema::players::platform.eq(g.platform_a)))
-            .execute(connection)
-            .unwrap();
+fn migrate_update_player_info(connection: &mut PgConnection, new_game: &Game) -> Result<(), String> {
+    //Update player name in the player table
+    insert_into(schema::players::table)
+        .values(&Player {
+            id: new_game.id_a,
+            name: new_game.name_a.clone(),
+            platform: new_game.platform_a,
+        })
+        .on_conflict(schema::players::id)
+        .do_update()
+        .set((schema::players::name.eq(new_game.name_a.clone()), schema::players::platform.eq(new_game.platform_a)))
+        .execute(connection)
+        .unwrap();
 
-        insert_into(schema::players::table)
-            .values(&Player {
-                id: g.id_b,
-                name: g.name_b.clone(),
-                platform: g.platform_b,
-            })
-            .on_conflict(schema::players::id)
-            .do_update()
-            .set((schema::players::name.eq(g.name_b.clone()), schema::players::platform.eq(g.platform_b)))
-            .execute(connection)
-            .unwrap();
+    insert_into(schema::players::table)
+        .values(&Player {
+            id: new_game.id_b,
+            name: new_game.name_b.clone(),
+            platform: new_game.platform_b,
+        })
+        .on_conflict(schema::players::id)
+        .do_update()
+        .set((schema::players::name.eq(new_game.name_b.clone()), schema::players::platform.eq(new_game.platform_b)))
+        .execute(connection)
+        .unwrap();
 
-        //Update player names in the player_names table
-        insert_into(schema::player_names::table)
-            .values(&PlayerName {
-                id: g.id_a,
-                name: g.name_a.clone(),
-            })
-            .on_conflict_do_nothing()
-            .execute(connection)
-            .unwrap();
+    //Update player names in the player_names table
+    insert_into(schema::player_names::table)
+        .values(&PlayerName {
+            id: new_game.id_a,
+            name: new_game.name_a.clone(),
+        })
+        .on_conflict_do_nothing()
+        .execute(connection)
+        .unwrap();
 
-        insert_into(schema::player_names::table)
-            .values(&PlayerName {
-                id: g.id_b,
-                name: g.name_b.clone(),
-            })
-            .on_conflict_do_nothing()
-            .execute(connection)
-            .unwrap();
-    }
+    insert_into(schema::player_names::table)
+        .values(&PlayerName {
+            id: new_game.id_b,
+            name: new_game.name_b.clone(),
+        })
+        .on_conflict_do_nothing()
+        .execute(connection)
+        .unwrap();
 
     Ok(())
 }

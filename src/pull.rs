@@ -55,10 +55,6 @@ pub async fn pull_and_update_continuous() {
                     if let Err(e) = update_ratings(conn, &new_games).await {
                         error!("update_ratings failed: {e}");
                     }
-
-                    if let Err(e) = update_player_info(conn, &new_games).await {
-                        error!("update_ratings failed: {e}");
-                    }
                 },
                 Err(e) => {
                     error!("grab_games failed: {e}");
@@ -135,9 +131,9 @@ async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> 
         SELECT ROW_NUMBER()
         OVER (ORDER BY value DESC) as rank, player_ratings.id, char_id
         FROM player_ratings
-        WHERE deviation < 75.0
+        WHERE deviation < 150.0
         ORDER BY value DESC
-        LIMIT 1000
+        LIMIT 1000  
         RETURNING rank
     ");
     let results: Vec<InsertedRankRowId> = results.get_results(connection).await.unwrap();
@@ -150,7 +146,7 @@ async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> 
             SELECT ROW_NUMBER() 
             OVER (ORDER BY value DESC) as rank, player_ratings.id, char_id
             FROM player_ratings
-            WHERE deviation < 75.0 AND char_id = $1
+            WHERE deviation < 150.0 AND char_id = $1
             ORDER BY value DESC
             LIMIT 1000
             RETURNING rank
@@ -163,56 +159,54 @@ async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> 
     Ok(())
 }
 
-async fn update_player_info(connection: &mut AsyncPgConnection, new_games: &Vec<Game>) -> Result<(), String> {
-    for g in new_games {
-        //Update player name in the player table
-        insert_into(players::table)
-            .values(&Player {
-                id: g.id_a,
-                name: g.name_a.clone(),
-                platform: g.platform_a,
-            })
-            .on_conflict(players::id)
-            .do_update()
-            .set((players::name.eq(g.name_a.clone()), players::platform.eq(g.platform_a)))
-            .execute(connection)
-            .await
-            .unwrap();
+async fn update_player_info(connection: &mut AsyncPgConnection, new_game: &Game) -> Result<(), String> {
+    //Update player name in the player table
+    insert_into(players::table)
+        .values(&Player {
+            id: new_game.id_a,
+            name: new_game.name_a.clone(),
+            platform: new_game.platform_a,
+        })
+        .on_conflict(players::id)
+        .do_update()
+        .set((players::name.eq(new_game.name_a.clone()), players::platform.eq(new_game.platform_a)))
+        .execute(connection)
+        .await
+        .unwrap();
 
-        insert_into(players::table)
-            .values(&Player {
-                id: g.id_b,
-                name: g.name_b.clone(),
-                platform: g.platform_b,
-            })
-            .on_conflict(players::id)
-            .do_update()
-            .set((players::name.eq(g.name_b.clone()), players::platform.eq(g.platform_b)))
-            .execute(connection)
-            .await
-            .unwrap();
+    insert_into(players::table)
+        .values(&Player {
+            id: new_game.id_b,
+            name: new_game.name_b.clone(),
+            platform: new_game.platform_b,
+        })
+        .on_conflict(players::id)
+        .do_update()
+        .set((players::name.eq(new_game.name_b.clone()), players::platform.eq(new_game.platform_b)))
+        .execute(connection)
+        .await
+        .unwrap();
 
-        //Update player names in the player_names table
-        insert_into(player_names::table)
-            .values(&PlayerName {
-                id: g.id_a,
-                name: g.name_a.clone(),
-            })
-            .on_conflict_do_nothing()
-            .execute(connection)
-            .await
-            .unwrap();
+    //Update player names in the player_names table
+    insert_into(player_names::table)
+        .values(&PlayerName {
+            id: new_game.id_a,
+            name: new_game.name_a.clone(),
+        })
+        .on_conflict_do_nothing()
+        .execute(connection)
+        .await
+        .unwrap();
 
-        insert_into(player_names::table)
-            .values(&PlayerName {
-                id: g.id_b,
-                name: g.name_b.clone(),
-            })
-            .on_conflict_do_nothing()
-            .execute(connection)
-            .await
-            .unwrap();
-    }
+    insert_into(player_names::table)
+        .values(&PlayerName {
+            id: new_game.id_b,
+            name: new_game.name_b.clone(),
+        })
+        .on_conflict_do_nothing()
+        .execute(connection)
+        .await
+        .unwrap();
 
     Ok(())
 }
@@ -254,6 +248,10 @@ async fn grab_games(connection: &mut AsyncPgConnection) -> Result<Vec<Game>, Str
             deviation_b: None,
         };
 
+        if let Err(e) = update_player_info(connection, &new_game).await {
+            error!("update_player_info failed: {e}");
+        }
+
         let count = insert_into(games::table)
             .values(&new_game)
             .on_conflict_do_nothing()
@@ -292,7 +290,7 @@ async fn update_ratings(connection: &mut AsyncPgConnection, new_games: &Vec<Game
                     wins: 0,
                     losses: 0,
                     value: 1500.0,
-                    deviation: 750.0,
+                    deviation: 250.0,
                     last_decay: g.timestamp,
                     top_rating_value: None,
                     top_rating_deviation: None,
@@ -330,7 +328,7 @@ async fn update_ratings(connection: &mut AsyncPgConnection, new_games: &Vec<Game
                     wins: 0,
                     losses: 0,
                     value: 1500.0,
-                    deviation: 750.0,
+                    deviation: 250.0,
                     last_decay: g.timestamp,
                     top_rating_value: None,
                     top_rating_deviation: None,
@@ -420,7 +418,7 @@ pub fn update_mean_and_variance(mean_a: f64, sigma_a: f64, mean_b: f64, sigma_b:
     
     //#How likely is a win for A? Bayesian methods let us create a normal distrubution by combining the two players ratings and variabiilies to estimate this. 
     let dist = univariate::normal::Normal::standard();
-    let x = rating_diff / sqrt_match_variablity;
+    let x = rating_diff / (sqrt_match_variablity + 241.0);
     let win_prob = dist.cdf(&x);
     
     
@@ -442,8 +440,8 @@ pub fn update_mean_and_variance(mean_a: f64, sigma_a: f64, mean_b: f64, sigma_b:
     //# But, since either player could have a contoller failure, computer issue, or any number of other external events. There is always some "suprise" to a win. Therefore, we add 0.001.
     //# This has the added bonus of some numerical stability as well, since result_suprise can be a very small number.
     //# Further, we scale by the variance of the player and divide by the overall variablity of the match.
-    let mean_a_new = mean_a + direction_of_update * 10.0 * (result_suprise + 0.001) * sigma_a.powf(2.5) / match_variablity;
-    let mean_b_new = mean_b - direction_of_update * 10.0 * (result_suprise + 0.001) * sigma_b.powf(2.5) / match_variablity;
+    let mean_a_new = mean_a + direction_of_update * 5.0 * (result_suprise + 0.001) * sigma_a.powf(1.5) / sqrt_match_variablity;
+    let mean_b_new = mean_b - direction_of_update * 5.0 * (result_suprise + 0.001) * sigma_b.powf(1.5) / sqrt_match_variablity;
 
     //# Going over each term:
     //# mean is the original rating of the player
@@ -469,10 +467,10 @@ pub fn update_mean_and_variance(mean_a: f64, sigma_a: f64, mean_b: f64, sigma_b:
     //# We multiply that by one hundred and then multiple it again by the result_suprise. Multiplying by result_suprise is a technique from importance sampling.
     //# Then, we want to create a mild reduction in variance if two players of equal skill continously go even.
     //# We multiply by (1-result_suprise) in this case because a 60% suprise should reduce variance less than a 40% suprise. 
-    
+        
     let variance_adjustment_factor = (8.0 + result_suprise.powf(2.0)) / 8.3;
-    let mut variance_adjustment_constant = ((result_suprise-0.5) * 100.0) * result_suprise;
-    variance_adjustment_constant -= (1.0 - (result_suprise-0.5).powf(2.0)) * 20.0 * (1.0-result_suprise);
+    let mut variance_adjustment_constant = ((result_suprise-0.5) * 20.0) * result_suprise;
+    variance_adjustment_constant -= (1.0 - (result_suprise-0.5).powf(2.0)) * 4.0 * (1.0-result_suprise);
     
     let mut sigma_a_new = (sigma_a + variance_adjustment_constant) * variance_adjustment_factor;
     let mut sigma_b_new = (sigma_b + variance_adjustment_constant) * variance_adjustment_factor;
@@ -495,9 +493,9 @@ pub fn update_mean_and_variance(mean_a: f64, sigma_a: f64, mean_b: f64, sigma_b:
     //# An upset increases variance for both players, and an expected result decreases it
     
     //# One last detail to help the stability of the overall model.
-    //# Taking the max of the new variation and 3.0 ensures that we don't enter situations where 1.0 or less variance causes numerical problems.
-    sigma_a_new = f64::max(3.0, sigma_a_new);
-    sigma_b_new = f64::max(3.0, sigma_b_new);
+    //# Taking the max of the new variation and 1.0 ensures that we don't enter situations where 1.0 or less variance causes numerical problems.
+    sigma_a_new = f64::max(1.0, sigma_a_new);
+    sigma_b_new = f64::max(1.0, sigma_b_new);
 
     //#This should be complimented with real time variance increase. I'd suggest no change for the first 21 hours, and then a old_variance*1.05 + 1 increase every 21 hours after.
     //#There are advantages to not using 24 hours.

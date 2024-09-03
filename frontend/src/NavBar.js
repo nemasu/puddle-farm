@@ -13,7 +13,6 @@ import { Link } from "react-router-dom";
 
 const pages = [
   {name:'Top 100', link:'./top100'},
-  {name:'History', link:'./history'}
 ];
 
 function NavBar() {
@@ -66,7 +65,8 @@ function NavBar() {
           </Box>
           <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
             {pages.map((page) => (
-              <Button component={Link} 
+              <Button key={page.name}
+                component={Link} 
                 to={page.link}
                 onClick={handleCloseNavMenu}
                 sx={{ my: 1, color: 'white', display: 'block' }

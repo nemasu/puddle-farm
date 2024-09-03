@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import Box from '@mui/material/Box';
 
 import History from './History';
 import NavBar from './NavBar';
@@ -19,17 +20,32 @@ const App = () => {
         main: '#811104',
       },
       secondary: {
-        main: '#c00000',
+        main: '#C00000',
       },
       background: {
         default: '#171717',
       },
     },
     components: {
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            variants: [
+              {
+                props: { variant: 'link'},
+                style: {
+                  textTransform: 'none',
+                  color: '#F8B552',
+                }
+              }
+            ],
+          },
+        },
+      },
       MuiAppBar: {
         styleOverrides: {
           root: {
-            backgroundColor: '#C00000',
+            backgroundColor: '#811104',
           },
         },
       },
@@ -38,12 +54,18 @@ const App = () => {
 
   return (
     <React.Fragment>
-      <ThemeProvider theme={defaultTheme}>
-        <CssBaseline enableColorScheme />
-        <NavBar />
+      <Box sx={{minWidth: 650}}>
+        <ThemeProvider theme={defaultTheme}>
+          <CssBaseline enableColorScheme />
+          <NavBar />
           <Routes>
               <Route
-                  exact
+                exact
+                path="/"
+                element={<Top100 />}
+              />
+
+              <Route
                   path="/top100"
                   element={<Top100 />}
               />
@@ -58,7 +80,9 @@ const App = () => {
                   element={<Navigate to="/" />}
               />
           </Routes>
-          </ThemeProvider>
+            
+        </ThemeProvider>
+      </Box>
     </React.Fragment>
   );
 };

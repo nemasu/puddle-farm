@@ -8,9 +8,9 @@ use chrono::NaiveDateTime;
 #[derive(Selectable, Insertable, Queryable, Identifiable)]
 #[diesel(primary_key(rank, char_id))]
 pub struct CharacterRank {
-    pub rank: i32,
     pub id: i64,
-    pub char_id: i16
+    pub char_id: i16,
+    pub rank: i32,
 }
 
 #[derive(Selectable, Insertable, Queryable, Identifiable)]
@@ -45,7 +45,7 @@ pub struct Game {
 pub struct GlobalRank {
     pub rank: i32,
     pub id: i64,
-    pub char_id: i16
+    pub char_id: i16,
 }
 
 #[derive(Selectable, Insertable, Queryable, Identifiable)]
