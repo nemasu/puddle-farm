@@ -39,15 +39,18 @@ const Player = () => {
         const result = await response.text().then(body => {
 
           var parsed = JSONParse(body);
+          
+          for( var key in parsed.ratings ) {
+            parsed.ratings[key].rating = parsed.ratings[key].rating.toFixed(2);
+            parsed.ratings[key].deviation = parsed.ratings[key].deviation.toFixed(2);
+          }
+
           setPlayer(parsed);
 
           return parsed;
         });
 
-        for( var key in result.ratings ) {
-          result.ratings[key].rating = result.ratings[key].rating.toFixed(2);
-          result.ratings[key].deviation = result.ratings[key].deviation.toFixed(2);
-        }
+        
 
       } catch (error) {
         console.error('Error fetching player data:', error);

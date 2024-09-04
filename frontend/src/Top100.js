@@ -29,10 +29,16 @@ const Top100 = () => {
           + '/top?'
           + 'game_count=' + (game_count ? game_count : '100')
           + '&offset=' + (offset ? offset : '0'));
-        await response.text().then(body => {
+          const result = await response.text().then(body => {
           
           var parsed = JSONParse(body);
-          setRanking(parsed.rank);
+
+          for( var key in parsed.ranks ) {
+            parsed.ranks[key].rating = parsed.ranks[key].rating.toFixed(2);
+            parsed.ranks[key].deviation = parsed.ranks[key].deviation.toFixed(2);
+          }
+
+          setRanking(parsed.ranks);
 
           return parsed;
         });

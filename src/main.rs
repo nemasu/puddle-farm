@@ -66,7 +66,7 @@ pub const CHAR_NAMES: &[(&str, &str)] = &[
 
 #[derive(Serialize)]
 struct RankResponse  {
-    rank: Vec<PlayerRankResponse>,
+    ranks: Vec<PlayerRankResponse>,
 }
 
 #[derive(Serialize)]
@@ -87,9 +87,10 @@ async fn top_all(mut db: Connection<Db>,
     let offset = offset.unwrap_or(0);
 
     let games: Vec<(GlobalRank, Player, PlayerRating)> = schema::global_ranks::table
-        .inner_join(schema::players::table)
-        .inner_join(schema::player_ratings::table.on(schema::players::id.eq(schema::player_ratings::id)))
+        .inner_join(schema::players::table.on(schema::players::id.eq(schema::global_ranks::id)))
+        .inner_join(schema::player_ratings::table.on(schema::player_ratings::id.eq(schema::global_ranks::id)))
         .select((GlobalRank::as_select(), Player::as_select(), PlayerRating::as_select()))
+        .filter(schema::global_ranks::char_id.eq(schema::player_ratings::char_id))
         .order(schema::global_ranks::rank.asc())
         .limit(game_count)
         .offset(offset)
@@ -98,7 +99,7 @@ async fn top_all(mut db: Connection<Db>,
         .expect("Error loading games");
     
     //Create response from games
-    let rank: Vec<PlayerRankResponse> = games.iter().map(|p| {
+    let ranks: Vec<PlayerRankResponse> = games.iter().map(|p| {
         PlayerRankResponse {
             rank: p.0.rank,
             id: p.1.id,
@@ -109,7 +110,7 @@ async fn top_all(mut db: Connection<Db>,
         }
     }).collect();
     
-    Json(RankResponse { rank })
+    Json(RankResponse { ranks })
 }
 
 #[get("/api/top_char?<char_id>&<game_count>&<offset>")]
@@ -126,7 +127,7 @@ async fn top_char(mut db: Connection<Db>,
             id as i16
         },
         None => {
-            return Json(RankResponse { rank: vec![] });
+            return Json(RankResponse { ranks: vec![] });
         }
     };
 
@@ -142,7 +143,7 @@ async fn top_char(mut db: Connection<Db>,
         .await
         .expect("Error loading games");
     
-    let rank: Vec<PlayerRankResponse> = games.iter().map(|p| {
+    let ranks: Vec<PlayerRankResponse> = games.iter().map(|p| {
         PlayerRankResponse {
             rank: p.0.rank,
             id: p.1.id,
@@ -153,7 +154,7 @@ async fn top_char(mut db: Connection<Db>,
         }
     }).collect();
     
-    Json(RankResponse { rank })
+    Json(RankResponse { ranks })
     
 }
 
