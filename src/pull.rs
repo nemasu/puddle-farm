@@ -440,8 +440,8 @@ pub fn update_mean_and_variance(mean_a: f64, sigma_a: f64, mean_b: f64, sigma_b:
     //# But, since either player could have a contoller failure, computer issue, or any number of other external events. There is always some "suprise" to a win. Therefore, we add 0.001.
     //# This has the added bonus of some numerical stability as well, since result_suprise can be a very small number.
     //# Further, we scale by the variance of the player and divide by the overall variablity of the match.
-    let mean_a_new = mean_a + direction_of_update * 5.0 * (result_suprise + 0.001) * sigma_a.powf(1.5) / sqrt_match_variablity;
-    let mean_b_new = mean_b - direction_of_update * 5.0 * (result_suprise + 0.001) * sigma_b.powf(1.5) / sqrt_match_variablity;
+    let mean_a_new = mean_a + direction_of_update * 10.0 * (result_suprise + 0.001) * sigma_a / f64::sqrt(sqrt_match_variablity);
+    let mean_b_new = mean_b - direction_of_update * 10.0 * (result_suprise + 0.001) * sigma_b / f64::sqrt(sqrt_match_variablity);
 
     //# Going over each term:
     //# mean is the original rating of the player
@@ -468,9 +468,8 @@ pub fn update_mean_and_variance(mean_a: f64, sigma_a: f64, mean_b: f64, sigma_b:
     //# Then, we want to create a mild reduction in variance if two players of equal skill continously go even.
     //# We multiply by (1-result_suprise) in this case because a 60% suprise should reduce variance less than a 40% suprise. 
         
-    let variance_adjustment_factor = (8.0 + result_suprise.powf(2.0)) / 8.3;
-    let mut variance_adjustment_constant = ((result_suprise-0.5) * 20.0) * result_suprise;
-    variance_adjustment_constant -= (1.0 - (result_suprise-0.5).powf(2.0)) * 4.0 * (1.0-result_suprise);
+    let variance_adjustment_factor = (2.0 + result_suprise) / 2.501;
+    let variance_adjustment_constant = ((result_suprise-0.5) * 2.0) * result_suprise;
     
     let mut sigma_a_new = (sigma_a + variance_adjustment_constant) * variance_adjustment_factor;
     let mut sigma_b_new = (sigma_b + variance_adjustment_constant) * variance_adjustment_factor;
