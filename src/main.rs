@@ -323,8 +323,6 @@ async fn player_games(mut db: Connection<Db>,
             let game_count = game_count.unwrap_or(100);
             let offset = offset.unwrap_or(0);
     
-            log::info!("id: {}, char_id: {}, game_count: {}, offset: {}", id, char_id, game_count, offset);
-
             let games: Vec<models::Game> = schema::games::table
                 .filter((schema::games::id_a.eq(id).and(schema::games::char_a.eq(char_id as i16)))
                     .or(schema::games::id_b.eq(id).and(schema::games::char_b.eq(char_id as i16))))
