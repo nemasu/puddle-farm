@@ -109,6 +109,7 @@ async fn do_hourly_update(conn: &mut AsyncPgConnection) -> Result<(), String> {
     Ok(())
 }
 
+#[allow(dead_code)]
 #[derive(QueryableByName)]
 struct InsertedRankRowId {
     #[sql_type = "Integer"]
@@ -131,7 +132,7 @@ async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> 
         SELECT ROW_NUMBER()
         OVER (ORDER BY value DESC) as rank, player_ratings.id, char_id
         FROM player_ratings
-        WHERE deviation < 150.0
+        WHERE deviation < 30.0
         ORDER BY value DESC
         LIMIT 1000  
         RETURNING rank
@@ -146,7 +147,7 @@ async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> 
             SELECT ROW_NUMBER() 
             OVER (ORDER BY value DESC) as rank, player_ratings.id, char_id
             FROM player_ratings
-            WHERE deviation < 150.0 AND char_id = $1
+            WHERE deviation < 30.0 AND char_id = $1
             ORDER BY value DESC
             LIMIT 1000
             RETURNING rank
