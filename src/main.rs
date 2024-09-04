@@ -159,16 +159,17 @@ async fn top_char(mut db: Connection<Db>,
 
 #[derive(Serialize)]
 struct PlayerResponse  {
-    player: Vec<PlayerResponsePlayer>,
+    id: i64,
+    name: String,
+    ratings: Vec<PlayerResponsePlayer>,
 }
 
 #[derive(Serialize)]
 struct PlayerResponsePlayer  {
-    id: i64,
-    name: String,
     rating: f32,
     deviation: f32,
-    char_id: String,
+    char_short: String,
+    character: String,
 }
 #[get("/api/player/<player_id>")]
 async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse> {
@@ -176,7 +177,7 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
     let id = match i64::from_str_radix(player_id, 10) {
         Ok(id) => id,
         Err(_) => {
-            return Json(PlayerResponse { player: vec![] });
+            return Json(PlayerResponse {ratings: vec![], id: 0, name: "".to_string()});
         }
     };
 
@@ -189,87 +190,23 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
         .expect("Error loading player");
 
     if player_char.len() == 0 {
-        return Json(PlayerResponse { player: vec![] });
+        return Json(PlayerResponse {ratings: vec![], id: 0, name: "".to_string()});
     }
 
-    let player: Vec<PlayerResponsePlayer> = player_char.iter().map(|p| {
+    let ratings: Vec<PlayerResponsePlayer> = player_char.iter().map(|p| {
         PlayerResponsePlayer {
-            id: p.0.id,
-            name: p.0.name.clone(),
             rating: p.1.value,
             deviation: p.1.deviation,
-            char_id: CHAR_NAMES[ p.1.char_id as usize].0.to_string(),
+            char_short: CHAR_NAMES[ p.1.char_id as usize].0.to_string(),
+            character: CHAR_NAMES[ p.1.char_id as usize].1.to_string(),
         }
     }).collect();
 
     Json(PlayerResponse {
-        player: player,
-    })
-}
-
-
-#[derive(Serialize)]
-struct PlayerCharResponse  {
-    id: i64,
-    name: String,
-    rating: f32,
-    deviation: f32,
-}
-#[get("/api/player/<player_id>/<char_id>")] 
-async fn player_char(mut db: Connection<Db>, player_id: &str, char_id: &str) -> Json<PlayerCharResponse> {
-
-    let id = match i64::from_str_radix(player_id, 10) {
-        Ok(id) => id,
-        Err(_) => {
-            return Json(PlayerCharResponse {
-                id: 0,
-                name: "".to_string(),
-                rating: 0.0,
-                deviation: 0.0,
-            });
-        }
-    };
-
-    let char_id = match CHAR_NAMES.iter().position(|(c, _)| *c == char_id) {
-        Some(id) => {
-            id as i16
-        },
-        None => {
-            return Json(PlayerCharResponse {
-                id: 0,
-                name: "".to_string(),
-                rating: 0.0,
-                deviation: 0.0,
-            });
-        }
-    };
-
-    let player_char: Vec<(Player, PlayerRating)> = schema::players::table
-        .inner_join(schema::player_ratings::table)
-        .filter(schema::players::id.eq(id))
-        .filter(schema::player_ratings::char_id.eq(char_id))
-        .select((Player::as_select(), PlayerRating::as_select()))
-        .load(&mut db)
-        .await
-        .expect("Error loading player");
-
-    if player_char.len() == 0 {
-        return Json(PlayerCharResponse {
-            id: 0,
-            name: "Not found".to_string(),
-            rating: 0.0,
-            deviation: 0.0,
-        });
-    }
-
-    let context = PlayerCharResponse {
         id: player_char[0].0.id,
         name: player_char[0].0.name.clone(),
-        rating: player_char[0].1.value,
-        deviation: player_char[0].1.deviation,
-    };
-
-    Json(context)
+        ratings,
+    })
 }
 
 
@@ -401,7 +338,6 @@ async fn player_games(mut db: Connection<Db>,
 pub async fn run() {
     let routes = routes![
         player,
-        player_char,
         player_games,
         top_all,
         top_char

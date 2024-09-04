@@ -32,7 +32,6 @@ const Top100 = () => {
         await response.text().then(body => {
           
           var parsed = JSONParse(body);
-          console.log(parsed.rank);
           setRanking(parsed.rank);
 
           return parsed;
@@ -58,7 +57,7 @@ const Top100 = () => {
         </Typography>
         </Box>
       </AppBar>
-      <Box maxWidth="700px" m={5}>
+      <Box m={4} maxWidth="700px">
         <TableContainer component={Paper}>
           <Table size="small">
             <TableHead>
@@ -73,7 +72,7 @@ const Top100 = () => {
               {ranking.map((player, index) => (
                 <TableRow key={index}>
                   <TableCell>{player.rank}</TableCell>
-                  <TableCell><TextButton component={Link} variant="link" to={`/history/${player.id}/${player.char_short}`}>{player.name}</TextButton></TableCell>
+                  <TableCell><TextButton component={Link} variant="link" to={`/player/${player.id}/${player.char_short}`}>{player.name}</TextButton></TableCell>
                   <TableCell>{player.char_short}</TableCell>
                   <TableCell>{player.rating} ±{player.deviation}</TableCell>
                 </TableRow>

@@ -8,7 +8,7 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 
-import History from './History';
+import Player from './Player';
 import NavBar from './NavBar';
 import Top100 from './Top100';
 
@@ -54,7 +54,7 @@ const App = () => {
 
   return (
     <React.Fragment>
-      <Box sx={{minWidth: 650}}>
+      <Box sx={{minWidth: 1300}}>
         <ThemeProvider theme={defaultTheme}>
           <CssBaseline enableColorScheme />
           <NavBar />
@@ -71,8 +71,8 @@ const App = () => {
               />
 
               <Route
-                  path="/history/:player_id/:char_short/:game_count?"
-                  element={<History />}
+                  path="/player/:player_id/:char_short/:game_count?"
+                  element={<Player />}
               />
 
               <Route
