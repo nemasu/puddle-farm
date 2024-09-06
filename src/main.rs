@@ -231,13 +231,7 @@ struct PlayerSet {
     opponent_character_short: &'static str,
     opponent_rating_value: f32,
     opponent_rating_deviation: f32,
-    expected_outcome: String,
-    rating_change: String,
-    rating_change_class: &'static str,
-    rating_change_sequence: String,
-    result_wins: i32,
-    result_losses: i32,
-    result_percent: f32,
+    result_win: bool,
 }
 #[get("/api/player/<player_id>/<char_id>/history?<game_count>&<offset>")]
 async fn player_games(mut db: Connection<Db>,
@@ -288,15 +282,9 @@ async fn player_games(mut db: Connection<Db>,
                 let opponent_character_short = if game.id_a == id { CHAR_NAMES[game.char_b as usize].0 } else { CHAR_NAMES[game.char_a as usize].0 };
                 let opponent_rating_value = if game.id_a == id { game.value_b.unwrap() } else { game.value_a.unwrap() };
                 let opponent_rating_deviation = if game.id_a == id { game.deviation_b.unwrap() } else { game.deviation_a.unwrap() };
-                let expected_outcome = "???";
-                let rating_change = "0";
-                let rating_change_class = "neutral";
-                let rating_change_sequence = "0";
-                let result_wins = if game.id_a == id && game.winner == 1 || game.id_b == id && game.winner == 2 { 1 } else { 0 };
-                let result_losses = 0;
-                let result_percent = 0.0;
                 let timestamp = game.timestamp.to_string();
                 let floor = game.game_floor.to_string();
+                let result_win = if game.id_a == id && game.winner == 1 || game.id_b == id && game.winner == 2 { true } else { false };
 
                 response.history.push(PlayerSet {
                     timestamp,
@@ -318,13 +306,7 @@ async fn player_games(mut db: Connection<Db>,
                     opponent_character_short,
                     opponent_rating_value: opponent_rating_value,
                     opponent_rating_deviation: opponent_rating_deviation,
-                    expected_outcome: expected_outcome.to_string(),
-                    rating_change: rating_change.to_string(),
-                    rating_change_class,
-                    rating_change_sequence: rating_change_sequence.to_string(),
-                    result_wins,
-                    result_losses,
-                    result_percent,
+                    result_win,
                 });
             }
             Json(response)

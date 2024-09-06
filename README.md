@@ -23,7 +23,7 @@ diesel --database-url "${DATABASE_PATH}" migration run
 
 `cargo run pull` will run the timed jobs continuously: grab replay, update ratings, update ranking, etc.
 
-`cargo run hourly` runs the hourly jobs once, then exists.
+`cargo run hourly` runs the hourly jobs once, then exits.
 
 To generate a new model.rs:
 
