@@ -39,7 +39,7 @@ function groupMatches(data, player, char_short) {
     if (
       currentGroup &&
       (prevMatch.opponent_id === match.opponent_id) && 
-      (prevMatch.char_short === match.char_short)
+      (prevMatch.opponent_character_short === match.opponent_character_short)
     ) {
       // Continue the current group if the opponent and character are the same as the previous match
       currentGroup.matches.push(match);
@@ -92,7 +92,15 @@ function Row(props) {
   const navigate = useNavigate();
 
   const { item } = props;
-  console.log(props);
+
+  function onMouseDown(event) {
+    if(event.button === 1) { //Middle mouse click
+      window.open(`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`, '_blank');
+    } else {
+      navigate(`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`);
+    }
+  }
+
   return (
     <React.Fragment>
       <TableRow sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
@@ -108,7 +116,7 @@ function Row(props) {
         <TableCell component="th" scope="row">{item.timestamp}</TableCell>
         <TableCell align="right">{item.floor == '99' ? 'C' : item.floor}</TableCell>
         <TableCell align="right">{item.matches[item.matches.length-1].own_rating_value.toFixed(2)} ±{item.matches[item.matches.length-1].own_rating_deviation.toFixed(2)}</TableCell>
-        <TableCell><TextButton onClick={() => {navigate(`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`)}} component={Link} variant="link">{item.opponent_name}</TextButton></TableCell>
+        <TableCell><TextButton onMouseDown={(event) => {onMouseDown(event)}} component={Link} variant="link">{item.opponent_name}</TextButton></TableCell>
         <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
         <TableCell align="right">{item.matches[item.matches.length-1].opponent_rating_value.toFixed(2)} ±{item.matches[item.matches.length-1].opponent_rating_deviation.toFixed(2)}</TableCell>
         <TableCell align="right">{item.wins} - {item.losses}</TableCell>
