@@ -246,11 +246,11 @@ struct PlayerSet {
     opponent_rating_deviation: f32,
     result_win: bool,
 }
-#[get("/api/player/<player_id>/<char_id>/history?<game_count>&<offset>")]
+#[get("/api/player/<player_id>/<char_id>/history?<count>&<offset>")]
 async fn player_games(mut db: Connection<Db>,
     player_id: &str,
     char_id: &str,
-    game_count: Option<i64>,
+    count: Option<i64>,
     offset: Option<i64>,) -> Json<PlayerGamesResponse> {
 
         if let Ok(id) = i64::from_str_radix(player_id, 10) {
@@ -265,14 +265,14 @@ async fn player_games(mut db: Connection<Db>,
                 }
             };
             
-            let game_count = game_count.unwrap_or(100);
+            let count = count.unwrap_or(100);
             let offset = offset.unwrap_or(0);
     
             let games: Vec<models::Game> = schema::games::table
                 .filter((schema::games::id_a.eq(id).and(schema::games::char_a.eq(char_id as i16)))
                     .or(schema::games::id_b.eq(id).and(schema::games::char_b.eq(char_id as i16))))
                 .order(schema::games::timestamp.desc())
-                .limit(game_count)
+                .limit(count)
                 .offset(offset)
                 .load(&mut db)
                 .await

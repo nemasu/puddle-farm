@@ -1,27 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import { CircularProgress } from '@mui/material';
+import AppBar from '@mui/material/AppBar';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Collapse from '@mui/material/Collapse';
+import IconButton from '@mui/material/IconButton';
+import Link from '@mui/material/Link';
+import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
-import Box from '@mui/material/Box';
-import AppBar from '@mui/material/AppBar';
-import TextButton from '@mui/material/Button';
-import Link from '@mui/material/Link';
-import { useParams, useNavigate } from 'react-router-dom';
-import { JSONParse, JSONStringify } from 'json-with-bigint';
-import Collapse from '@mui/material/Collapse';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import IconButton from '@mui/material/IconButton';
+import { JSONParse } from 'json-with-bigint';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 /* global BigInt */
 
 function getCurrentPlayerRating(player, char_short) {
   for (var key in player.ratings) {
-    if (player.ratings[key].char_short == char_short) {
+    if (player.ratings[key].char_short === char_short) {
       return {rating: player.ratings[key].rating, deviation: player.ratings[key].deviation};
     }
   }
@@ -114,9 +115,9 @@ function Row(props) {
           </IconButton>
         </TableCell>
         <TableCell component="th" scope="row">{item.timestamp}</TableCell>
-        <TableCell align="right">{item.floor == '99' ? 'C' : item.floor}</TableCell>
+        <TableCell align="right">{item.floor === '99' ? 'C' : item.floor}</TableCell>
         <TableCell align="right">{item.matches[item.matches.length-1].own_rating_value.toFixed(2)} ±{item.matches[item.matches.length-1].own_rating_deviation.toFixed(2)}</TableCell>
-        <TableCell><TextButton onMouseDown={(event) => {onMouseDown(event)}} component={Link} variant="link">{item.opponent_name}</TextButton></TableCell>
+        <TableCell><Button onMouseDown={(event) => {onMouseDown(event)}} component={Link} variant="link">{item.opponent_name}</Button></TableCell>
         <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
         <TableCell align="right">{item.matches[item.matches.length-1].opponent_rating_value.toFixed(2)} ±{item.matches[item.matches.length-1].opponent_rating_deviation.toFixed(2)}</TableCell>
         <TableCell align="right">{item.wins} - {item.losses}</TableCell>
@@ -157,11 +158,17 @@ function Row(props) {
 const Player = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
+  const defaultCount = 100;
+
   const navigate = useNavigate();
-  let { player_id, char_short, game_count } = useParams();
+  let { player_id, char_short, count,  offset } = useParams();
   
   const [history, setHistory] = useState([]);
   const [player, setPlayer] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+
+  const [showNext, setShowNext] = useState(true);
 
   let player_id_checked = player_id;
   if (player_id_checked.match(/[a-zA-Z]/)) {
@@ -172,6 +179,7 @@ const Player = () => {
     window.scrollTo(0, 0);
 
     const fetchPlayerAndHistory = async () => {
+      setLoading(true);
       try {
         const player_response = await fetch(API_ENDPOINT + '/player/' + player_id_checked);
         const player_result = await player_response.text().then(body => {
@@ -186,22 +194,52 @@ const Player = () => {
 
         setPlayer(player_result);
 
-        const history_response = await fetch(API_ENDPOINT + '/player/' + player_id_checked +'/' + char_short + '/history?game_count='+ (game_count ? game_count : '100'));
+        const url = API_ENDPOINT
+          + '/player/'
+          + player_id_checked
+          +'/' + char_short
+          + '/history?count=' + (count ? count : '100')
+          + '&offset=' + (offset ? offset : '0');
+        const history_response = await fetch(url);
         const history_result = await history_response.json();
+
+        if(history_result.history.length < (count ? count : defaultCount)) {
+          setShowNext(false);
+        } else {
+          setShowNext(true);
+        }
 
         const groupedData = groupMatches(history_result.history, player_result, char_short);
         setHistory(groupedData);
         
-
+        setLoading(false);
       } catch (error) {
         console.error('Error fetching player data:', error);
       }
     };
     fetchPlayerAndHistory();
-  }, [player_id, char_short, game_count, API_ENDPOINT, player_id_checked]);
+  }, [player_id, char_short, count, API_ENDPOINT, player_id_checked, offset]);
+
+  function onPrev(event) {
+    let nav_count = count ? parseInt(count) : defaultCount;
+    let nav_offset = offset ? parseInt(offset) - parseInt(nav_count) : 0;
+    if(nav_count < 0) {
+      nav_count = defaultCount;
+    }
+    if(nav_offset < 0) {
+      nav_offset = 0;
+    }
+    navigate(`/player/${player_id_checked}/${char_short}/${nav_count}/${nav_offset}`);
+  }
+
+  function onNext(event) {
+    let nav_count = count ? parseInt(count) : defaultCount;
+    let nav_offset = offset ? parseInt(offset) + parseInt(nav_count) : nav_count;
+    navigate(`/player/${player_id_checked}/${char_short}/${nav_count}/${nav_offset}`);
+  }
 
   let player_line;
-  if(player && player.length != 0) {
+  if(player && player.length !== 0) {
     const player_rating = getCurrentPlayerRating(player, char_short);
     if(player_rating) {
       player_line = player.name + ' (' + char_short + ') ' + player_rating.rating + ' ±' + player_rating.deviation;
@@ -219,6 +257,15 @@ const Player = () => {
             {player_line}
           </Typography>
         </Box>
+        { loading ?
+          <CircularProgress
+            size={60}
+            variant="indeterminate"
+            disableShrink={true}
+            sx={{ position: 'absolute', top:'-1px', color:'white' }}
+          />
+          : null
+        }
       </AppBar>
 
       <Box sx={{display:'flex', flexWrap:'nowrap'}}>
@@ -253,16 +300,20 @@ const Player = () => {
           <h4>Characters:</h4>
           {player.ratings && player.ratings.map((item, i) => (
             <Box key={i}>
-              <TextButton onClick={() => {navigate(`/player/${player.id}/${item.char_short}`)}} sx={{textAlign: 'left'}} color='text' >
+              <Button variant="text" onClick={() => {navigate(`/player/${player.id}/${item.char_short}`)}} sx={{textAlign: 'left'}} color='text' >
                 <Typography my={2}>
                   {item.character} {item.rating} ±{item.deviation}
                 </Typography>
-              </TextButton>
+              </Button>
               <br />
             </Box>
           ))}
         <hr style={{marginTop:30}}/>
         </Box>
+      </Box>
+      <Box mx={3} maxWidth="800px" minWidth="800px" sx={{display: 'inline-block'}}>
+      <Button onClick={(event) => onPrev(event)}>Prev</Button>
+      <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
       </Box>
     </React.Fragment>
   );

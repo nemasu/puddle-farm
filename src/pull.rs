@@ -112,7 +112,7 @@ async fn do_hourly_update(conn: &mut AsyncPgConnection) -> Result<(), String> {
 #[allow(dead_code)]
 #[derive(QueryableByName)]
 struct InsertedRankRowId {
-    #[sql_type = "Integer"]
+    #[diesel(sql_type = Integer)]
     rank: i32
 }
 async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> {

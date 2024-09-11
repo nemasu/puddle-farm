@@ -1,16 +1,21 @@
 # Rating Update
 
-This project is a replacement for [Rating Update](https://github.com/nemasu/rating-update), it is still being developed.
+This project is aimed to become a replacement for [Rating Update](https://github.com/nemasu/rating-update).
 
+### Major Changes
+- Rocket 0.5 => Rocket (git) for now, considering Axum.
+- Sqlite3 => Postgres with Diesel ORM
+- Handlebars (templated frontend) => React
+- Rating algorithm
 
 ## Getting Started
 
 ### Backend
 
 A postgresql server needs to be available, set the DATABASE_PATH in your .env file accordingly.
-eg. `DATABASE_PATH="postgresql://user:password@localhost/rating_update?user=ru_user&password=ru_password"`
+eg. `DATABASE_PATH="postgresql://user:password@localhost/rating_update"`
 
-Install diesel_cli, and create the database.
+Install diesel_cli, and create the database:
 ```
 cargo install diesel_cli
 source .env
@@ -40,3 +45,20 @@ cd frontend
 npm install
 npm start
 ```
+---
+### Production
+Release versions can be built with:
+
+Backend:
+```
+cargo build --release
+```
+
+Frontend:
+```
+cd frontend
+npm install
+npm run build
+```
+
+And then copy `frontend/build/*` to your web server's root.

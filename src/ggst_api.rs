@@ -38,61 +38,59 @@ pub async fn get_player_stats(player_id: String) -> Result<String, String> {
 }
 
 pub async fn get_token() -> Result<String, String> {
-    // {
-    //     let token = TOKEN.lock().await;
-    //     if let Some(t) = token.deref() {
-    //         info!("Already have a strive token");
-    //         return Ok(t.to_owned());
-    //     }
-    // }
+    {
+        let token = TOKEN.lock().await;
+        if let Some(t) = token.deref() {
+            info!("Already have a strive token");
+            return Ok(t.to_owned());
+        }
+    }
 
-    // warn!("Grabbing steam token");
-    // let request_data = requests::generate_login_request().await;
-    // let request_data = encrypt_data(&request_data);
+    warn!("Grabbing steam token");
+    let request_data = requests::generate_login_request().await;
+    let request_data = encrypt_data(&request_data);
 
-    // let client = reqwest::Client::new();
-    // let form = client
-    //     .post("https://ggst-game.guiltygear.com/api/user/login")
-    //     .header(header::USER_AGENT, "GGST/Steam")
-    //     .header(header::CACHE_CONTROL, "no-store")
-    //     .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-    //     .header("x-client-version", "1")
-    //     .form(&[("data", request_data)]);
+    let client = reqwest::Client::new();
+    let form = client
+        .post("https://ggst-game.guiltygear.com/api/user/login")
+        .header(header::USER_AGENT, "GGST/Steam")
+        .header(header::CACHE_CONTROL, "no-store")
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .header("x-client-version", "1")
+        .form(&[("data", request_data)]);
 
-    // //Add logging before panic.
-    // let response = match form.send().await {
-    //     Ok(resp) => resp,
-    //     Err(err) => {
-    //         error!("get_token send() error: {}", err);
-    //         panic!(); //force crash to restart server
-    //     }
-    // };
+    //Add logging before panic.
+    let response = match form.send().await {
+        Ok(resp) => resp,
+        Err(err) => {
+            error!("get_token send() error: {}", err);
+            panic!(); //force crash to restart server
+        }
+    };
 
-    // let response_bytes = match response.bytes().await {
-    //     Ok(resp_bytes) => resp_bytes,
-    //     Err(err) => {
-    //         error!("get_token bytes() error: {}", err);
-    //         panic!(); //force crash to restart server
-    //     }
-    // };
+    let response_bytes = match response.bytes().await {
+        Ok(resp_bytes) => resp_bytes,
+        Err(err) => {
+            error!("get_token bytes() error: {}", err);
+            panic!(); //force crash to restart server
+        }
+    };
     
-    // info!("Waiting for strive token");
+    info!("Waiting for strive token");
 
-    // let mut t = TOKEN.lock().await;
+    let mut t = TOKEN.lock().await;
 
-    // if let Ok(r) = decrypt_response::<responses::Login>(&response_bytes) {
-    //     info!("Got token: {}", r.header.token);
-    //     *t = Some(r.header.token.to_owned());
+    if let Ok(r) = decrypt_response::<responses::Login>(&response_bytes) {
+        info!("Got token: {}", r.header.token);
+        *t = Some(r.header.token.to_owned());
 
-    //     // save off token
-    //     let _ = std::fs::write("token.txt", r.header.token.clone());
+        // save off token
+        let _ = std::fs::write("token.txt", r.header.token.clone());
 
-    //     Ok(r.header.token)
-    // } else {
-    //     return Err("Couldn't get strive token".to_owned());
-    // }
-    
-    Ok(std::fs::read_to_string("token.txt").unwrap())
+        Ok(r.header.token)
+    } else {
+        return Err("Couldn't get strive token".to_owned());
+    }
 }
 
 pub async fn get_replays() -> Result<Vec<responses::Replay>, String> {

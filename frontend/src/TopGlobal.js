@@ -1,21 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import { CircularProgress } from '@mui/material';
 import AppBar from '@mui/material/AppBar';
+import Box from '@mui/material/Box';
+import { default as Button, default as TextButton } from '@mui/material/Button';
+import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import { CircularProgress } from '@mui/material';
-import Paper from '@mui/material/Paper';
-import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import TextButton from '@mui/material/Button';
-import Button from '@mui/material/Button';
-import { useNavigate } from 'react-router-dom';
-import { Link } from 'react-router-dom';
-import { useParams } from 'react-router-dom';
 import { JSONParse } from 'json-with-bigint';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 // eslint-disable-next-line
 /* global BigInt */
@@ -140,7 +137,7 @@ const TopGlobal = () => {
           </Table>
         </TableContainer>
       </Box>
-      <Box mx={3} maxWidth="700px" minWidth="600px" sx={{display: 'inline-block'}}>
+      <Box mx={3} maxWidth="600px" minWidth="600px" sx={{display: 'inline-block'}}>
       <Button onClick={(event) => onPrev(event)}>Prev</Button>
       <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
       </Box>

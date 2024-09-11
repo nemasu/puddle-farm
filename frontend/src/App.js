@@ -1,15 +1,14 @@
-import React from 'react';
-import {
-  Routes,
-  Route,
-  Navigate,
-} from "react-router-dom";
-import { createTheme, ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import CssBaseline from '@mui/material/CssBaseline';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
+import React from 'react';
+import { Link, Route, Routes } from "react-router-dom";
+import { ReactComponent as DiscordIcon } from './images/discord-mark-white.svg';
+import { ReactComponent as GitHubIcon } from './images/github-mark-white.svg';
 
-import Player from './Player';
 import NavBar from './NavBar';
+import Player from './Player';
 import TopGlobal from './TopGlobal';
 import TopPlayer from './TopPlayer';
 
@@ -78,12 +77,16 @@ const App = () => {
             />
 
             <Route
-                path="/player/:player_id/:char_short/:game_count?"
+                path="/player/:player_id/:char_short/:count?/:offset?"
                 element={<Player />}
             />
 
           </Routes>
-            
+          <Box sx={{minHeight: 200, textAlign: 'center'}}>
+            <Box sx={{marginTop: 10}}/>
+            <Button component={Link} variant="link" target="_blank" to="https://github.com/nemasu/puddle-farm"><GitHubIcon style={{transform: 'scale(0.35)'}}/></Button>
+            <Button component={Link} variant="link" target="_blank" to="https://discord.gg/vY4mE8exXB"><DiscordIcon/></Button>
+          </Box>
         </ThemeProvider>
       </Box>
     </React.Fragment>
