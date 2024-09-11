@@ -77,6 +77,7 @@ struct PlayerRankResponse  {
     rating: f32,
     deviation: f32,
     char_short: String,
+    char_long: String,
 }
 #[get("/api/top?<count>&<offset>")]
 async fn top_all(mut db: Connection<Db>,
@@ -106,20 +107,21 @@ async fn top_all(mut db: Connection<Db>,
             name: p.1.name.clone(),
             rating: p.2.value,
             deviation: p.2.deviation,
-            char_short: CHAR_NAMES[ p.2.char_id as usize].0.to_string(),
+            char_short: CHAR_NAMES[ p.0.char_id as usize].0.to_string(),
+            char_long: CHAR_NAMES[ p.0.char_id as usize].1.to_string(),
         }
     }).collect();
     
     Json(RankResponse { ranks })
 }
 
-#[get("/api/top_char?<char_id>&<game_count>&<offset>")]
+#[get("/api/top_char?<char_id>&<count>&<offset>")]
 async fn top_char(mut db: Connection<Db>,
     char_id: &str,
-    game_count: Option<i64>,
+    count: Option<i64>,
     offset: Option<i64>,) -> Json<RankResponse> {
 
-    let game_count = game_count.unwrap_or(100);
+    let count = count.unwrap_or(100);
     let offset = offset.unwrap_or(0);
 
     let char_id = match CHAR_NAMES.iter().position(|(c, _)| *c == char_id) {
@@ -136,26 +138,37 @@ async fn top_char(mut db: Connection<Db>,
         .inner_join(schema::player_ratings::table.on(schema::players::id.eq(schema::player_ratings::id)))
         .select((GlobalRank::as_select(), Player::as_select(), PlayerRating::as_select()))
         .filter(schema::global_ranks::char_id.eq(char_id))
+        .filter(schema::player_ratings::char_id.eq(char_id))
         .order(schema::global_ranks::rank.asc())
-        .limit(game_count)
+        .limit(count)
         .offset(offset)
         .load(&mut db)
         .await
         .expect("Error loading games");
     
+
+    let mut rank: i32 = offset as i32 + 1;
     let ranks: Vec<PlayerRankResponse> = games.iter().map(|p| {
-        PlayerRankResponse {
-            rank: p.0.rank,
+        let rank_response = PlayerRankResponse {
+            rank: rank,
             id: p.1.id,
             name: p.1.name.clone(),
             rating: p.2.value,
             deviation: p.2.deviation,
-            char_short: CHAR_NAMES[ p.2.char_id as usize].0.to_string(),
-        }
+            char_short: CHAR_NAMES[ p.0.char_id as usize].0.to_string(),
+            char_long: CHAR_NAMES[ p.0.char_id as usize].1.to_string(),
+        };
+        rank += 1;
+        rank_response
     }).collect();
     
     Json(RankResponse { ranks })
     
+}
+
+#[get("/api/characters")]
+async fn characters() -> Json<Vec<(&'static str, &'static str)>> {
+    Json(CHAR_NAMES.to_vec())
 }
 
 #[derive(Serialize)]
@@ -323,7 +336,8 @@ pub async fn run() {
         player,
         player_games,
         top_all,
-        top_char
+        top_char,
+        characters
     ];
 
     if cfg!(debug_assertions) {//Cors only used for development

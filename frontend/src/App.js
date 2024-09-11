@@ -11,6 +11,7 @@ import Box from '@mui/material/Box';
 import Player from './Player';
 import NavBar from './NavBar';
 import TopGlobal from './TopGlobal';
+import TopPlayer from './TopPlayer';
 
 const App = () => {
   const defaultTheme = createTheme({
@@ -69,6 +70,11 @@ const App = () => {
             <Route
                 path="/top_global/:count?/:offset?"
                 element={<TopGlobal />}
+            />
+
+            <Route
+                path="/top/:char_short/:count?/:offset?"
+                element={<TopPlayer />}
             />
 
             <Route
