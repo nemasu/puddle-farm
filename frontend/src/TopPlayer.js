@@ -6,7 +6,7 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import TablePagination from '@mui/material/TablePagination';
+import { CircularProgress } from '@mui/material';
 import Paper from '@mui/material/Paper';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
@@ -15,8 +15,9 @@ import Button from '@mui/material/Button';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
-import { JSONParse, JSONStringify } from 'json-with-bigint';
+import { JSONParse } from 'json-with-bigint';
 
+// eslint-disable-next-line
 /* global BigInt */
 
 const TopPlayer = () => {
@@ -34,29 +35,28 @@ const TopPlayer = () => {
 
   const [charLong, setCharLong] = useState();
 
+  const [loading, setLoading ] = useState(true);
+
   useEffect(() => {
     window.scrollTo(0, 0);
 
     const fetchRanking = async () => {
+      setLoading(true);
       try {
 
-        if(!count) {
-          count = defaultCount;
-        }
-        if(!offset) {
-          offset = 0;
-        }
-
-        const response = await fetch(API_ENDPOINT
+        const url = API_ENDPOINT
           + '/top_char?'
           + 'char_id=' + char_short
-          + '&count=' + count
-          + '&offset=' + offset);
+          + '&count=' + (count ? count : defaultCount)
+          + '&offset=' + (offset ? offset : 0);
+        const response = await fetch(url);
+        
+        // eslint-disable-next-line
         const result = await response.text().then(body => {
           
           var parsed = JSONParse(body);
 
-          if(parsed.ranks.length == 0) {
+          if(parsed.ranks.length === 0) {
             //navigate(`/`);
             setCharLong("???");
             setRanking([]);
@@ -70,7 +70,7 @@ const TopPlayer = () => {
             parsed.ranks[key].deviation = parsed.ranks[key].deviation.toFixed(2);
           }
 
-          if(parsed.ranks.length < count) {
+          if(parsed.ranks.length < (count ? count : defaultCount) || parsed.ranks.length === 1000) {
             setShowNext(false);
           } else {
             setShowNext(true);
@@ -81,13 +81,14 @@ const TopPlayer = () => {
           return parsed;
         });
 
+        setLoading(false);
       } catch (error) {
         console.error('Error fetching player data:', error);
       }
     };
 
     fetchRanking();
-  }, [char_short, count, offset]);
+  }, [char_short, count, offset, API_ENDPOINT]);
 
   function onPrev(event) {
     let nav_count = count ? parseInt(count) : defaultCount;
@@ -113,6 +114,15 @@ const TopPlayer = () => {
         style={{backgroundImage: "none"}}
         sx={{backgroundColor:"secondary.main"}}
       >
+        { loading ?
+          <CircularProgress
+            size={60}
+            variant="indeterminate"
+            disableShrink={true}
+            sx={{ position: 'absolute', top:'-1px', color:'white' }}
+          />
+          : null
+        }
         <Box sx={{minHeight:100, paddingTop:'30px'}}>
         <Typography align='center' variant="h4">
           {charLong} Leaderboard
