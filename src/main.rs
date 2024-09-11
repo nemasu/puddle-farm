@@ -1,7 +1,7 @@
 extern crate simplelog;
 
 use log::LevelFilter;
-use models::{Player, PlayerRating, GlobalRank};
+use models::{CharacterRank, GlobalRank, Player, PlayerRating};
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::Header;
 use rocket::{Request, Response};
@@ -133,13 +133,13 @@ async fn top_char(mut db: Connection<Db>,
         }
     };
 
-    let games: Vec<(GlobalRank, Player, PlayerRating)> = schema::global_ranks::table
+    let games: Vec<(CharacterRank, Player, PlayerRating)> = schema::character_ranks::table
         .inner_join(schema::players::table)
         .inner_join(schema::player_ratings::table.on(schema::players::id.eq(schema::player_ratings::id)))
-        .select((GlobalRank::as_select(), Player::as_select(), PlayerRating::as_select()))
-        .filter(schema::global_ranks::char_id.eq(char_id))
+        .select((CharacterRank::as_select(), Player::as_select(), PlayerRating::as_select()))
+        .filter(schema::character_ranks::char_id.eq(char_id))
         .filter(schema::player_ratings::char_id.eq(char_id))
-        .order(schema::global_ranks::rank.asc())
+        .order(schema::character_ranks::rank.asc())
         .limit(count)
         .offset(offset)
         .load(&mut db)
