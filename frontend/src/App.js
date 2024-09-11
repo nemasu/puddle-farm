@@ -10,7 +10,7 @@ import Box from '@mui/material/Box';
 
 import Player from './Player';
 import NavBar from './NavBar';
-import Top100 from './Top100';
+import TopGlobal from './TopGlobal';
 
 const App = () => {
   const defaultTheme = createTheme({
@@ -59,26 +59,23 @@ const App = () => {
           <CssBaseline enableColorScheme />
           <NavBar />
           <Routes>
-              <Route
-                exact
-                path="/"
-                element={<Top100 />}
-              />
 
-              <Route
-                  path="/top100"
-                  element={<Top100 />}
-              />
+            <Route
+              exact
+              path="/"
+              element={<TopGlobal />}
+            />
 
-              <Route
-                  path="/player/:player_id/:char_short/:game_count?"
-                  element={<Player />}
-              />
+            <Route
+                path="/top_global/:count?/:offset?"
+                element={<TopGlobal />}
+            />
 
-              <Route
-                  path="*"
-                  element={<Navigate to="/" />}
-              />
+            <Route
+                path="/player/:player_id/:char_short/:game_count?"
+                element={<Player />}
+            />
+
           </Routes>
             
         </ThemeProvider>

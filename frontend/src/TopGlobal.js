@@ -6,30 +6,50 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import TablePagination from '@mui/material/TablePagination';
 import Paper from '@mui/material/Paper';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import TextButton from '@mui/material/Button';
+import Button from '@mui/material/Button';
+import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { useParams } from 'react-router-dom';
 import { JSONParse, JSONStringify } from 'json-with-bigint';
 
 /* global BigInt */
 
-const Top100 = () => {
+const TopGlobal = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
+  const defaultCount = 100;
+
+  const navigate = useNavigate();
+
   const [ranking, setRanking] = useState([]);
+
+  const [showNext, setShowNext] = useState(true);
   
-  let { game_count, offset } = useParams();
+  let { count, offset } = useParams();
+
   useEffect(() => {
+    window.scrollTo(0, 0);
+
     const fetchRanking = async () => {
       try {
+
+        if(!count) {
+          count = defaultCount;
+        }
+        if(!offset) {
+          offset = 0;
+        }
+
         const response = await fetch(API_ENDPOINT
           + '/top?'
-          + 'game_count=' + (game_count ? game_count : '100')
-          + '&offset=' + (offset ? offset : '0'));
-          const result = await response.text().then(body => {
+          + 'count=' + count
+          + '&offset=' + offset);
+        const result = await response.text().then(body => {
           
           var parsed = JSONParse(body);
 
@@ -38,6 +58,12 @@ const Top100 = () => {
             parsed.ranks[key].deviation = parsed.ranks[key].deviation.toFixed(2);
           }
 
+          if(parsed.ranks.length < count) {
+            setShowNext(false);
+          } else {
+            setShowNext(true);
+          }
+          
           setRanking(parsed.ranks);
 
           return parsed;
@@ -49,7 +75,25 @@ const Top100 = () => {
     };
 
     fetchRanking();
-  }, []);
+  }, [count, offset]);
+
+  function onPrev(event) {
+    let nav_count = count ? parseInt(count) : defaultCount;
+    let nav_offset = offset ? parseInt(offset) - parseInt(nav_count) : 0;
+    if(nav_count < 0) {
+      nav_count = defaultCount;
+    }
+    if(nav_offset < 0) {
+      nav_offset = 0;
+    }
+    navigate(`/top_global/${nav_count}/${nav_offset}`);
+  }
+
+  function onNext(event) {
+    let nav_count = count ? parseInt(count) : defaultCount;
+    let nav_offset = offset ? parseInt(offset) + parseInt(nav_count) : nav_count;
+    navigate(`/top_global/${nav_count}/${nav_offset}`);
+  }
 
   return (
     <React.Fragment>
@@ -59,7 +103,7 @@ const Top100 = () => {
       >
         <Box sx={{minHeight:100, paddingTop:'30px'}}>
         <Typography align='center' variant="h4">
-          Top 100 Players
+          Top Players
         </Typography>
         </Box>
       </AppBar>
@@ -87,8 +131,14 @@ const Top100 = () => {
           </Table>
         </TableContainer>
       </Box>
+      <Box mx={3} maxWidth="700px" minWidth="600px" sx={{display: 'inline-block'}}>
+      <Button onClick={(event) => onPrev(event)}>Prev</Button>
+      <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
+      </Box>
+      <Button align="right" onClick={() => navigate(`/top_global/1000/0`)}>View All</Button>
+      
     </React.Fragment>
   );
 };
 
-export default Top100;
+export default TopGlobal;

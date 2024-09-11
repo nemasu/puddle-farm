@@ -12,7 +12,7 @@ import { Button } from '@mui/material';
 import { Link } from "react-router-dom";
 
 const pages = [
-  {name:'Top 100', link:'./top100'},
+  {name:'Top', link:'./top_global'},
 ];
 
 function NavBar() {

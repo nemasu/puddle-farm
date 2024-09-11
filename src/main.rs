@@ -78,12 +78,12 @@ struct PlayerRankResponse  {
     deviation: f32,
     char_short: String,
 }
-#[get("/api/top?<game_count>&<offset>")]
+#[get("/api/top?<count>&<offset>")]
 async fn top_all(mut db: Connection<Db>,
-    game_count: Option<i64>,
+    count: Option<i64>,
     offset: Option<i64>,) -> Json<RankResponse> {
     
-    let game_count = game_count.unwrap_or(100);
+    let count = count.unwrap_or(100);
     let offset = offset.unwrap_or(0);
 
     let games: Vec<(GlobalRank, Player, PlayerRating)> = schema::global_ranks::table
@@ -92,7 +92,7 @@ async fn top_all(mut db: Connection<Db>,
         .select((GlobalRank::as_select(), Player::as_select(), PlayerRating::as_select()))
         .filter(schema::global_ranks::char_id.eq(schema::player_ratings::char_id))
         .order(schema::global_ranks::rank.asc())
-        .limit(game_count)
+        .limit(count)
         .offset(offset)
         .load(&mut db)
         .await
