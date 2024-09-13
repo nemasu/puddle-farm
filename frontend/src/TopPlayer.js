@@ -121,7 +121,7 @@ const TopPlayer = () => {
           : null
         }
         <Box sx={{minHeight:100, paddingTop:'30px'}}>
-        <Typography align='center' variant="h4">
+        <Typography align='center' variant="pageHeader">
           {charLong} Leaderboard
         </Typography>
         </Box>

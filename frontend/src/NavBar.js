@@ -10,6 +10,7 @@ import Toolbar from '@mui/material/Toolbar';
 import { JSONParse, JSONStringify } from 'json-with-bigint';
 import React, { useEffect, useState } from 'react';
 import { Link } from "react-router-dom";
+import Themes from './Themes';
 
 var pages = [
   {name:'Top', link:'./top_global'},
@@ -20,10 +21,14 @@ function resetCharacters() {
   pages[1].list = [];
 }
 
+const themes = Array.from(Themes.keys());
+
 function NavBar() {
   const [anchorElNav, setAnchorElNav] = React.useState(null);
 
   const [characterElNav, setCharacterElNav] = React.useState(null);
+
+  const [themeElNav, setThemeElNav] = React.useState(null);
 
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
@@ -70,6 +75,18 @@ function NavBar() {
   };
   const handleCloseCharNavMenu = () => {
     setCharacterElNav(null);
+  };
+
+  const handleOpenThemeNavMenu = (event) => {
+    setThemeElNav(event.currentTarget);
+  };
+  const handleCloseThemeNavMenu = (char) => {
+    setThemeElNav(null);
+    
+    if( Array.from(themes.values()).includes(char) ) {
+      localStorage.setItem('theme', char);
+      window.location.reload();
+    }
   };
 
   return (
@@ -132,6 +149,37 @@ function NavBar() {
                 )
               ))}
             </Menu>
+            <Button m={0}
+              component={Link} 
+              onClick={handleOpenThemeNavMenu}
+              sx={{ my: 1, color: 'white', display: 'block' }
+            }>
+              Theme
+            </Button>
+            <Menu
+              id="menu-charbar"
+              anchorEl={themeElNav}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'left',
+              }}
+              keepMounted
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'left',
+              }}
+              open={Boolean(themeElNav)}
+              onClose={handleCloseThemeNavMenu}
+              sx={{ display: { xs: 'flex', md: 'none' } }}
+            >
+              <Box style={{display: 'flex', flexWrap: 'wrap', maxWidth: '500px'}}>
+              {themes.map((char) => (
+                <MenuItem component={Link} key={char} onClick={() => handleCloseThemeNavMenu(char)}>
+                  {char}
+                </MenuItem>
+              ))}
+              </Box>
+            </Menu>
           </Box>
           <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
             {pages.map((page) => (
@@ -184,6 +232,37 @@ function NavBar() {
               )
             ))}
           </Box>
+          <Button m={0}
+              component={Link} 
+              onClick={handleOpenThemeNavMenu}
+              sx={{ my: 1, color: 'white', display: 'block' }
+            }>
+              Theme
+            </Button>
+            <Menu
+              id="menu-charbar"
+              anchorEl={themeElNav}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'left',
+              }}
+              keepMounted
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'left',
+              }}
+              open={Boolean(themeElNav)}
+              onClose={handleCloseThemeNavMenu}
+              sx={{ display: { xs: 'none', md: 'flex' } }}
+            >
+              <Box style={{display: 'flex', flexWrap: 'wrap', maxWidth: '500px'}}>
+              {themes.map((char) => (
+                <MenuItem component={Link} key={char} onClick={() => handleCloseThemeNavMenu(char)}>
+                  {char}
+                </MenuItem>
+              ))}
+              </Box>
+            </Menu>
         </Toolbar>
       </Container>
     </AppBar>
