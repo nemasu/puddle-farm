@@ -118,7 +118,7 @@ async fn decay(connection: &mut AsyncPgConnection) -> Result<(), String> {
     info!("Decaying ratings");
 
     diesel::update(player_ratings::table)
-        .set(player_ratings::deviation.eq((player_ratings::deviation*1.003)+0.01))
+        .set((player_ratings::deviation.eq((player_ratings::deviation*1.003)+0.01), player_ratings::last_decay.eq(Utc::now().naive_utc())))
         .filter(player_ratings::deviation.lt(250.0))
         .execute(connection)
         .await
