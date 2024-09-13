@@ -95,6 +95,11 @@ pub async fn do_hourly_update_once() {
 }
 
 async fn do_hourly_update(conn: &mut AsyncPgConnection) -> Result<(), String> {
+    
+    if let Err(e) = decay(conn).await {
+        error!("decay failed: {e}");
+    }
+    
     if let Err(e) = update_ranks(conn).await {
         error!("update_ranks failed: {e}");
     }
@@ -106,6 +111,19 @@ async fn do_hourly_update(conn: &mut AsyncPgConnection) -> Result<(), String> {
         .execute(conn)
         .await
         .unwrap();
+    Ok(())
+}
+
+async fn decay(connection: &mut AsyncPgConnection) -> Result<(), String> {
+    info!("Decaying ratings");
+
+    diesel::update(player_ratings::table)
+        .set(player_ratings::deviation.eq((player_ratings::deviation*1.003)+0.01))
+        .filter(player_ratings::deviation.lt(250.0))
+        .execute(connection)
+        .await
+        .unwrap();
+
     Ok(())
 }
 
