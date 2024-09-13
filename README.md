@@ -13,7 +13,7 @@ This project is aimed to become a replacement for [Rating Update](https://github
 ### Backend
 
 A postgresql server needs to be available, set the DATABASE_PATH in your .env file accordingly.
-eg. `DATABASE_PATH="postgresql://user:password@localhost/rating_update"`
+eg. `DATABASE_PATH="postgresql://user:password@localhost/puddle_farm"`
 
 Install diesel_cli, and create the database:
 ```
