@@ -1,4 +1,4 @@
-# Rating Update
+# Puddle Farm
 
 This project is aimed to become a replacement for [Rating Update](https://github.com/nemasu/rating-update).
 
