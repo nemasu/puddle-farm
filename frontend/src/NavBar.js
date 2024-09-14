@@ -93,7 +93,7 @@ function NavBar() {
     <AppBar position="static" style={{backgroundImage: "none"}}>
       <Container maxWidth="md">
         <Toolbar disableGutters>
-          <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
+          <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>{/* Mobile view */}
             <IconButton
               size="large"
               aria-label="Menu"
@@ -102,7 +102,7 @@ function NavBar() {
               onClick={handleOpenNavMenu}
               color="inherit"
             >
-              <MenuIcon />
+              <MenuIcon /> {/* Mobile view - menu icon */}
             </IconButton>
             <Menu
               id="menu-appbar"
@@ -118,8 +118,8 @@ function NavBar() {
               }}
               open={Boolean(anchorElNav)}
               onClose={handleCloseNavMenu}
-              sx={{ display: { xs: 'block', md: 'none' } }}
-            >
+              sx={{ display: { xs: 'block', md: 'none' } }} 
+            > {/* Mobile view - menu */}
               {pages.map((page) => (
                 //If the page has a 'list' attribute that is an array, render a submenu
                 'list' in page ? (
@@ -149,11 +149,11 @@ function NavBar() {
                 )
               ))}
             </Menu>
-            <Button m={0}
+            <Button m={0} 
               component={Link} 
               onClick={handleOpenThemeNavMenu}
               sx={{ my: 1, color: 'white', display: 'block' }
-            }>
+            }> {/* Mobile view - theme button */}
               Theme
             </Button>
             <Menu
@@ -181,7 +181,7 @@ function NavBar() {
               </Box>
             </Menu>
           </Box>
-          <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
+          <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>{/* Desktop view */}
             {pages.map((page) => (
               //If the page has a 'list' attribute that is an array, render a submenu
               'list' in page ? (
@@ -193,7 +193,7 @@ function NavBar() {
                     sx={{ my: 1, color: 'white', display: 'block' }
                   }>
                     Characters
-                  </Button>
+                  </Button> {/* Desktop view - character menu*/}
                   <Menu
                     id="menu-charbar"
                     anchorEl={characterElNav}
@@ -226,19 +226,20 @@ function NavBar() {
                   to={page.link}
                   onClick={handleCloseCharNavMenu}
                   sx={{ my: 1, color: 'white', display: 'block' }
-                }>
+                }> {/* Desktop view  - button*/}
                   {page.name}
                 </MenuItem>
               )
             ))}
           </Box>
-          <Button m={0}
-              component={Link} 
-              onClick={handleOpenThemeNavMenu}
-              sx={{ my: 1, color: 'white', display: 'block' }
+          <Box sx={{ display: { xs: 'none', md: 'flex' } }}> {/* Desktop view - right box */}
+            <Button m={0}
+                component={Link} 
+                onClick={handleOpenThemeNavMenu}
+                sx={{ my: 1, color: 'white', display: 'block' }
             }>
               Theme
-            </Button>
+            </Button> {/* Desktop view - theme button */}
             <Menu
               id="menu-charbar"
               anchorEl={themeElNav}
@@ -263,6 +264,7 @@ function NavBar() {
               ))}
               </Box>
             </Menu>
+          </Box>
         </Toolbar>
       </Container>
     </AppBar>
