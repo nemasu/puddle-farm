@@ -10,6 +10,7 @@ import NavBar from './NavBar';
 import Player from './Player';
 import TopGlobal from './TopGlobal';
 import TopPlayer from './TopPlayer';
+import Search from './Search';
 import ThemeManager from './ThemeManager';
 
 const App = () => {
@@ -40,6 +41,11 @@ const App = () => {
             <Route
                 path="/player/:player_id/:char_short/:count?/:offset?"
                 element={<Player />}
+            />
+
+            <Route
+                path="/search/:search_string/:exact?"
+                element={<Search />}
             />
 
           </Routes>

@@ -331,13 +331,66 @@ async fn player_games(mut db: Connection<Db>,
         }
 }
 
+#[derive(Serialize)]
+struct SearchResponse  {
+    results: Vec<PlayerSearchResponse>,
+}
+
+#[derive(Serialize)]
+struct PlayerSearchResponse  {
+    id: i64,
+    name: String,
+    rating: f32,
+    deviation: f32,
+    char_short: String,
+    char_long: String,
+}
+#[get("/api/player/search?<search_string>&<exact>")]
+async fn player_search(mut db: Connection<Db>,
+    search_string: &str,
+    exact: Option<bool>,
+    ) -> Json<SearchResponse> {
+
+        let count = 100;
+        let offset = 0;
+
+        let exact_like = if exact.unwrap_or(false) { format!("{}", search_string) } else { format!("%{}%", search_string) };
+
+        let games: Vec<(Player, PlayerRating)> = schema::players::table
+            .inner_join(schema::player_ratings::table.on(schema::player_ratings::id.eq(schema::players::id)))
+            .select((Player::as_select(), PlayerRating::as_select()))
+            .filter(schema::players::name.ilike(exact_like))
+            .limit(count)
+            .offset(offset)
+            .load(&mut db)
+            .await
+            .expect("Error loading games");
+        
+        //Create response from games
+        let results: Vec<PlayerSearchResponse> = games.iter().map(|p| {
+            PlayerSearchResponse {
+                id: p.0.id,
+                name: p.0.name.clone(),
+                rating: p.1.value,
+                deviation: p.1.deviation,
+                char_short: CHAR_NAMES[ p.1.char_id as usize].0.to_string(),
+                char_long: CHAR_NAMES[ p.1.char_id as usize].1.to_string(),
+            }
+        }).collect();
+        
+        Json(SearchResponse { results })
+
+    }
+
+
 pub async fn run() {
     let routes = routes![
         player,
         player_games,
         top_all,
         top_char,
-        characters
+        characters,
+        player_search,
     ];
 
     if cfg!(debug_assertions) {//Cors only used for development

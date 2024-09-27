@@ -7,9 +7,13 @@ import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Toolbar from '@mui/material/Toolbar';
-import { JSONParse, JSONStringify } from 'json-with-bigint';
+import { JSONParse } from 'json-with-bigint';
 import React, { useEffect, useState } from 'react';
 import { Link } from "react-router-dom";
+import TextField from '@mui/material/TextField';
+import SearchIcon from '@mui/icons-material/Search';
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
+import { useNavigate } from 'react-router-dom';
 import Themes from './Themes';
 
 var pages = [
@@ -24,15 +28,38 @@ function resetCharacters() {
 const themes = Array.from(Themes.keys());
 
 function NavBar() {
+
+  const navigate = useNavigate();
+
   const [anchorElNav, setAnchorElNav] = React.useState(null);
 
   const [characterElNav, setCharacterElNav] = React.useState(null);
 
   const [themeElNav, setThemeElNav] = React.useState(null);
 
+  const [searchString, setSearchString] = useState('');
+
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
   const [characters, setCharacters] = useState([]);
+
+  const handleSearchChange = (event) => {
+    setSearchString(event.target.value);
+  };
+
+  const handleSearchKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      navigate(`/search/${searchString}`);
+    }
+  };
+
+  const handleSearchClick = () => {
+    navigate(`/search/${searchString}`);
+  };
+
+  const handleExactSearchClick = () => {
+    navigate(`/search/${searchString}/exact`);
+  };
 
   useEffect(() => {
     const fetchCharacterList = async () => {
@@ -61,7 +88,7 @@ function NavBar() {
     };
 
     fetchCharacterList();
-  }, []);
+  }, [API_ENDPOINT]);
 
   const handleOpenNavMenu = (event) => {
     setAnchorElNav(event.currentTarget);
@@ -149,10 +176,16 @@ function NavBar() {
                 )
               ))}
             </Menu>
+            {/* Mobile View - Search */}
+            <TextField id="search_string" variant="outlined" label="Search..." style={{marginTop: 5}} value={searchString} onChange={handleSearchChange} onKeyDown={handleSearchKeyDown}/>
+            <Box>
+              <SearchIcon style={{marginTop: 2, fontSize: 30, display: 'block', cursor: 'pointer'}}onClick={handleSearchClick} />
+              <ZoomInIcon style={{fontSize: 30, cursor: 'pointer'}} onClick={handleExactSearchClick} />
+            </Box>
             <Button m={0} 
               component={Link} 
               onClick={handleOpenThemeNavMenu}
-              sx={{ my: 1, color: 'white', display: 'block' }
+              sx={{ my: 2, color: 'white', display: 'block' }
             }> {/* Mobile view - theme button */}
               Theme
             </Button>
@@ -233,10 +266,16 @@ function NavBar() {
             ))}
           </Box>
           <Box sx={{ display: { xs: 'none', md: 'flex' } }}> {/* Desktop view - right box */}
+            {/* Desktop View - Search */}
+            <TextField id="search_string" variant="outlined" label="Search..." style={{marginTop: 5}} value={searchString} onChange={handleSearchChange} onKeyDown={handleSearchKeyDown}/>
+            <Box>
+              <SearchIcon style={{marginTop: 2, fontSize: 30, display: 'block', cursor: 'pointer'}}onClick={handleSearchClick} />
+              <ZoomInIcon style={{fontSize: 30, cursor: 'pointer'}} onClick={handleExactSearchClick} />
+            </Box>
             <Button m={0}
                 component={Link} 
                 onClick={handleOpenThemeNavMenu}
-                sx={{ my: 1, color: 'white', display: 'block' }
+                sx={{ my: 2, color: 'white', display: 'block' }
             }>
               Theme
             </Button> {/* Desktop view - theme button */}
