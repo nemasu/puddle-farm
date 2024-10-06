@@ -245,6 +245,7 @@ struct PlayerSet {
     opponent_rating_value: f32,
     opponent_rating_deviation: f32,
     result_win: bool,
+    odds: f32,
 }
 #[get("/api/player/<player_id>/<char_id>/history?<count>&<offset>")]
 async fn player_games(mut db: Connection<Db>,
@@ -298,6 +299,7 @@ async fn player_games(mut db: Connection<Db>,
                 let timestamp = game.timestamp.to_string();
                 let floor = game.game_floor.to_string();
                 let result_win = if game.id_a == id && game.winner == 1 || game.id_b == id && game.winner == 2 { true } else { false };
+                let odds = if game.id_a == id {game.win_chance.unwrap()} else {1.0 - game.win_chance.unwrap()};
 
                 response.history.push(PlayerSet {
                     timestamp,
@@ -320,6 +322,7 @@ async fn player_games(mut db: Connection<Db>,
                     opponent_rating_value: opponent_rating_value,
                     opponent_rating_deviation: opponent_rating_deviation,
                     result_win,
+                    odds,
                 });
             }
             Json(response)
