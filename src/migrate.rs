@@ -235,6 +235,16 @@ fn migrate_update_ratings(connection: &mut PgConnection, new_games: &Vec<Game>) 
         };
 
 
+
+        //Calculate value and deviation
+        let (new_value_a, new_value_b, new_deviation_a, new_deviation_b, win_prob) = update_mean_and_variance(
+            player_rating_a.value as f64,
+            player_rating_a.deviation as f64,
+            player_rating_b.value as f64,
+            player_rating_b.deviation as f64,
+            g.winner == 1,
+        );
+
         //Update game table with player ratings
         diesel::update(schema::games::table)
             .filter(schema::games::timestamp.eq(g.timestamp))
@@ -249,26 +259,18 @@ fn migrate_update_ratings(connection: &mut PgConnection, new_games: &Vec<Game>) 
                 schema::games::deviation_a.eq(player_rating_a.deviation),
                 schema::games::value_b.eq(player_rating_b.value),
                 schema::games::deviation_b.eq(player_rating_b.deviation),
+                schema::games::win_chance.eq(win_prob as f32),
             ))
             .execute(connection)
             .unwrap();
-
-        //Calculate value and deviation
-        let (value_a, value_b, deviation_a, deviation_b) = update_mean_and_variance(
-            player_rating_a.value as f64,
-            player_rating_a.deviation as f64,
-            player_rating_b.value as f64,
-            player_rating_b.deviation as f64,
-            g.winner == 1,
-        );
 
         //Update player_rating a
         diesel::update(schema::player_ratings::table)
             .filter(schema::player_ratings::id.eq(g.id_a))
             .filter(schema::player_ratings::char_id.eq(g.char_a))
             .set((
-                schema::player_ratings::value.eq(value_a as f32),
-                schema::player_ratings::deviation.eq(deviation_a as f32),
+                schema::player_ratings::value.eq(new_value_a as f32),
+                schema::player_ratings::deviation.eq(new_deviation_a as f32),
             ))
             .execute(connection)
             .unwrap();
@@ -278,8 +280,8 @@ fn migrate_update_ratings(connection: &mut PgConnection, new_games: &Vec<Game>) 
             .filter(schema::player_ratings::id.eq(g.id_b))
             .filter(schema::player_ratings::char_id.eq(g.char_b))
             .set((
-                schema::player_ratings::value.eq(value_b as f32),
-                schema::player_ratings::deviation.eq(deviation_b as f32),
+                schema::player_ratings::value.eq(new_value_b as f32),
+                schema::player_ratings::deviation.eq(new_deviation_b as f32),
             ))
             .execute(connection)
             .unwrap();

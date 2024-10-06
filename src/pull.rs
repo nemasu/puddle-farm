@@ -371,6 +371,15 @@ async fn update_ratings(connection: &mut AsyncPgConnection, new_games: &Vec<Game
         };
 
 
+        //Calculate value and deviation
+        let (new_value_a, new_value_b, new_deviation_a, new_deviation_b, win_prob) = update_mean_and_variance(
+            player_rating_a.value as f64,
+            player_rating_a.deviation as f64,
+            player_rating_b.value as f64,
+            player_rating_b.deviation as f64,
+            g.winner == 1,
+        );
+
         //Update game table with player ratings
         diesel::update(games::table)
             .filter(games::timestamp.eq(g.timestamp))
@@ -385,27 +394,19 @@ async fn update_ratings(connection: &mut AsyncPgConnection, new_games: &Vec<Game
                 games::deviation_a.eq(player_rating_a.deviation),
                 games::value_b.eq(player_rating_b.value),
                 games::deviation_b.eq(player_rating_b.deviation),
+                games::win_chance.eq(win_prob as f32),
             ))
             .execute(connection)
             .await
             .unwrap();
-
-        //Calculate value and deviation
-        let (value_a, value_b, deviation_a, deviation_b) = update_mean_and_variance(
-            player_rating_a.value as f64,
-            player_rating_a.deviation as f64,
-            player_rating_b.value as f64,
-            player_rating_b.deviation as f64,
-            g.winner == 1,
-        );
 
         //Update player_rating a
         diesel::update(player_ratings::table)
             .filter(player_ratings::id.eq(g.id_a))
             .filter(player_ratings::char_id.eq(g.char_a))
             .set((
-                player_ratings::value.eq(value_a as f32),
-                player_ratings::deviation.eq(deviation_a as f32),
+                player_ratings::value.eq(new_value_a as f32),
+                player_ratings::deviation.eq(new_deviation_a as f32),
             ))
             .execute(connection)
             .await
@@ -416,8 +417,8 @@ async fn update_ratings(connection: &mut AsyncPgConnection, new_games: &Vec<Game
             .filter(player_ratings::id.eq(g.id_b))
             .filter(player_ratings::char_id.eq(g.char_b))
             .set((
-                player_ratings::value.eq(value_b as f32),
-                player_ratings::deviation.eq(deviation_b as f32),
+                player_ratings::value.eq(new_value_b as f32),
+                player_ratings::deviation.eq(new_deviation_b as f32),
             ))
             .execute(connection)
             .await
@@ -428,7 +429,7 @@ async fn update_ratings(connection: &mut AsyncPgConnection, new_games: &Vec<Game
     Ok(())
 }
 
-pub fn update_mean_and_variance(mean_a: f64, sigma_a: f64, mean_b: f64, sigma_b: f64, a_wins: bool) -> (f64, f64, f64, f64) {
+pub fn update_mean_and_variance(mean_a: f64, sigma_a: f64, mean_b: f64, sigma_b: f64, a_wins: bool) -> (f64, f64, f64, f64, f64) {
     //### Calculate some helpful values. ###
     
     let rating_diff = mean_a - mean_b; //#This can be negative, that is intended.
@@ -518,5 +519,5 @@ pub fn update_mean_and_variance(mean_a: f64, sigma_a: f64, mean_b: f64, sigma_b:
     //#This should be complimented with real time variance increase. I'd suggest no change for the first 21 hours, and then a old_variance*1.05 + 1 increase every 21 hours after.
     //#There are advantages to not using 24 hours.
 
-    (mean_a_new, mean_b_new, sigma_a_new, sigma_b_new)
+    (mean_a_new, mean_b_new, sigma_a_new, sigma_b_new, win_prob)
 }
