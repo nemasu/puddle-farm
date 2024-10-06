@@ -251,7 +251,7 @@ async fn player_games(mut db: Connection<Db>,
     player_id: &str,
     char_id: &str,
     count: Option<i64>,
-    offset: Option<i64>,) -> Json<PlayerGamesResponse> {
+    offset: Option<i64>, ) -> Json<PlayerGamesResponse> {
 
         if let Ok(id) = i64::from_str_radix(player_id, 10) {
             let char_id = match CHAR_NAMES.iter().position(|(c, _)| *c == char_id) {

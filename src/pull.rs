@@ -265,6 +265,7 @@ async fn grab_games(connection: &mut AsyncPgConnection) -> Result<Vec<Game>, Str
             deviation_a: None,
             value_b: None,
             deviation_b: None,
+            win_chance: None,
         };
 
         if let Err(e) = update_player_info(connection, &new_game).await {
@@ -519,5 +520,5 @@ pub fn update_mean_and_variance(mean_a: f64, sigma_a: f64, mean_b: f64, sigma_b:
     //#This should be complimented with real time variance increase. I'd suggest no change for the first 21 hours, and then a old_variance*1.05 + 1 increase every 21 hours after.
     //#There are advantages to not using 24 hours.
 
-    (mean_a_new, mean_b_new, sigma_a_new, sigma_b_new, win_prob)
+    (mean_a_new, mean_b_new, sigma_a_new, sigma_b_new, win_prob.into())
 }
