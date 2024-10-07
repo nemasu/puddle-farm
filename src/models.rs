@@ -38,6 +38,7 @@ pub struct Game {
     pub deviation_a: Option<f32>,
     pub value_b: Option<f32>,
     pub deviation_b: Option<f32>,
+    pub win_chance: Option<f32>,
 }
 
 #[derive(Selectable, Insertable, Queryable, Identifiable)]

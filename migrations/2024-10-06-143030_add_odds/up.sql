@@ -1,0 +1,1 @@
+ALTER TABLE games ADD win_chance REAL;
