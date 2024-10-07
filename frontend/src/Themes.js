@@ -48,7 +48,6 @@ Themes.set('Sol', createTheme({
     },
   }));
 
-
 Themes.set('Ky', createTheme({
   palette: {
     mode: 'dark',
