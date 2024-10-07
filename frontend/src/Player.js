@@ -68,6 +68,7 @@ function groupMatches(data, player, char_short) {
         matches: [match],
         wins: match.result_win ? 1 : 0,
         losses: match.result_win ? 0 : 1,
+        odds: match.odds,
         ratingChange: 0,
         timestamp: match.timestamp,
       };
@@ -121,6 +122,7 @@ function Row(props) {
         <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
         <TableCell align="right">{item.matches[item.matches.length-1].opponent_rating_value.toFixed(2)} ±{item.matches[item.matches.length-1].opponent_rating_deviation.toFixed(2)}</TableCell>
         <TableCell align="right">{item.wins} - {item.losses}</TableCell>
+        <TableCell align="right">{(item.odds === 1.0 || item.odds === 0.0) ? '' : (item.odds*100).toFixed(1)+'%' }</TableCell>
         <TableCell align="right">{item.ratingChange.toFixed(2) > 0 ? '+' : ''}{item.ratingChange.toFixed(2)}</TableCell>
       </TableRow>
       <TableRow id={item.timestamp}>
@@ -283,6 +285,7 @@ const Player = () => {
                 <TableCell align="right">Opponent Character</TableCell>
                 <TableCell align="right">Opponent Rating</TableCell>
                 <TableCell align="right">Result</TableCell>
+                <TableCell align="right">Odds</TableCell>
                 <TableCell align="right">Rating Change</TableCell>
               </TableRow>
             </TableHead>
