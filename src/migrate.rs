@@ -57,7 +57,7 @@ pub fn migrate(sqlite_db: &str, transaction_amount: i64) {
             
             let mut new_games = Vec::new();
 
-            let mut stmt = sqlite_connection.prepare("SELECT timestamp, id_a, name_a, char_a, platform_a, id_b, name_b, char_b, platform_b, winner, game_floor, win_chance FROM games ORDER BY timestamp ASC LIMIT ? OFFSET ? ").unwrap();
+            let mut stmt = sqlite_connection.prepare("SELECT timestamp, id_a, name_a, char_a, platform_a, id_b, name_b, char_b, platform_b, winner, game_floor FROM games ORDER BY timestamp ASC LIMIT ? OFFSET ? ").unwrap();
             let mut rows = stmt.query([transaction_amount, offset]).unwrap();
             while let Some(row) = rows.next().unwrap() {
                 
