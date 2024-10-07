@@ -133,7 +133,7 @@ Themes.set('Nagoriyuki', createTheme({
     MuiAppBar: {
       styleOverrides: {
         root: {
-          backgroundColor: '#217DBB',
+          backgroundColor: '#60304f',
         },
       },
     },
