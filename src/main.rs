@@ -299,7 +299,7 @@ async fn player_games(mut db: Connection<Db>,
                 let timestamp = game.timestamp.to_string();
                 let floor = game.game_floor.to_string();
                 let result_win = if game.id_a == id && game.winner == 1 || game.id_b == id && game.winner == 2 { true } else { false };
-                let odds = if game.id_a == id {game.win_chance.unwrap()} else {1.0 - game.win_chance.unwrap()};
+                let odds = if game.id_a == id {game.win_chance.unwrap_or(0.0)} else {1.0 - game.win_chance.unwrap_or(0.0)};
 
                 response.history.push(PlayerSet {
                     timestamp,
