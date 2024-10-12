@@ -127,6 +127,11 @@ const TopPlayer = () => {
         </Box>
       </AppBar>
       <Box m={4} maxWidth="700px">
+        <Box mx={3} maxWidth="500px" minWidth="500px" sx={{display: 'inline-block'}}>
+          <Button onClick={(event) => onPrev(event)}>Prev</Button>
+          <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
+        </Box>
+        <Button align="right" onClick={() => navigate(`/top/${char_short}/1000/0`)}>View All</Button>
         <TableContainer component={Paper}>
           <Table size="small">
             <TableHead>
@@ -149,13 +154,12 @@ const TopPlayer = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        <Box mx={3} maxWidth="500px" minWidth="500px" sx={{display: 'inline-block'}}>
+          <Button onClick={(event) => onPrev(event)}>Prev</Button>
+          <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
+        </Box>
+        <Button align="right" onClick={() => navigate(`/top/${char_short}/1000/0`)}>View All</Button>
       </Box>
-      <Box mx={3} maxWidth="600px" minWidth="600px" sx={{display: 'inline-block'}}>
-      <Button onClick={(event) => onPrev(event)}>Prev</Button>
-      <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
-      </Box>
-      <Button align="right" onClick={() => navigate(`/top/${char_short}/1000/0`)}>View All</Button>
-      
     </React.Fragment>
   );
 };

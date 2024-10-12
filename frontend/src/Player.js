@@ -28,12 +28,19 @@ function getCurrentPlayerRating(player, char_short) {
   }
 }
 
-function groupMatches(data, player, char_short) {
+function groupMatches(data, player, char_short, has_offset) {
   const groupedData = [];
   let currentGroup = null;
   data.reverse();
 
-  for (let i = 0; i < data.length; i++) {
+  let limit;
+  if( has_offset ) {
+    limit = data.length - 1;
+  } else {
+    limit = data.length;
+  }
+
+  for (let i = 0; i < limit; i++) {
     const match = data[i];
     const prevMatch = i > 0 ? data[i - 1] : null;
 
@@ -80,8 +87,13 @@ function groupMatches(data, player, char_short) {
   groupedData.reverse();
   groupedData[0].matches.reverse();
 
-  const player_rating = getCurrentPlayerRating(player, char_short);
-  
+  let player_rating = {};
+  if( has_offset ) {
+    player_rating.rating = data[data.length-1].own_rating_value;
+  } else {
+    player_rating = getCurrentPlayerRating(player, char_short);
+  }
+    
   const lastChange = player_rating.rating - groupedData[0].matches[0].own_rating_value;
   groupedData[0].ratingChange += lastChange;
   groupedData[0].matches[0].ratingChange = lastChange.toFixed(2);
@@ -196,12 +208,14 @@ const Player = () => {
 
         setPlayer(player_result);
 
+        const has_offset = offset ? true : false;
+
         const url = API_ENDPOINT
           + '/player/'
           + player_id_checked
           +'/' + char_short
-          + '/history?count=' + (count ? count : '100')
-          + '&offset=' + (offset ? offset : '0');
+          + '/history?count=' + ((has_offset && offset !== '0') ? Number(count)+1 : '100')
+          + '&offset=' + (has_offset && offset !== '0' ? Number(offset)-1 : '0');
         const history_response = await fetch(url);
         const history_result = await history_response.json();
 
@@ -211,7 +225,7 @@ const Player = () => {
           setShowNext(true);
         }
 
-        const groupedData = groupMatches(history_result.history, player_result, char_short);
+        const groupedData = groupMatches(history_result.history, player_result, char_short, has_offset);
         setHistory(groupedData);
         
         setLoading(false);
@@ -269,35 +283,42 @@ const Player = () => {
           : null
         }
       </AppBar>
-
       <Box sx={{display:'flex', flexWrap:'nowrap'}}>
-      <Box m={4} sx={{width:.7}}>
-        <Box sx={{maxWidth:1000}}>
-        <TableContainer component={Paper}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell></TableCell>
-                <TableCell>Timestamp</TableCell>
-                <TableCell align="right">Floor</TableCell>
-                <TableCell align="right">Rating</TableCell>
-                <TableCell>Opponent</TableCell>
-                <TableCell align="right">Opponent Character</TableCell>
-                <TableCell align="right">Opponent Rating</TableCell>
-                <TableCell align="right">Result</TableCell>
-                <TableCell align="right">Odds</TableCell>
-                <TableCell align="right">Rating Change</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {history.map((item, i) => (
-                <Row key={i} item={item} i={i} />
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <Box m={4} sx={{width:.7}}>
+          <Box sx={{maxWidth:1000}}>
+            <Box mx={3} maxWidth="800px" minWidth="800px" sx={{display: 'inline-block'}}>
+              <Button onClick={(event) => onPrev(event)}>Prev</Button>
+              <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
+            </Box>
+            <TableContainer component={Paper}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell></TableCell>
+                    <TableCell>Timestamp</TableCell>
+                    <TableCell align="right">Floor</TableCell>
+                    <TableCell align="right">Rating</TableCell>
+                    <TableCell>Opponent</TableCell>
+                    <TableCell align="right">Opponent Character</TableCell>
+                    <TableCell align="right">Opponent Rating</TableCell>
+                    <TableCell align="right">Result</TableCell>
+                    <TableCell align="right">Odds</TableCell>
+                    <TableCell align="right">Rating Change</TableCell>
+                  </TableRow>
+                </TableHead>
+               <TableBody>
+                 {history.map((item, i) => (
+                    <Row key={i} item={item} i={i} />
+                 ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Box mx={3} maxWidth="800px" minWidth="800px" sx={{display: 'inline-block'}}>
+              <Button onClick={(event) => onPrev(event)}>Prev</Button>
+              <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
+            </Box>
+          </Box>
         </Box>
-      </Box>
         <Box m={4} sx={{width:.2}}>
           <hr />
           <h4>Characters:</h4>
@@ -313,10 +334,6 @@ const Player = () => {
           ))}
         <hr style={{marginTop:30}}/>
         </Box>
-      </Box>
-      <Box mx={3} maxWidth="800px" minWidth="800px" sx={{display: 'inline-block'}}>
-      <Button onClick={(event) => onPrev(event)}>Prev</Button>
-      <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
       </Box>
     </React.Fragment>
   );
