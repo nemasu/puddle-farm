@@ -12,6 +12,7 @@ import TopGlobal from './TopGlobal';
 import TopPlayer from './TopPlayer';
 import Search from './Search';
 import ThemeManager from './ThemeManager';
+import Settings from './Settings';
 
 const App = () => {
   return (
@@ -29,6 +30,11 @@ const App = () => {
             />
 
             <Route
+              path="/settings"
+              element={<Settings />}
+            />
+
+            <Route
                 path="/top_global/:count?/:offset?"
                 element={<TopGlobal />}
             />
@@ -39,7 +45,7 @@ const App = () => {
             />
 
             <Route
-                path="/player/:player_id/:char_short/:count?/:offset?"
+                path="/player/:player_id/:char_short?/:count?/:offset?"
                 element={<Player />}
             />
 

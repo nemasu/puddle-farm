@@ -16,8 +16,13 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import { JSONParse } from 'json-with-bigint';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
 /* global BigInt */
 
 function getCurrentPlayerRating(player, char_short) {
@@ -190,6 +195,12 @@ const Player = () => {
   }
 
   useEffect(() => {
+
+    //TODO redirect to the hihgest rated character
+    if( char_short === undefined ) {
+      navigate(`/player/${player_id_checked}/SO`);
+    }
+
     window.scrollTo(0, 0);
 
     const fetchPlayerAndHistory = async () => {
@@ -225,10 +236,14 @@ const Player = () => {
           setShowNext(true);
         }
 
-        const groupedData = groupMatches(history_result.history, player_result, char_short, has_offset);
-        setHistory(groupedData);
-        
-        setLoading(false);
+        if(history_result.history.length === 0) {
+          setLoading(false);
+        } else {
+          const groupedData = groupMatches(history_result.history, player_result, char_short, has_offset);
+          setHistory(groupedData);
+          
+          setLoading(false);
+        }
       } catch (error) {
         console.error('Error fetching player data:', error);
       }
@@ -259,6 +274,8 @@ const Player = () => {
     const player_rating = getCurrentPlayerRating(player, char_short);
     if(player_rating) {
       player_line = player.name + ' (' + char_short + ') ' + player_rating.rating + ' ±' + player_rating.deviation;
+    } else {
+      player_line = player.name;
     }
   }
 
@@ -333,10 +350,118 @@ const Player = () => {
             </Box>
           ))}
         <hr style={{marginTop:30}}/>
+        <ClaimDialog playerId={player_id_checked} setLoading={setLoading} API_ENDPOINT={API_ENDPOINT} />
         </Box>
       </Box>
     </React.Fragment>
   );
 };
+
+const ClaimDialog = ({ playerId, setLoading, API_ENDPOINT }) => {
+  const [open, setOpen] = useState(false);
+  const [code, setCode] = useState('');
+  const [isPolling, setIsPolling] = useState(false);
+  const timerRef = useRef(null);
+  const counter = useRef(0);
+
+  useEffect(() => {
+    if (isPolling) {
+      timerRef.current = setInterval(() => {
+        pollPlayer(playerId);
+      }, 2000);
+    } else {
+      clearInterval(timerRef.current);
+    }
+
+    return () => clearInterval(timerRef.current);
+  }, [code, isPolling]);
+
+  const handleClickOpen = async () => {
+
+    //If 'key' is set in localstorage, just redirect to settings
+    if(localStorage.getItem('key')) {
+      document.location.href = '/settings';
+      return;
+    }
+
+    if(code === '') {
+      const response = await fetch(API_ENDPOINT + '/claim/' + playerId);
+      const result = await response.text().then(body => {
+        var parsed = JSONParse(body);
+        return parsed;
+      });
+
+      setCode(result);
+    }
+
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    setIsPolling(false);
+  };
+
+  function startPolling() {
+    setIsPolling(true);
+  }
+  
+  function pollPlayer(playerId) {
+    if (counter.current >= 10) {
+      clearInterval(timerRef.current);
+      alert("Code is not matching, please try again.");
+      document.location.reload();
+    }
+
+    const req = new XMLHttpRequest();
+    req.open("GET", `${API_ENDPOINT}/claim/poll/${playerId}`);
+    req.send();
+
+    req.onreadystatechange = (e) => {
+      
+      if (req.readyState === 4 && req.status === 200) {
+        const resp = JSON.parse(req.response);
+        
+        if(resp !== 'false') {
+          clearInterval(timerRef.current);
+
+          setTimeout(() => {
+            localStorage.setItem('key', resp);
+            document.location.href = '/settings';
+          }, 2000);
+        }
+      }
+    }
+
+    counter.current++;
+    
+  }
+
+  return (
+    <React.Fragment>
+      <Button variant="outlined" onClick={handleClickOpen}>
+        Claim Profile
+      </Button>
+      <Dialog
+        open={open}
+        onClose={handleClose}
+      >
+        <DialogTitle>Claim profile</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {code}<br /><br /><br />
+            To confirm that this is your profile, put the above code in your R-Code "free comment" section 
+            and close the R-Code so that it saves.<br /><br />
+            Press <Button onClick={startPolling}>THIS</Button> once you've done this.<br /><br />
+            After the profile has been confirmed you can change your R-code comment back to whatever you want.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+    </React.Fragment>
+  );
+}
 
 export default Player;

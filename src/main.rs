@@ -1,13 +1,17 @@
 extern crate simplelog;
 
+use diesel::update;
 use log::LevelFilter;
-use models::{CharacterRank, GlobalRank, Player, PlayerRating};
+use models::{CharacterRank, GlobalRank, Player, PlayerRating, Status};
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::Header;
 use rocket::{Request, Response};
+use schema::players::api_key;
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode, WriteLogger};
 
 use std::fs::File;
+
+use uuid::Uuid;
 
 #[macro_use] extern crate rocket;
 
@@ -24,8 +28,6 @@ mod ggst_api;
 mod requests;
 mod responses;
 mod models;
-
-mod migrate;
 
 #[derive(Database)]
 #[database("ratings")]
@@ -177,6 +179,7 @@ struct PlayerResponse  {
     id: i64,
     name: String,
     ratings: Vec<PlayerResponsePlayer>,
+    status: String,
 }
 
 #[derive(Serialize)]
@@ -192,7 +195,7 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
     let id = match i64::from_str_radix(player_id, 10) {
         Ok(id) => id,
         Err(_) => {
-            return Json(PlayerResponse {ratings: vec![], id: 0, name: "".to_string()});
+            return Json(PlayerResponse {ratings: vec![], id: 0, name: "".to_string(), status: "Unknown".to_string()});
         }
     };
 
@@ -205,7 +208,14 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
         .expect("Error loading player");
 
     if player_char.len() == 0 {
-        return Json(PlayerResponse {ratings: vec![], id: 0, name: "".to_string()});
+        return Json(PlayerResponse {ratings: vec![], id: 0, name: "".to_string(), status: "Unknown".to_string()});
+    }
+
+    let status = player_char[0].0.status.clone().unwrap().to_string();
+
+    //If the player is not public, then return an empty response
+    if player_char[0].0.status != Some(Status::Public) {
+        return Json(PlayerResponse {ratings: vec![], id: 0, name: status.clone(), status: status.clone()});
     }
 
     let ratings: Vec<PlayerResponsePlayer> = player_char.iter().map(|p| {
@@ -221,6 +231,7 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
         id: player_char[0].0.id,
         name: player_char[0].0.name.clone(),
         ratings,
+        status: status.clone(),
     })
 }
 
@@ -267,6 +278,26 @@ async fn player_games(mut db: Connection<Db>,
                 }
             };
             
+            //Return empty if player's status is not Public
+            match schema::players::table
+                .select(schema::players::status)
+                .filter(schema::players::id.eq(id))
+                .first::<Option<Status>>(&mut db)
+                .await {
+                    Ok(Some(status)) => {
+                        if status != Status::Public {
+                            return Json(PlayerGamesResponse {
+                                history: vec![],
+                            });
+                        }
+                    },
+                    _ => {
+                        return Json(PlayerGamesResponse {
+                            history: vec![],
+                        });
+                    }
+                }
+                
             let count = count.unwrap_or(100);
             let offset = offset.unwrap_or(0);
     
@@ -364,6 +395,7 @@ async fn player_search(mut db: Connection<Db>,
             .inner_join(schema::player_ratings::table.on(schema::player_ratings::id.eq(schema::players::id)))
             .select((Player::as_select(), PlayerRating::as_select()))
             .filter(schema::players::name.ilike(exact_like))
+            .filter(schema::players::status.eq(Status::Public))
             .limit(count)
             .offset(offset)
             .load(&mut db)
@@ -387,40 +419,171 @@ async fn player_search(mut db: Connection<Db>,
     }
 
 
-pub async fn run() {
-    let routes = routes![
-        player,
-        player_games,
-        top_all,
-        top_char,
-        characters,
-        player_search,
-    ];
 
-    if cfg!(debug_assertions) {//Cors only used for development
-        rocket::build()
-            .attach(Db::init())
-            .attach(Cors)
-            //.register("/", catchers![catch_404, catch_500, catch_503])
-            .mount("/", routes)
-            .ignite()
-            .await
-            .unwrap()
-            .launch()
-            .await
-            .unwrap();
-    } else {
-        rocket::build()
-            .attach(Db::init())
-            //.register("/", catchers![catch_404, catch_500, catch_503])
-            .mount("/", routes)
-            .ignite()
-            .await
-            .unwrap()
-            .launch()
-            .await
-            .unwrap();
+
+fn generate_code() -> String {
+    use rand::Rng;
+    const CHARSET: &[u8] = b"ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789";
+    const STR_LEN: usize = 8;
+    let mut rng = rand::thread_rng();
+
+    let password: String = (0..STR_LEN)
+        .map(|_| {
+            let idx = rng.gen_range(0..CHARSET.len());
+            CHARSET[idx] as char
+        })
+        .collect();
+    password
+}
+
+#[get("/api/claim/<player_id>")]
+async fn start_player_claim(mut db: Connection<Db>, player_id: &str) -> Json<String> {
+    let id = match i64::from_str_radix(player_id, 10) {
+        Ok(id) => id,
+        Err(_) => {
+            return Json("Invalid ID".to_string());
         }
+    };
+
+    let rcode_check_code = generate_code();
+
+    let updated_row_count = update(schema::players::table.filter(schema::players::id.eq(id)))
+        .set(schema::players::rcode_check_code.eq(rcode_check_code.clone()))
+        .execute(&mut db)
+        .await
+        .expect("Error updating player");
+
+    if updated_row_count == 0 {
+        return Json("Invalid ID".to_string());
+    }
+
+    Json(rcode_check_code)
+}
+
+#[get("/api/claim/poll/<player_id>")]
+async fn poll_player_claim(mut db: Connection<Db>, player_id: &str) -> Json<String> {
+    let id = match i64::from_str_radix(player_id, 10) {
+        Ok(id) => id,
+        Err(_) => {
+            return Json("Invalid ID".to_string());
+        }
+    };
+
+    let code = match schema::players::table
+        .select(schema::players::rcode_check_code)
+        .filter(schema::players::id.eq(id))
+        .first::<Option<String>>(&mut db)
+        .await {
+            Ok(code) => code.unwrap(),
+            Err(_) => {
+                return Json("Invalid ID".to_string());
+            }
+        };
+    
+    let json = ggst_api::get_player_stats(id.to_string()).await;
+    let lookup = format!("PublicComment\":\"{code}");
+
+    let found = match json {
+        Ok(json) => json.contains(&lookup),
+        Err(er) => {
+            error!("error {}", er);
+            false
+        }
+    };
+
+    if found {
+        let player_api_key = match schema::players::table
+            .select(api_key)
+            .filter(schema::players::id.eq(id))
+            .first::<Option<String>>(&mut db)
+            .await {
+                Ok(key) => {
+                    match key {
+                        Some(key) => Some(key),
+                        None => {
+                            let key = Uuid::new_v4().to_string();
+                            let updated_row_count = update(schema::players::table.filter(schema::players::id.eq(id)))
+                                .set(api_key.eq(key.clone()))
+                                .execute(&mut db)
+                                .await
+                                .expect("Error updating player");
+
+                            if updated_row_count == 0 {
+                                return Json("Invalid ID".to_string());
+                            }
+                            Some(key)
+                        },
+                    }
+                },
+                Err(_) => panic!("Error updating player"),
+            }.unwrap();
+
+        return Json(player_api_key);
+    }
+
+    Json("false".to_string())
+}
+
+
+#[get("/api/toggle_private/<key>")]
+async fn toggle_private(mut db: Connection<Db>, key: &str) -> Json<String> {
+    let status = match schema::players::table
+        .select(schema::players::status)
+        .filter(api_key.eq(key))
+        .first::<Option<Status>>(&mut db)
+        .await {
+            Ok(Some(status)) => {
+                match status {
+                    Status::Public => Status::Private,
+                    Status::Private => Status::Public,
+                    Status::Cheater => Status::Cheater,
+                }
+
+            },
+            Ok(None) => {
+                return Json("Invalid Key".to_string());
+            }
+            Err(_) => {
+                return Json("Invalid Key".to_string());
+            }
+        };
+
+    let updated_row_count = update(schema::players::table.filter(api_key.eq(key)))
+        .set(schema::players::status.eq(status))
+        .execute(&mut db)
+        .await
+        .expect("Error updating player");
+
+    if updated_row_count == 0 {
+        return Json("Invalid Key".to_string());
+    }
+
+    Json("true".to_string())
+}
+
+#[get("/api/settings/<key>")]
+async fn get_settings_data(mut db: Connection<Db>, key: &str) -> Json<String> {
+    let status = match schema::players::table
+        .select(schema::players::status)
+        .filter(api_key.eq(key))
+        .first::<Option<Status>>(&mut db)
+        .await {
+            Ok(Some(hidden)) => {
+                match hidden {
+                    Status::Public => "Not Hidden",
+                    Status::Private => "Hidden",
+                    Status::Cheater => "Cheater! :O",
+                }
+            },
+            Ok(None) => {
+                return Json("Invalid Key".to_string());
+            }
+            Err(_) => {
+                return Json("Invalid Key".to_string());
+            }
+        };
+
+    Json(status.to_string())
 }
 
 #[rocket::main]
@@ -439,14 +602,6 @@ async fn main() {
         //This runs the timed jobs: grab replay, update ratings, update ranking, etc.
         Some("pull") => {
             pull::pull_and_update_continuous().await;
-        },
-        //This migrates a halvnykterist sqlite3 database to a postgres database.
-        Some("migrate") => {
-            let mut count = 100000;
-            if args.len() > 1 {
-                count = args.get(2).unwrap().parse().unwrap();
-            }
-            migrate::migrate(args.get(1).unwrap(), count);
         },
         //This skips checking last_rank_update, but it does set it.
         Some("hourly") => {
@@ -477,4 +632,44 @@ impl Fairing for Cors {
         response.set_header(Header::new("Access-Control-Allow-Headers", "*"));
         response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
     }
+}
+
+pub async fn run() {
+    let routes = routes![
+        player,
+        player_games,
+        top_all,
+        top_char,
+        characters,
+        player_search,
+        start_player_claim,
+        poll_player_claim,
+        toggle_private,
+        get_settings_data,
+    ];
+
+    if cfg!(debug_assertions) {//Cors only used for development
+        rocket::build()
+            .attach(Db::init())
+            .attach(Cors)
+            //.register("/", catchers![catch_404, catch_500, catch_503])
+            .mount("/", routes)
+            .ignite()
+            .await
+            .unwrap()
+            .launch()
+            .await
+            .unwrap();
+    } else {
+        rocket::build()
+            .attach(Db::init())
+            //.register("/", catchers![catch_404, catch_500, catch_503])
+            .mount("/", routes)
+            .ignite()
+            .await
+            .unwrap()
+            .launch()
+            .await
+            .unwrap();
+        }
 }

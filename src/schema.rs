@@ -1,5 +1,11 @@
 // @generated automatically by Diesel CLI.
 
+pub mod sql_types {
+    #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "status"))]
+    pub struct Status;
+}
+
 diesel::table! {
     character_ranks (rank, char_id) {
         id -> Int8,
@@ -73,10 +79,16 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::Status;
+
     players (id) {
         id -> Int8,
         name -> Text,
         platform -> Int2,
+        status -> Nullable<Status>,
+        api_key -> Nullable<Varchar>,
+        rcode_check_code -> Nullable<Varchar>,
     }
 }
 

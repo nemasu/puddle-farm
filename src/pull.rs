@@ -163,9 +163,11 @@ async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> 
         let results = sql_query("
             INSERT INTO character_ranks (rank, id, char_id)
             SELECT ROW_NUMBER() 
-            OVER (ORDER BY value DESC) as rank, player_ratings.id, char_id
-            FROM player_ratings
-            WHERE deviation < 30.0 AND char_id = $1
+            OVER (ORDER BY value DESC) as rank, r.id, char_id
+            FROM player_ratings r, players p
+            WHERE r.id = p.id
+            AND p.status = 'public'
+            AND deviation < 30.0 AND char_id = $1
             ORDER BY value DESC
             LIMIT 1000
             RETURNING rank
@@ -185,6 +187,9 @@ async fn update_player_info(connection: &mut AsyncPgConnection, new_game: &Game)
             id: new_game.id_a,
             name: new_game.name_a.clone(),
             platform: new_game.platform_a,
+            status: Some(crate::models::Status::Public),
+            api_key: None,
+            rcode_check_code: None,
         })
         .on_conflict(players::id)
         .do_update()
@@ -198,6 +203,9 @@ async fn update_player_info(connection: &mut AsyncPgConnection, new_game: &Game)
             id: new_game.id_b,
             name: new_game.name_b.clone(),
             platform: new_game.platform_b,
+            status: Some(crate::models::Status::Public),
+            api_key: None,
+            rcode_check_code: None,
         })
         .on_conflict(players::id)
         .do_update()
@@ -270,6 +278,21 @@ async fn grab_games(connection: &mut AsyncPgConnection) -> Result<Vec<Game>, Str
 
         if let Err(e) = update_player_info(connection, &new_game).await {
             error!("update_player_info failed: {e}");
+        }
+
+        //Skip the game if either player a or player b is not Public
+        let player_a = players::table
+            .filter(players::id.eq(new_game.id_a))
+            .get_result::<Player>(connection)
+            .await
+            .unwrap();
+        let player_b = players::table
+            .filter(players::id.eq(new_game.id_b))
+            .get_result::<Player>(connection)
+            .await
+            .unwrap();
+        if player_a.status != Some(Status::Public) || player_b.status != Some(Status::Public) {
+            continue;
         }
 
         let count = insert_into(games::table)
@@ -371,7 +394,6 @@ async fn update_ratings(connection: &mut AsyncPgConnection, new_games: &Vec<Game
             }
         };
 
-
         //Calculate value and deviation
         let (new_value_a, new_value_b, new_deviation_a, new_deviation_b, win_prob) = update_mean_and_variance(
             player_rating_a.value as f64,
@@ -461,8 +483,8 @@ pub fn update_mean_and_variance(mean_a: f64, sigma_a: f64, mean_b: f64, sigma_b:
     //# But, since either player could have a contoller failure, computer issue, or any number of other external events. There is always some "suprise" to a win. Therefore, we add 0.001.
     //# This has the added bonus of some numerical stability as well, since result_suprise can be a very small number.
     //# Further, we scale by the variance of the player and divide by the overall variablity of the match.
-    let mean_a_new = mean_a + direction_of_update * 10.0 * (result_suprise + 0.001) * sigma_a / f64::sqrt(sqrt_match_variablity);
-    let mean_b_new = mean_b - direction_of_update * 10.0 * (result_suprise + 0.001) * sigma_b / f64::sqrt(sqrt_match_variablity);
+    let mean_a_new = mean_a + direction_of_update * 10.0 * (result_suprise + 0.001) * f64::sqrt(sigma_a / sqrt_match_variablity);
+    let mean_b_new = mean_b - direction_of_update * 10.0 * (result_suprise + 0.001) * f64::sqrt(sigma_b / sqrt_match_variablity);
 
     //# Going over each term:
     //# mean is the original rating of the player

@@ -1,8 +1,21 @@
 #![allow(unused)]
 #![allow(clippy::all)]
 
-use rocket_db_pools::diesel::{QueryResult, PgPool, prelude::*};
-use crate::schema::{games, player_names, players, player_ratings, character_ranks, global_ranks, constants};
+use std::io::Write;
+use std::fmt::{Display, Formatter};
+
+use diesel::{
+    deserialize::{self, FromSql, FromSqlRow},
+    expression::AsExpression,
+    pg::{Pg, PgValue},
+    serialize::{self, IsNull, Output, ToSql},
+    sql_types::SqlType,
+    prelude::*,
+};
+use rocket_db_pools::diesel::{PgPool, QueryResult};
+use crate::schema::{
+    self, character_ranks, constants, games, global_ranks, player_names, player_ratings, players,
+};
 
 use chrono::NaiveDateTime;
 #[derive(Selectable, Insertable, Queryable, Identifiable)]
@@ -77,10 +90,52 @@ pub struct PlayerRating {
     pub top_defeated_timestamp: Option<NaiveDateTime>,
 }
 
+#[derive(Debug, PartialEq, FromSqlRow, AsExpression, Eq, Clone)]
+#[diesel(sql_type = crate::schema::sql_types::Status)]
+pub enum Status {
+    Public,
+    Private,
+    Cheater
+}
+
+impl Display for Status {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        match *self {
+            Status::Public => write!(f, "Public"),
+            Status::Private => write!(f, "Private"),
+            Status::Cheater => write!(f, "Cheater"),
+        }
+    }
+}
+
+impl ToSql<crate::schema::sql_types::Status, Pg> for Status {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        match *self {
+            Status::Public => out.write_all(b"public")?,
+            Status::Private => out.write_all(b"private")?,
+            Status::Cheater => out.write_all(b"cheater")?,
+        }
+        Ok(IsNull::No)
+    }
+}
+
+impl FromSql<crate::schema::sql_types::Status, Pg> for Status {
+    fn from_sql(bytes: PgValue<'_>) -> deserialize::Result<Self> {
+        match bytes.as_bytes() {
+            b"public" => Ok(Status::Public),
+            b"private" => Ok(Status::Private),
+            b"cheater" => Ok(Status::Cheater),
+            _ => Err("Unrecognized enum variant".into()),
+        }
+    }
+}
+
 #[derive(Selectable, Insertable, Queryable)]
 pub struct Player {
     pub id: i64,
     pub name: String,
     pub platform: i16,
+    pub status: Option<Status>,
+    pub api_key: Option<String>,
+    pub rcode_check_code: Option<String>,
 }
-

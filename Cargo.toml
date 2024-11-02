@@ -24,3 +24,5 @@ base64-url = "1.4"
 chrono = "0.4"
 rstat = "0.6.0"
 rusqlite = { version = "0.32", features = ["bundled", "functions"] }
+rand = "0.8.5"
+uuid = {version = "1.11.0", features = ["v4", "fast-rng"]}

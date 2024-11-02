@@ -45,6 +45,13 @@ Themes.set('Sol', createTheme({
           },
         },
       },
+      MuiDialog: {
+        styleOverrides: {
+          paper: {
+            background: '#171717',
+          },
+        },
+      },
     },
   }));
 
@@ -88,6 +95,13 @@ Themes.set('Ky', createTheme({
       styleOverrides: {
         root: {
           backgroundColor: '#217DBB',
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          background: '#282E30',
         },
       },
     },
@@ -137,6 +151,13 @@ Themes.set('Nagoriyuki', createTheme({
         },
       },
     },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          background: '#282E30',
+        },
+      },
+    },
   },
 }));
 
@@ -180,6 +201,13 @@ Themes.set('Bedman?', createTheme({
       styleOverrides: {
         root: {
           backgroundColor: '#471d37',
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          background: '#171717',
         },
       },
     },
