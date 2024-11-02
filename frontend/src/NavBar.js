@@ -120,7 +120,7 @@ function NavBar() {
   return (
     <AppBar position="static" style={{backgroundImage: "none"}}>
       <Container maxWidth="md">
-        <Toolbar disableGutters>
+        <Toolbar variant='dense' disableGutters>
           <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>{/* Mobile view */}
             <IconButton
               size="large"
@@ -151,7 +151,7 @@ function NavBar() {
               {pages.map((page) => (
                 //If the page has a 'list' attribute that is an array, render a submenu
                 'list' in page ? (
-                  <Box key={page.name} style={{display: 'flex', flexWrap: 'wrap', maxWidth: '500px'}}>
+                  <Box key={page.name} style={{display: 'flex', flexWrap: 'wrap', maxWidth: '450px', borderBottom: '1px solid', borderTop: '1px solid'}}>
                       {page['list'].map((char) => (
                         <MenuItem
                           component={Link}
@@ -159,9 +159,8 @@ function NavBar() {
                           key={char.name}
                           sx={{ my: 1, color: 'white', display: 'block' }}
                           onClick={handleCloseNavMenu}
-                          >
-                          
-                          {char.name}
+                        >
+                          <Box sx={{display: {width: 80}}}>{char.name}</Box>
                         </MenuItem>
                       ))}
                   </Box>
@@ -178,15 +177,15 @@ function NavBar() {
               ))}
             </Menu>
             {/* Mobile View - Search */}
-            <TextField id="search_string" variant="outlined" label="Search..." style={{marginTop: 5}} value={searchString} onChange={handleSearchChange} onKeyDown={handleSearchKeyDown}/>
+            <TextField size="small" id="search_string" variant="outlined" label="Search..." style={{marginTop: 10}} value={searchString} onChange={handleSearchChange} onKeyDown={handleSearchKeyDown}/>
             <Box>
-              <SearchIcon style={{marginTop: 2, fontSize: 30, display: 'block', cursor: 'pointer'}}onClick={handleSearchClick} />
-              <ZoomInIcon style={{fontSize: 30, cursor: 'pointer'}} onClick={handleExactSearchClick} />
+              <SearchIcon style={{marginTop: 5, fontSize: 25, display: 'block', cursor: 'pointer'}}onClick={handleSearchClick} />
+              <ZoomInIcon style={{fontSize: 25, cursor: 'pointer'}} onClick={handleExactSearchClick} />
             </Box>
             <Button m={0} 
               component={Link} 
               onClick={handleOpenThemeNavMenu}
-              sx={{ my: 2, color: 'white', display: 'block' }
+              sx={{ my: 1.5, color: 'white', display: 'block' }
             }> {/* Mobile view - theme button */}
               Theme
             </Button>
@@ -226,7 +225,7 @@ function NavBar() {
                     onClick={handleOpenCharNavMenu}
                     sx={{ my: 1, color: 'white', display: 'block' }
                   }>
-                    Characters
+                    {page.name}
                   </Button> {/* Desktop view - character menu*/}
                   <Menu
                     id="menu-charbar"
@@ -244,10 +243,10 @@ function NavBar() {
                     onClose={handleCloseCharNavMenu}
                     sx={{ display: { xs: 'none', md: 'flex' } }}
                   >
-                    <Box style={{display: 'flex', flexWrap: 'wrap', maxWidth: '500px'}}>
+                    <Box style={{display: 'flex', flexWrap: 'wrap', maxWidth: '450px'}}>
                     {page['list'].map((char) => (
                       <MenuItem component={Link} to={char.link} key={char.name} onClick={handleCloseCharNavMenu}>
-                        {char.name}
+                        <Box sx={{display: {width: 80}}}>{char.name}</Box>
                       </MenuItem>
                     ))}
                     </Box>
@@ -268,16 +267,16 @@ function NavBar() {
           </Box>
           <Box sx={{ display: { xs: 'none', md: 'flex' } }}> {/* Desktop view - right box */}
             {/* Desktop View - Search */}
-            <TextField id="search_string" variant="outlined" label="Search..." style={{marginTop: 5}} value={searchString} onChange={handleSearchChange} onKeyDown={handleSearchKeyDown}/>
+            <TextField size="small" id="search_string" variant="outlined" label="Search..." style={{marginTop: 10}} value={searchString} onChange={handleSearchChange} onKeyDown={handleSearchKeyDown}/>
             <Box>
-              <SearchIcon style={{marginTop: 2, fontSize: 30, display: 'block', cursor: 'pointer'}}onClick={handleSearchClick} />
-              <ZoomInIcon style={{fontSize: 30, cursor: 'pointer'}} onClick={handleExactSearchClick} />
+              <SearchIcon style={{marginTop: 5, fontSize: 25, display: 'block', cursor: 'pointer'}}onClick={handleSearchClick} />
+              <ZoomInIcon style={{fontSize: 25, cursor: 'pointer'}} onClick={handleExactSearchClick} />
             </Box>
             <Button m={0}
                 component={Link} 
                 onClick={handleOpenThemeNavMenu}
-                sx={{ my: 2, color: 'white', display: 'block' }
-            }>
+                sx={{ my: 1.5, color: 'white', display: 'block' }}
+              >
               Theme
             </Button> {/* Desktop view - theme button */}
             <Menu

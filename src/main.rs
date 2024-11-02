@@ -561,8 +561,14 @@ async fn toggle_private(mut db: Connection<Db>, key: &str) -> Json<String> {
     Json("true".to_string())
 }
 
+#[derive(Serialize)]
+struct SettingsResponse  {
+    id: i64,
+    name: String,
+    status: String,
+}
 #[get("/api/settings/<key>")]
-async fn get_settings_data(mut db: Connection<Db>, key: &str) -> Json<String> {
+async fn get_settings_data(mut db: Connection<Db>, key: &str) -> Json<SettingsResponse> {
     let status = match schema::players::table
         .select(schema::players::status)
         .filter(api_key.eq(key))
@@ -576,14 +582,30 @@ async fn get_settings_data(mut db: Connection<Db>, key: &str) -> Json<String> {
                 }
             },
             Ok(None) => {
-                return Json("Invalid Key".to_string());
+                return Json(SettingsResponse { id: 0, name: "".to_string(), status: "".to_string() });
             }
             Err(_) => {
-                return Json("Invalid Key".to_string());
+                return Json(SettingsResponse { id: 0, name: "".to_string(), status: "".to_string() });
             }
         };
 
-    Json(status.to_string())
+        let player_rating = match schema::players::table
+            .inner_join(schema::player_ratings::table)
+            .select((schema::players::id, schema::players::name))
+            .filter(api_key.eq(key))
+            .first::<(i64, String)>(&mut db)
+            .await {
+                Ok(player_rating) => player_rating,
+                Err(_) => {
+                    return Json(SettingsResponse { id: 0, name: "".to_string(), status: "".to_string() });
+                }
+            };
+
+    Json(SettingsResponse {
+        id: player_rating.0,
+        name: player_rating.1,
+        status: status.to_string(),
+    })
 }
 
 #[rocket::main]

@@ -286,7 +286,7 @@ const Player = () => {
         sx={{backgroundColor:"secondary.main"}}
       >
         <Box sx={{minHeight:100, paddingTop:'30px'}}>
-          <Typography align='center' variant="pageHeader">
+          <Typography align='center' variant="pageHeader" fontSize={30}>
             {player_line}
           </Typography>
         </Box>
@@ -316,11 +316,11 @@ const Player = () => {
                     <TableCell align="right">Floor</TableCell>
                     <TableCell align="right">Rating</TableCell>
                     <TableCell>Opponent</TableCell>
-                    <TableCell align="right">Opponent Character</TableCell>
-                    <TableCell align="right">Opponent Rating</TableCell>
+                    <TableCell align="right">Character</TableCell>
+                    <TableCell align="right">Rating</TableCell>
                     <TableCell align="right">Result</TableCell>
                     <TableCell align="right">Odds</TableCell>
-                    <TableCell align="right">Rating Change</TableCell>
+                    <TableCell align="right">Change</TableCell>
                   </TableRow>
                 </TableHead>
                <TableBody>
@@ -342,14 +342,14 @@ const Player = () => {
           {player.ratings && player.ratings.map((item, i) => (
             <Box key={i}>
               <Button variant="text" onClick={() => {navigate(`/player/${player.id}/${item.char_short}`)}} sx={{textAlign: 'left'}} color='text' >
-                <Typography my={2}>
+                <Typography my={0.5}>
                   {item.character} {item.rating} ±{item.deviation}
                 </Typography>
               </Button>
               <br />
             </Box>
           ))}
-        <hr style={{marginTop:30}}/>
+        <hr style={{marginTop:10}}/>
         <ClaimDialog playerId={player_id_checked} setLoading={setLoading} API_ENDPOINT={API_ENDPOINT} />
         </Box>
       </Box>
