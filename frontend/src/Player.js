@@ -184,6 +184,7 @@ const Player = () => {
   
   const [history, setHistory] = useState([]);
   const [player, setPlayer] = useState([]);
+  const [currentCharData, setCurrentCharData] = useState([]);
 
   const [loading, setLoading] = useState(true);
 
@@ -218,6 +219,12 @@ const Player = () => {
         }
 
         setPlayer(player_result);
+        
+        for (var key in player_result.ratings) {
+          if(player_result.ratings[key].char_short === char_short) {
+            setCurrentCharData(player_result.ratings[key]);
+          }
+        }
 
         const has_offset = offset ? true : false;
 
@@ -269,16 +276,6 @@ const Player = () => {
     navigate(`/player/${player_id_checked}/${char_short}/${nav_count}/${nav_offset}`);
   }
 
-  let player_line;
-  if(player && player.length !== 0) {
-    const player_rating = getCurrentPlayerRating(player, char_short);
-    if(player_rating) {
-      player_line = player.name + ' (' + char_short + ') ' + player_rating.rating + ' ±' + player_rating.deviation;
-    } else {
-      player_line = player.name;
-    }
-  }
-
   return (
     <React.Fragment>
       <AppBar position="static"
@@ -287,7 +284,17 @@ const Player = () => {
       >
         <Box sx={{minHeight:100, paddingTop:'30px'}}>
           <Typography align='center' variant="pageHeader" fontSize={30}>
-            {player_line}
+
+           
+            {player.name}
+            <Typography variant="platform">
+              {player.platform}
+            </Typography>
+            {player.top_global !== 0 ? (
+              <Typography variant="global_rank">
+                #{player.top_global} Overall
+              </Typography>
+            ) : null}
           </Typography>
         </Box>
         { loading ?
@@ -303,6 +310,15 @@ const Player = () => {
       <Box sx={{display:'flex', flexWrap:'nowrap'}}>
         <Box m={4} sx={{width:.7}}>
           <Box sx={{maxWidth:1000}}>
+            <Typography variant='h6'>
+              {currentCharData.character} Rating: {currentCharData.rating} ±{currentCharData.deviation} ({currentCharData.match_count} games)
+              {currentCharData.top_char !== 0 ? (
+              <Typography variant="char_rank">
+                #{currentCharData.top_char}
+              </Typography>
+            ) : null}
+            </Typography>
+
             <Box mx={3} maxWidth="800px" minWidth="800px" sx={{display: 'inline-block'}}>
               <Button onClick={(event) => onPrev(event)}>Prev</Button>
               <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
@@ -336,14 +352,16 @@ const Player = () => {
             </Box>
           </Box>
         </Box>
-        <Box m={4} sx={{width:.2}}>
+        <Box marginLeft={10} marginTop={13} sx={{width:.18, maxWidth:'235px'}}>
           <hr />
-          <h4>Characters:</h4>
+          <Typography fontSize={14}>
+            Characters:
+          </Typography>
           {player.ratings && player.ratings.map((item, i) => (
             <Box key={i}>
               <Button variant="text" onClick={() => {navigate(`/player/${player.id}/${item.char_short}`)}} sx={{textAlign: 'left'}} color='text' >
-                <Typography my={0.5}>
-                  {item.character} {item.rating} ±{item.deviation}
+                <Typography fontSize={12.5} my={0.3}>
+                  {item.character} {item.rating} ±{item.deviation}<br />({item.match_count} games)
                 </Typography>
               </Button>
               <br />

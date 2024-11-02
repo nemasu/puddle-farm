@@ -9,6 +9,7 @@ use rocket::{Request, Response};
 use schema::players::api_key;
 use simplelog::{ColorChoice, CombinedLogger, Config, TermLogger, TerminalMode, WriteLogger};
 
+use std::collections::HashMap;
 use std::fs::File;
 
 use uuid::Uuid;
@@ -179,7 +180,22 @@ struct PlayerResponse  {
     id: i64,
     name: String,
     ratings: Vec<PlayerResponsePlayer>,
+    platform: String,
     status: String,
+    top_global: i32,
+}
+
+impl PlayerResponse {
+    fn empty() -> PlayerResponse {
+        PlayerResponse {
+            ratings: vec![],
+            id: 0,
+            name: "".to_string(),
+            status: "Unknown".to_string(),
+            platform: "???".to_string(),
+            top_global: 0,
+        }
+    }
 }
 
 #[derive(Serialize)]
@@ -188,6 +204,8 @@ struct PlayerResponsePlayer  {
     deviation: f32,
     char_short: String,
     character: String,
+    match_count: i32,
+    top_char: i32,
 }
 #[get("/api/player/<player_id>")]
 async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse> {
@@ -195,7 +213,7 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
     let id = match i64::from_str_radix(player_id, 10) {
         Ok(id) => id,
         Err(_) => {
-            return Json(PlayerResponse {ratings: vec![], id: 0, name: "".to_string(), status: "Unknown".to_string()});
+            return Json(PlayerResponse::empty());
         }
     };
 
@@ -208,14 +226,53 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
         .expect("Error loading player");
 
     if player_char.len() == 0 {
-        return Json(PlayerResponse {ratings: vec![], id: 0, name: "".to_string(), status: "Unknown".to_string()});
+        return Json(PlayerResponse::empty());
     }
 
     let status = player_char[0].0.status.clone().unwrap().to_string();
 
     //If the player is not public, then return an empty response
     if player_char[0].0.status != Some(Status::Public) {
-        return Json(PlayerResponse {ratings: vec![], id: 0, name: status.clone(), status: status.clone()});
+        return Json(PlayerResponse::empty());
+    }
+
+    let mut match_counts = HashMap::new();
+    let mut top_chars = HashMap::new();
+
+    let top_global = match schema::global_ranks::table
+    .filter(schema::global_ranks::id.eq(id))
+    .select(schema::global_ranks::rank)
+    .first::<i32>(&mut db)
+    .await {
+        Ok(rank) => rank,
+        Err(_) => 0,
+    };
+
+    for (player, rating) in player_char.iter() {
+        let match_count = schema::games::table
+            .filter(schema::games::id_a.eq(player.id).and(schema::games::char_a.eq(rating.char_id)))
+            .or_filter(schema::games::id_b.eq(player.id).and(schema::games::char_b.eq(rating.char_id)))
+            .count()
+            .get_result::<i64>(&mut db)
+            .await
+            .expect("Error loading games");
+
+        match_counts.insert(rating.char_id, match_count as i32);
+
+        let top_char = match schema::character_ranks::table
+            .filter(schema::character_ranks::char_id.eq(rating.char_id))
+            .filter(schema::character_ranks::id.eq(player.id))
+            .select(schema::character_ranks::rank)
+            .first::<i32>(&mut db)
+            .await {
+                Ok(rank) => rank,
+                Err(_) => 0,
+            };
+            
+
+        top_chars.insert(rating.char_id, top_char);
+
+ 
     }
 
     let ratings: Vec<PlayerResponsePlayer> = player_char.iter().map(|p| {
@@ -224,6 +281,8 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
             deviation: p.1.deviation,
             char_short: CHAR_NAMES[ p.1.char_id as usize].0.to_string(),
             character: CHAR_NAMES[ p.1.char_id as usize].1.to_string(),
+            match_count: match_counts.get(&p.1.char_id).unwrap().clone(),
+            top_char: top_chars.get(&p.1.char_id).unwrap().clone(),
         }
     }).collect();
 
@@ -232,6 +291,13 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
         name: player_char[0].0.name.clone(),
         ratings,
         status: status.clone(),
+        platform: match player_char[0].0.platform {
+            1 => "PS".to_string(),
+            2 => "XB".to_string(),
+            3 => "PC".to_string(),
+            _ => "???".to_string(),
+        },
+        top_global,
     })
 }
 

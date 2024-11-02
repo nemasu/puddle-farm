@@ -13,6 +13,7 @@ import TopPlayer from './TopPlayer';
 import Search from './Search';
 import ThemeManager from './ThemeManager';
 import Settings from './Settings';
+import { Typography } from '@mui/material';
 
 const App = () => {
   return (
@@ -55,8 +56,17 @@ const App = () => {
             />
 
           </Routes>
-          <Box sx={{minHeight: 200, textAlign: 'center'}}>
-            <Box sx={{marginTop: 10}}/>
+          <Box sx={{ display: 'block', justifyContent: 'center', alignItems: 'center'}}>
+            <Typography variant="h7" align="center" display={'block'}>
+              Puddle Farm is an open source project. Feel free to contribute!
+            </Typography>
+            
+            <Typography fontSize={13} align="center" display={'block'}>
+              Don't worry, new (and old) features are still being added!
+            </Typography>
+          </Box>
+          <Box sx={{minHeight: 100, textAlign: 'center'}}>
+            <Box sx={{marginTop: 5}}/>
             <Button component={Link} variant="link" target="_blank" to="https://github.com/nemasu/puddle-farm"><GitHubIcon style={{transform: 'scale(0.35)'}}/></Button>
             <Button component={Link} variant="link" target="_blank" to="https://discord.gg/vY4mE8exXB"><DiscordIcon/></Button>
           </Box>

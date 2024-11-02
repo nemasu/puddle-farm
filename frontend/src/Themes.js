@@ -23,12 +23,64 @@ Themes.set('Sol', createTheme({
         },
     },
     components: {
+      MuiTypography: {
+        styleOverrides: {
+          root: {
+            variants: [
+              {
+                props: { variant: 'platform' },
+                style: {
+                  fontSize: '.8rem',
+                  backgroundColor: '#363636',
+                  color: 'white',
+                  borderRadius: '8px',
+                  padding: '8px 10px',
+                  display: 'inline-block',
+                  marginLeft: '8px',
+                  top: '-4px',
+                  position: 'relative',
+                }
+              },
+              {
+                props: { variant: 'char_rank' },
+                style: {
+                  fontSize: '.8rem',
+                  backgroundColor: '#811104',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  borderRadius: '8px',
+                  padding: '8px 10px',
+                  display: 'inline-block',
+                  marginLeft: '8px',
+                  top: '-4px',
+                  position: 'relative',
+                }
+              },
+              {
+                props: { variant: 'global_rank' },
+                style: {
+                  fontSize: '.8rem',
+                  backgroundColor: 'rgb(255, 224, 138)',
+                  color: 'rgba(0, 0, 0, 0.7)',
+                  fontWeight: 'bold',
+                  borderRadius: '8px',
+                  padding: '8px 10px',
+                  display: 'inline-block',
+                  marginLeft: '8px',
+                  top: '-4px',
+                  position: 'relative',
+                }
+              }
+            ],
+          }
+        },
+      },
       MuiButton: {
         styleOverrides: {
           root: {
             variants: [
               {
-                props: { variant: 'link'},
+                props: { variant: 'link' },
                 style: {
                   textTransform: 'none',
                   color: '#F8B552',
@@ -76,6 +128,58 @@ Themes.set('Ky', createTheme({
     },
   },
   components: {
+    MuiTypography: {
+      styleOverrides: {
+        root: {
+          variants: [
+            {
+              props: { variant: 'platform' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: '#363636',
+                color: 'white',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            },
+            {
+              props: { variant: 'char_rank' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: '#811104',
+                color: 'white',
+                fontWeight: 'bold',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            },
+            {
+              props: { variant: 'global_rank' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: 'rgb(255, 224, 138)',
+                color: 'rgba(0, 0, 0, 0.7)',
+                fontWeight: 'bold',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            }
+          ],
+        }
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: {
@@ -129,6 +233,58 @@ Themes.set('Nagoriyuki', createTheme({
     },
   },
   components: {
+    MuiTypography: {
+      styleOverrides: {
+        root: {
+          variants: [
+            {
+              props: { variant: 'platform' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: '#363636',
+                color: 'white',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            },
+            {
+              props: { variant: 'char_rank' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: '#811104',
+                color: 'white',
+                fontWeight: 'bold',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            },
+            {
+              props: { variant: 'global_rank' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: 'rgb(255, 224, 138)',
+                color: 'rgba(0, 0, 0, 0.7)',
+                fontWeight: 'bold',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            }
+          ],
+        }
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: {
@@ -182,6 +338,58 @@ Themes.set('Bedman?', createTheme({
     },
   },
   components: {
+    MuiTypography: {
+      styleOverrides: {
+        root: {
+          variants: [
+            {
+              props: { variant: 'platform' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: '#363636',
+                color: 'white',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            },
+            {
+              props: { variant: 'char_rank' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: '#811104',
+                color: 'white',
+                fontWeight: 'bold',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            },
+            {
+              props: { variant: 'global_rank' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: 'rgb(255, 224, 138)',
+                color: 'rgba(0, 0, 0, 0.7)',
+                fontWeight: 'bold',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            }
+          ],
+        }
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: {
