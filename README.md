@@ -26,8 +26,6 @@ diesel --database-url "${DATABASE_PATH}" migration run
 
 `cargo run` to start the server.
 
-`cargo run migrate <path>` can be used to import an old sqlite3 database.
-
 `cargo run pull` will run the timed jobs continuously: grab replay, update ratings, update ranking, etc.
 
 `cargo run hourly` runs the hourly jobs once, then exits.
