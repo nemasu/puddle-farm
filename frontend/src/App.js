@@ -14,6 +14,7 @@ import Search from './Search';
 import ThemeManager from './ThemeManager';
 import Settings from './Settings';
 import { Typography } from '@mui/material';
+import About from './About';
 
 const App = () => {
   return (
@@ -28,6 +29,11 @@ const App = () => {
               exact
               path="/"
               element={<TopGlobal />}
+            />
+
+            <Route
+              path="/about"
+              element={<About />}
             />
 
             <Route
@@ -62,7 +68,7 @@ const App = () => {
             </Typography>
             
             <Typography fontSize={13} align="center" display={'block'}>
-              Don't worry, new (and old) features are still being added!
+              Don't worry, features are still being added!
             </Typography>
           </Box>
           <Box sx={{minHeight: 100, textAlign: 'center'}}>
