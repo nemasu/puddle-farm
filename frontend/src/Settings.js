@@ -29,9 +29,17 @@ const Settings = () => {
               });
 
             setSettings(result);
+
+            if(result.id === 0) {
+                localStorage.removeItem('key');
+                window.location.reload();
+            }
         }
 
-        fetchSettings();
+        if( key ) {
+            fetchSettings();
+        }
+
     }, [key]);
 
     function toggleStatus() {
@@ -40,7 +48,7 @@ const Settings = () => {
         + key;
         
         fetch(url)
-            .then(response => JSONParse(response))
+            .then(response => response)
             .then(result => {
                 window.location.reload();
             });
@@ -62,6 +70,11 @@ const Settings = () => {
                     <Box sx={{margin: 10}}>
                         Your profile is: {settings.status} <br />
                         Click <Button onClick={toggleStatus}>HERE</Button> to toggle.
+                    </Box>
+
+                    <Box sx={{ borderColor: '#F8B552', borderWidth: '2px', borderStyle: 'dashed', p: '20px', m: '50px'}}>
+                        <p>Note: If you use the same browser, you can revisit this page without reauthenticating to change settings.</p>
+                        <p>If you don't want that, click <Button onClick={() => {localStorage.removeItem('key'); window.location.reload();}}>here</Button> to clear browser data.</p>
                     </Box>
                 </Box>
 

@@ -190,7 +190,29 @@ impl PlayerResponse {
         PlayerResponse {
             ratings: vec![],
             id: 0,
-            name: "".to_string(),
+            name: "Player not found".to_string(),
+            status: "Unknown".to_string(),
+            platform: "???".to_string(),
+            top_global: 0,
+        }
+    }
+
+    fn private() -> PlayerResponse {
+        PlayerResponse {
+            ratings: vec![],
+            id: 0,
+            name: "Hidden".to_string(),
+            status: "Unknown".to_string(),
+            platform: "???".to_string(),
+            top_global: 0,
+        }
+    }
+
+    fn cheater() -> PlayerResponse {
+        PlayerResponse {
+            ratings: vec![],
+            id: 0,
+            name: "Cheater".to_string(),
             status: "Unknown".to_string(),
             platform: "???".to_string(),
             top_global: 0,
@@ -231,9 +253,12 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
 
     let status = player_char[0].0.status.clone().unwrap().to_string();
 
-    //If the player is not public, then return an empty response
-    if player_char[0].0.status != Some(Status::Public) {
-        return Json(PlayerResponse::empty());
+    
+    //If the player is not public, then return an appropriate response 
+    match player_char[0].0.status {
+        Some(Status::Cheater) => { return Json(PlayerResponse::cheater()); },
+        Some(Status::Private) => { return Json(PlayerResponse::private()); },
+        _ => {},
     }
 
     let mut match_counts = HashMap::new();

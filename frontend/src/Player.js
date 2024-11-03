@@ -190,6 +190,8 @@ const Player = () => {
 
   const [showNext, setShowNext] = useState(true);
 
+  const [hideClaim, setHideClaim] = useState(false);
+
   let player_id_checked = player_id;
   if (player_id_checked.match(/[a-zA-Z]/)) {
     player_id_checked = BigInt('0x' + player_id_checked);
@@ -219,6 +221,10 @@ const Player = () => {
         }
 
         setPlayer(player_result);
+
+        if( player_result.name === 'Player not found' && player_result.id === 0 ) {
+          setHideClaim(true);
+        }
         
         for (var key in player_result.ratings) {
           if(player_result.ratings[key].char_short === char_short) {
@@ -368,7 +374,7 @@ const Player = () => {
             </Box>
           ))}
         <hr style={{marginTop:10}}/>
-        <ClaimDialog playerId={player_id_checked} setLoading={setLoading} API_ENDPOINT={API_ENDPOINT} />
+        { hideClaim ? null : ( <ClaimDialog playerId={player_id_checked} setLoading={setLoading} API_ENDPOINT={API_ENDPOINT} /> ) }
         </Box>
       </Box>
     </React.Fragment>
