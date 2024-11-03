@@ -28,7 +28,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 function getCurrentPlayerRating(player, char_short) {
   for (var key in player.ratings) {
     if (player.ratings[key].char_short === char_short) {
-      return {rating: player.ratings[key].rating, deviation: player.ratings[key].deviation};
+      return { rating: player.ratings[key].rating, deviation: player.ratings[key].deviation };
     }
   }
 }
@@ -39,7 +39,7 @@ function groupMatches(data, player, char_short, has_offset) {
   data.reverse();
 
   let limit;
-  if( has_offset ) {
+  if (has_offset) {
     limit = data.length - 1;
   } else {
     limit = data.length;
@@ -51,22 +51,22 @@ function groupMatches(data, player, char_short, has_offset) {
 
     if (
       currentGroup &&
-      (prevMatch.opponent_id === match.opponent_id) && 
+      (prevMatch.opponent_id === match.opponent_id) &&
       (prevMatch.opponent_character_short === match.opponent_character_short)
     ) {
       // Continue the current group if the opponent and character are the same as the previous match
       currentGroup.matches.push(match);
       currentGroup.wins += match.result_win ? 1 : 0;
       currentGroup.losses += match.result_win ? 0 : 1;
-      if(prevMatch) {
+      if (prevMatch) {
         prevMatch.ratingChange = parseFloat(match.own_rating_value - prevMatch.own_rating_value);
         currentGroup.ratingChange += prevMatch.ratingChange;
         prevMatch.ratingChange = prevMatch.ratingChange.toFixed(2);
       }
     } else {
 
-      if(currentGroup) {
-        const lastChange = match.own_rating_value - currentGroup.matches[currentGroup.matches.length-1].own_rating_value;
+      if (currentGroup) {
+        const lastChange = match.own_rating_value - currentGroup.matches[currentGroup.matches.length - 1].own_rating_value;
         currentGroup.ratingChange += lastChange;
         currentGroup.matches.reverse();
         currentGroup.matches[0].ratingChange = lastChange.toFixed(2);
@@ -84,7 +84,7 @@ function groupMatches(data, player, char_short, has_offset) {
         ratingChange: 0,
         timestamp: match.timestamp,
       };
-      
+
       groupedData.push(currentGroup);
     }
   }
@@ -93,12 +93,12 @@ function groupMatches(data, player, char_short, has_offset) {
   groupedData[0].matches.reverse();
 
   let player_rating = {};
-  if( has_offset ) {
-    player_rating.rating = data[data.length-1].own_rating_value;
+  if (has_offset) {
+    player_rating.rating = data[data.length - 1].own_rating_value;
   } else {
     player_rating = getCurrentPlayerRating(player, char_short);
   }
-    
+
   const lastChange = player_rating.rating - groupedData[0].matches[0].own_rating_value;
   groupedData[0].ratingChange += lastChange;
   groupedData[0].matches[0].ratingChange = lastChange.toFixed(2);
@@ -113,7 +113,7 @@ function Row(props) {
   const { item } = props;
 
   function onMouseDown(event) {
-    if(event.button === 1) { //Middle mouse click
+    if (event.button === 1) { //Middle mouse click
       window.open(`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`, '_blank');
     } else {
       navigate(`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`);
@@ -134,12 +134,12 @@ function Row(props) {
         </TableCell>
         <TableCell component="th" scope="row">{item.timestamp}</TableCell>
         <TableCell align="right">{item.floor === '99' ? 'C' : item.floor}</TableCell>
-        <TableCell align="right">{item.matches[item.matches.length-1].own_rating_value.toFixed(2)} ±{item.matches[item.matches.length-1].own_rating_deviation.toFixed(2)}</TableCell>
-        <TableCell><Button onMouseDown={(event) => {onMouseDown(event)}} component={Link} variant="link">{item.opponent_name}</Button></TableCell>
+        <TableCell align="right">{item.matches[item.matches.length - 1].own_rating_value.toFixed(2)} ±{item.matches[item.matches.length - 1].own_rating_deviation.toFixed(2)}</TableCell>
+        <TableCell><Button onMouseDown={(event) => { onMouseDown(event) }} component={Link} variant="link">{item.opponent_name}</Button></TableCell>
         <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
-        <TableCell align="right">{item.matches[item.matches.length-1].opponent_rating_value.toFixed(2)} ±{item.matches[item.matches.length-1].opponent_rating_deviation.toFixed(2)}</TableCell>
+        <TableCell align="right">{item.matches[item.matches.length - 1].opponent_rating_value.toFixed(2)} ±{item.matches[item.matches.length - 1].opponent_rating_deviation.toFixed(2)}</TableCell>
         <TableCell align="right">{item.wins} - {item.losses}</TableCell>
-        <TableCell align="right">{(item.odds === 1.0 || item.odds === 0.0) ? '' : (item.odds*100).toFixed(1)+'%' }</TableCell>
+        <TableCell align="right">{(item.odds === 1.0 || item.odds === 0.0) ? '' : (item.odds * 100).toFixed(1) + '%'}</TableCell>
         <TableCell align="right">{item.ratingChange.toFixed(2) > 0 ? '+' : ''}{item.ratingChange.toFixed(2)}</TableCell>
       </TableRow>
       <TableRow id={item.timestamp}>
@@ -148,11 +148,11 @@ function Row(props) {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                <TableCell>Timestamp</TableCell>
-                <TableCell align="right">Rating</TableCell>
-                <TableCell align="right">Opponent Rating</TableCell>
-                <TableCell align="right">Winner?</TableCell>
-                <TableCell align="right">Rating Change</TableCell>
+                  <TableCell>Timestamp</TableCell>
+                  <TableCell align="right">Rating</TableCell>
+                  <TableCell align="right">Opponent Rating</TableCell>
+                  <TableCell align="right">Winner?</TableCell>
+                  <TableCell align="right">Rating Change</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -180,12 +180,12 @@ const Player = () => {
   const defaultCount = 100;
 
   const navigate = useNavigate();
-  let { player_id, char_short, count,  offset } = useParams();
-  
-  const [history, setHistory] = useState([]);
-  const [player, setPlayer] = useState([]);
-  const [currentCharData, setCurrentCharData] = useState([]);
-  const [alias, setAlias] = useState('');
+  let { player_id, char_short, count, offset } = useParams();
+
+  const [history, setHistory] = useState(null);
+  const [player, setPlayer] = useState(null);
+  const [currentCharData, setCurrentCharData] = useState(null);
+  const [alias, setAlias] = useState(null);
 
   const [loading, setLoading] = useState(true);
 
@@ -211,24 +211,24 @@ const Player = () => {
           return parsed;
         });
 
-        for( var key in player_result.ratings ) {
+        for (var key in player_result.ratings) {
           player_result.ratings[key].rating = player_result.ratings[key].rating.toFixed(2);
           player_result.ratings[key].deviation = player_result.ratings[key].deviation.toFixed(2);
         }
 
         setPlayer(player_result);
 
-        if( player_result.name === 'Player not found' && player_result.id === 0 ) {
+        if (player_result.name === 'Player not found' && player_result.id === 0) {
           setHideClaim(true);
         }
-        
+
         //Redirect to the highest rated character
-        if( char_short === undefined ) {
+        if (char_short === undefined) {
 
           let highest_rating = 0;
           let highest_char = 'SO';
-          for( var key in player_result.ratings ) {
-            if( player_result.ratings[key].rating > highest_rating ) {
+          for (var key in player_result.ratings) {
+            if (player_result.ratings[key].rating > highest_rating) {
               highest_rating = player_result.ratings[key].rating;
               highest_char = player_result.ratings[key].char_short;
             }
@@ -239,7 +239,7 @@ const Player = () => {
         }
 
         for (var key in player_result.ratings) {
-          if(player_result.ratings[key].char_short === char_short) {
+          if (player_result.ratings[key].char_short === char_short) {
             setCurrentCharData(player_result.ratings[key]);
           }
         }
@@ -249,19 +249,19 @@ const Player = () => {
         const url = API_ENDPOINT
           + '/player/'
           + player_id_checked
-          +'/' + char_short
-          + '/history?count=' + ((has_offset && offset !== '0') ? Number(count)+1 : '100')
-          + '&offset=' + (has_offset && offset !== '0' ? Number(offset)-1 : '0');
+          + '/' + char_short
+          + '/history?count=' + ((has_offset && offset !== '0') ? Number(count) + 1 : '100')
+          + '&offset=' + (has_offset && offset !== '0' ? Number(offset) - 1 : '0');
         const history_response = await fetch(url);
         const history_result = await history_response.json();
 
-        if(history_result.history.length < (count ? count : defaultCount)) {
+        if (history_result.history.length < (count ? count : defaultCount)) {
           setShowNext(false);
         } else {
           setShowNext(true);
         }
 
-        if(history_result.history.length !== 0) {
+        if (history_result.history.length !== 0) {
           const groupedData = groupMatches(history_result.history, player_result, char_short, has_offset);
           setHistory(groupedData);
         }
@@ -269,10 +269,10 @@ const Player = () => {
         const alias_response = await fetch(API_ENDPOINT + '/alias/' + player_id_checked);
         const alias_result = await alias_response.json();
 
-        if( alias_result !== null ) {
+        if (alias_result !== null) {
           //loop through alias_result and remove current player name
-          for( var key in alias_result ) {
-            if( alias_result[key] === player_result.name ) {
+          for (var key in alias_result) {
+            if (alias_result[key] === player_result.name) {
               alias_result.splice(key, 1);
             }
           }
@@ -291,10 +291,10 @@ const Player = () => {
   function onPrev(event) {
     let nav_count = count ? parseInt(count) : defaultCount;
     let nav_offset = offset ? parseInt(offset) - parseInt(nav_count) : 0;
-    if(nav_count < 0) {
+    if (nav_count < 0) {
       nav_count = defaultCount;
     }
-    if(nav_offset < 0) {
+    if (nav_offset < 0) {
       nav_offset = 0;
     }
     navigate(`/player/${player_id_checked}/${char_short}/${nav_count}/${nav_offset}`);
@@ -309,113 +309,126 @@ const Player = () => {
   return (
     <React.Fragment>
       <AppBar position="static"
-        style={{backgroundImage: "none"}}
-        sx={{backgroundColor:"secondary.main"}}
+        style={{ backgroundImage: "none" }}
+        sx={{ backgroundColor: "secondary.main" }}
       >
-        <Box sx={{minHeight:100, paddingTop:'30px'}}>
-          <Typography align='center' variant="pageHeader" fontSize={30}>
 
-           
-            {player.name}
-            <Typography variant="platform">
-              {player.platform}
-            </Typography>
-            {player.top_global !== 0 ? (
-              <Typography variant="global_rank">
-                #{player.top_global} Overall
+        <Box sx={{ minHeight: 100, paddingTop: '30px' }}>
+          {player ? (
+            <Typography align='center' variant="pageHeader" fontSize={30}>
+              {player.name}
+              <Typography variant="platform">
+                {player.platform}
               </Typography>
-            ) : null}
-          </Typography>
-          
-          {alias !== '' && alias.length > 0 ? (
-            <Box  align='center' fontSize={17}>
-              <Typography variant='platform' sx={{position:'relative', top:'0px', borderRadius: '5px', py: '5px'}} display={'inline-block'}>
+              {player.top_global !== 0 ? (
+                <Typography variant="global_rank">
+                  #{player.top_global} Overall
+                </Typography>
+              ) : null}
+            </Typography>
+          ) : null}
+
+          {alias && alias.length > 0 ? (
+            <Box align='center' fontSize={17}>
+              <Typography variant='platform' sx={{ position: 'relative', top: '0px', borderRadius: '5px', py: '5px' }} display={'inline-block'}>
                 AKA
               </Typography>
-              <Box m={1} sx={{display: 'inline-block'}}>
+              <Box m={1} sx={{ display: 'inline-block' }}>
                 {alias.map((item, i) => (
-                  <Box px={0.8} py={0.2} mx={0.3} my={0.2} sx={{backgroundColor: 'primary.main', borderRadius: '3px'}} display={'inline-block'} key={i}>
+                  <Box px={0.8} py={0.2} mx={0.3} my={0.2} sx={{ backgroundColor: 'primary.main', borderRadius: '3px' }} display={'inline-block'} key={i}>
                     {item}
                   </Box>
                 ))}
               </Box>
             </Box>
-          ): null }
+          ) : null}
 
         </Box>
-        { loading ?
+        {loading ?
           <CircularProgress
             size={60}
             variant="indeterminate"
             disableShrink={true}
-            sx={{ position: 'absolute', top:'-1px', color:'white' }}
+            sx={{ position: 'absolute', top: '-1px', color: 'white' }}
           />
           : null
         }
       </AppBar>
-      <Box sx={{display:'flex', flexWrap:'nowrap'}}>
-        <Box m={4} sx={{width:.7}}>
-          <Box sx={{maxWidth:1000}}>
-            <Typography variant='h6'>
-              {currentCharData.character} Rating: {currentCharData.rating} ±{currentCharData.deviation} ({currentCharData.match_count} games)
-              {currentCharData.top_char !== 0 ? (
-              <Typography variant="char_rank">
-                #{currentCharData.top_char}
+      <Box sx={{ display: 'flex', flexWrap: 'nowrap' }}>
+        <Box m={4} sx={{ width: .7 }}>
+          <Box sx={{ maxWidth: 1000 }}>
+            {currentCharData ? (
+              <Typography variant='h6'>
+                {currentCharData.character} Rating: {currentCharData.rating} ±{currentCharData.deviation} ({currentCharData.match_count} games)
+                {currentCharData.top_char !== 0 ? (
+                  <Typography variant="char_rank">
+                    #{currentCharData.top_char}
+                  </Typography>
+                ) : null}
               </Typography>
             ) : null}
-            </Typography>
 
-            <Box mx={3} maxWidth="800px" minWidth="800px" sx={{display: 'inline-block'}}>
-              <Button onClick={(event) => onPrev(event)}>Prev</Button>
-              <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
-            </Box>
-            <TableContainer component={Paper}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell></TableCell>
-                    <TableCell>Timestamp</TableCell>
-                    <TableCell align="right">Floor</TableCell>
-                    <TableCell align="right">Rating</TableCell>
-                    <TableCell>Opponent</TableCell>
-                    <TableCell align="right">Character</TableCell>
-                    <TableCell align="right">Rating</TableCell>
-                    <TableCell align="right">Result</TableCell>
-                    <TableCell align="right">Odds</TableCell>
-                    <TableCell align="right">Change</TableCell>
-                  </TableRow>
-                </TableHead>
-               <TableBody>
-                 {history.map((item, i) => (
-                    <Row key={i} item={item} i={i} />
-                 ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            <Box mx={3} maxWidth="800px" minWidth="800px" sx={{display: 'inline-block'}}>
-              <Button onClick={(event) => onPrev(event)}>Prev</Button>
-              <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
-            </Box>
+            {history ? (
+              <React.Fragment>
+                <Box mx={3} maxWidth="800px" minWidth="800px" sx={{ display: 'inline-block' }}>
+                  <Button onClick={(event) => onPrev(event)}>Prev</Button>
+                  <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
+                </Box>
+                <TableContainer component={Paper}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell></TableCell>
+                        <TableCell>Timestamp</TableCell>
+                        <TableCell align="right">Floor</TableCell>
+                        <TableCell align="right">Rating</TableCell>
+                        <TableCell>Opponent</TableCell>
+                        <TableCell align="right">Character</TableCell>
+                        <TableCell align="right">Rating</TableCell>
+                        <TableCell align="right">Result</TableCell>
+                        <TableCell align="right">Odds</TableCell>
+                        <TableCell align="right">Change</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {history.map((item, i) => (
+                        <Row key={i} item={item} i={i} />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <Box mx={3} maxWidth="800px" minWidth="800px" sx={{ display: 'inline-block' }}>
+                  <Button onClick={(event) => onPrev(event)}>Prev</Button>
+                  <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
+                </Box>
+              </React.Fragment>
+            ) : null}
           </Box>
         </Box>
-        <Box marginLeft={10} marginTop={13} sx={{width:.18, maxWidth:'235px'}}>
-          <hr />
-          <Typography fontSize={14}>
-            Characters:
-          </Typography>
-          {player.ratings && player.ratings.map((item, i) => (
-            <Box key={i}>
-              <Button variant="text" onClick={() => {navigate(`/player/${player.id}/${item.char_short}`)}} sx={{textAlign: 'left'}} color='text' >
-                <Typography fontSize={12.5} my={0.3}>
-                  {item.character} {item.rating} ±{item.deviation}<br />({item.match_count} games)
-                </Typography>
-              </Button>
-              <br />
-            </Box>
-          ))}
-        <hr style={{marginTop:10}}/>
-        { hideClaim ? null : ( <ClaimDialog playerId={player_id_checked} setLoading={setLoading} API_ENDPOINT={API_ENDPOINT} /> ) }
+        <Box marginLeft={10} marginTop={13} sx={{ width: .18, maxWidth: '235px' }}>
+          {player && player.id !== 0 ? (
+            <React.Fragment>
+              <hr />
+              <Typography fontSize={14}>
+                Characters:
+              </Typography>
+              {player.ratings && player.ratings.map((item, i) => (
+                <Box key={i}>
+                  <Button variant="text" onClick={() => { navigate(`/player/${player.id}/${item.char_short}`) }} sx={{ textAlign: 'left' }} color='text' >
+                    <Typography fontSize={12.5} my={0.3}>
+                      {item.character} {item.rating} ±{item.deviation}<br />({item.match_count} games)
+                    </Typography>
+                  </Button>
+                  <br />
+                </Box>
+              ))}
+              <hr style={{ marginTop: 10 }} />
+            </React.Fragment>
+          ) : null}
+
+          {hideClaim ? null : (<ClaimDialog playerId={player_id_checked} setLoading={setLoading} API_ENDPOINT={API_ENDPOINT} />)}
         </Box>
+
       </Box>
     </React.Fragment>
   );
@@ -443,12 +456,12 @@ const ClaimDialog = ({ playerId, setLoading, API_ENDPOINT }) => {
   const handleClickOpen = async () => {
 
     //If 'key' is set in localstorage, just redirect to settings
-    if(localStorage.getItem('key')) {
+    if (localStorage.getItem('key')) {
       document.location.href = '/settings';
       return;
     }
 
-    if(code === '') {
+    if (code === '') {
       const response = await fetch(API_ENDPOINT + '/claim/' + playerId);
       const result = await response.text().then(body => {
         var parsed = JSONParse(body);
@@ -469,7 +482,7 @@ const ClaimDialog = ({ playerId, setLoading, API_ENDPOINT }) => {
   function startPolling() {
     setIsPolling(true);
   }
-  
+
   function pollPlayer(playerId) {
     if (counter.current >= 10) {
       clearInterval(timerRef.current);
@@ -482,11 +495,11 @@ const ClaimDialog = ({ playerId, setLoading, API_ENDPOINT }) => {
     req.send();
 
     req.onreadystatechange = (e) => {
-      
+
       if (req.readyState === 4 && req.status === 200) {
         const resp = JSON.parse(req.response);
-        
-        if(resp !== 'false') {
+
+        if (resp !== 'false') {
           clearInterval(timerRef.current);
 
           setTimeout(() => {
@@ -498,7 +511,7 @@ const ClaimDialog = ({ playerId, setLoading, API_ENDPOINT }) => {
     }
 
     counter.current++;
-    
+
   }
 
   return (
@@ -514,7 +527,7 @@ const ClaimDialog = ({ playerId, setLoading, API_ENDPOINT }) => {
         <DialogContent>
           <DialogContentText>
             {code}<br /><br /><br />
-            To confirm that this is your profile, put the above code in your R-Code "free comment" section 
+            To confirm that this is your profile, put the above code in your R-Code "free comment" section
             and close the R-Code so that it saves.<br /><br />
             Press <Button onClick={startPolling}>THIS</Button> once you've done this.<br /><br />
             After the profile has been confirmed you can change your R-code comment back to whatever you want.
