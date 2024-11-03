@@ -699,6 +699,43 @@ async fn get_settings_data(mut db: Connection<Db>, key: &str) -> Json<SettingsRe
     })
 }
 
+#[get("/api/alias/<player_id>")]
+async fn get_alias(mut db: Connection<Db>, player_id: &str) -> Json<Vec<String>> {
+
+    let id = match i64::from_str_radix(player_id, 10) {
+        Ok(id) => id,
+        Err(_) => {
+            return Json(vec![]);
+        }
+    };
+
+    //If player is not Public, return empty
+    match schema::players::table
+        .select(schema::players::status)
+        .filter(schema::players::id.eq(id))
+        .first::<Option<Status>>(&mut db)
+        .await {
+            Ok(Some(status)) => {
+                if status != Status::Public {
+                    return Json(vec![]);
+                }
+            },
+            _ => {
+                return Json(vec![]);
+            }
+        }
+
+    let alias: Vec<String> = schema::player_names::table
+        .select(schema::player_names::name)
+        .filter(schema::player_names::id.eq(id))
+        .order(schema::player_names::name.asc())
+        .load::<String>(&mut db)
+        .await
+        .expect("Error loading alias'");
+
+    Json(alias)
+}
+
 #[rocket::main]
 async fn main() {
     dotenv().expect("dotenv failed");
@@ -759,6 +796,7 @@ pub async fn run() {
         poll_player_claim,
         toggle_private,
         get_settings_data,
+        get_alias,
     ];
 
     if cfg!(debug_assertions) {//Cors only used for development

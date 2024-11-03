@@ -185,6 +185,7 @@ const Player = () => {
   const [history, setHistory] = useState([]);
   const [player, setPlayer] = useState([]);
   const [currentCharData, setCurrentCharData] = useState([]);
+  const [alias, setAlias] = useState('');
 
   const [loading, setLoading] = useState(true);
 
@@ -260,14 +261,26 @@ const Player = () => {
           setShowNext(true);
         }
 
-        if(history_result.history.length === 0) {
-          setLoading(false);
-        } else {
+        if(history_result.history.length !== 0) {
           const groupedData = groupMatches(history_result.history, player_result, char_short, has_offset);
           setHistory(groupedData);
-          
-          setLoading(false);
         }
+
+        const alias_response = await fetch(API_ENDPOINT + '/alias/' + player_id_checked);
+        const alias_result = await alias_response.json();
+
+        if( alias_result !== null ) {
+          //loop through alias_result and remove current player name
+          for( var key in alias_result ) {
+            if( alias_result[key] === player_result.name ) {
+              alias_result.splice(key, 1);
+            }
+          }
+          setAlias(alias_result);
+        }
+
+        setLoading(false);
+
       } catch (error) {
         console.error('Error fetching player data:', error);
       }
@@ -313,6 +326,22 @@ const Player = () => {
               </Typography>
             ) : null}
           </Typography>
+          
+          {alias !== '' && alias.length > 0 ? (
+            <Box  align='center' fontSize={17}>
+              <Typography variant='platform' sx={{position:'relative', top:'0px', borderRadius: '5px', py: '5px'}} display={'inline-block'}>
+                AKA
+              </Typography>
+              <Box m={1} sx={{display: 'inline-block'}}>
+                {alias.map((item, i) => (
+                  <Box px={0.8} py={0.2} mx={0.3} my={0.2} sx={{backgroundColor: 'primary.main', borderRadius: '3px'}} display={'inline-block'} key={i}>
+                    {item}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          ): null }
+
         </Box>
         { loading ?
           <CircularProgress

@@ -73,8 +73,8 @@ const Settings = () => {
                     </Box>
 
                     <Box sx={{ borderColor: '#F8B552', borderWidth: '2px', borderStyle: 'dashed', p: '20px', m: '50px'}}>
-                        <p>Note: If you use the same browser, you can revisit this page without reauthenticating to change settings.</p>
-                        <p>If you don't want that, click <Button onClick={() => {localStorage.removeItem('key'); window.location.reload();}}>here</Button> to clear browser data.</p>
+                        <Typography variant='body1'>Note: If you use the same browser, you can revisit this page without reauthenticating to change settings.</Typography>
+                        <Typography variant='body1'>If you don't want that, click <Button onClick={() => {localStorage.removeItem('key'); window.location.reload();}}>here</Button> to clear browser data.</Typography>
                     </Box>
                 </Box>
 

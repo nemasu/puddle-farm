@@ -148,9 +148,11 @@ async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> 
     let results = sql_query("
         INSERT INTO global_ranks (rank, id, char_id)
         SELECT ROW_NUMBER()
-        OVER (ORDER BY value DESC) as rank, player_ratings.id, char_id
-        FROM player_ratings
-        WHERE deviation < 30.0
+        OVER (ORDER BY value DESC) as rank, r.id, r.char_id
+        FROM player_ratings r
+        LEFT JOIN players p ON p.id = r.id
+        WHERE r.deviation < 30.0
+        AND p.status = 'public'
         ORDER BY value DESC
         LIMIT 1000  
         RETURNING rank
