@@ -2,6 +2,8 @@
 
 This project is aimed to become a replacement for [Rating Update](https://github.com/nemasu/rating-update).
 
+It is currently being hosted at [Puddle.farm](https://puddle.farm)
+
 ### Major Changes
 - Rocket 0.5 => Rocket (git) for now, considering Axum.
 - Sqlite3 => Postgres with Diesel ORM
