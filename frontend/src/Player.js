@@ -199,11 +199,6 @@ const Player = () => {
 
   useEffect(() => {
 
-    //TODO redirect to the hihgest rated character
-    if( char_short === undefined ) {
-      navigate(`/player/${player_id_checked}/SO`);
-    }
-
     window.scrollTo(0, 0);
 
     const fetchPlayerAndHistory = async () => {
@@ -226,6 +221,22 @@ const Player = () => {
           setHideClaim(true);
         }
         
+        //Redirect to the highest rated character
+        if( char_short === undefined ) {
+
+          let highest_rating = 0;
+          let highest_char = 'SO';
+          for( var key in player_result.ratings ) {
+            if( player_result.ratings[key].rating > highest_rating ) {
+              highest_rating = player_result.ratings[key].rating;
+              highest_char = player_result.ratings[key].char_short;
+            }
+          }
+
+          navigate(`/player/${player_id_checked}/${highest_char}`);
+          return;
+        }
+
         for (var key in player_result.ratings) {
           if(player_result.ratings[key].char_short === char_short) {
             setCurrentCharData(player_result.ratings[key]);
