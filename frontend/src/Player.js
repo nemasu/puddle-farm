@@ -220,6 +220,10 @@ const Player = () => {
 
         if (player_result.name === 'Player not found' && player_result.id === 0) {
           setHideClaim(true);
+        } else if (player_result.id === 0 ) {
+          setHistory(null);
+          setCurrentCharData(null);
+          setAlias(null);
         }
 
         //Redirect to the highest rated character
