@@ -387,7 +387,7 @@ const Player = () => {
               
               {currentCharData.top_defeated.value !== 0.0 ? (
                 <Typography variant='h7'>
-                Top Defeated: <Button sx={{fontSize: '110%'}} component={Link} variant="link" onMouseDown={(event) => onProfileClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name}</Button> <Box title={currentCharData.top_defeated.value} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({currentCharData.top_defeated.timestamp})
+                Top Defeated: <Button sx={{fontSize: '16px'}}component={Link} variant="link" onMouseDown={(event) => onProfileClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name}</Button> <Box title={currentCharData.top_defeated.value} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({currentCharData.top_defeated.timestamp})
                 </Typography>
               ) : null}
               
