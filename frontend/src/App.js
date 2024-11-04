@@ -20,7 +20,7 @@ import About from './About';
 const App = () => {
   return (
     <React.Fragment>
-      <Box sx={{minWidth: 1300}}>
+      <Box sx={{ minWidth: 1300 }}>
         <ThemeManager>
           <CssBaseline enableColorScheme />
           <NavBar />
@@ -43,39 +43,39 @@ const App = () => {
             />
 
             <Route
-                path="/top_global/:count?/:offset?"
-                element={<TopGlobal />}
+              path="/top_global/:count?/:offset?"
+              element={<TopGlobal />}
             />
 
             <Route
-                path="/top/:char_short/:count?/:offset?"
-                element={<TopPlayer />}
+              path="/top/:char_short/:count?/:offset?"
+              element={<TopPlayer />}
             />
 
             <Route
-                path="/player/:player_id/:char_short?/:count?/:offset?"
-                element={<Player />}
+              path="/player/:player_id/:char_short?/:count?/:offset?"
+              element={<Player />}
             />
 
             <Route
-                path="/search/:search_string/:exact?"
-                element={<Search />}
+              path="/search/:search_string/:exact?"
+              element={<Search />}
             />
 
           </Routes>
-          <Box sx={{ display: 'block', justifyContent: 'center', alignItems: 'center'}}>
+          <Box sx={{ display: 'block', justifyContent: 'center', alignItems: 'center' }}>
             <Typography variant="h7" align="center" display={'block'}>
               Puddle Farm is an open source project. Feel free to contribute!
             </Typography>
-            
+
             <Typography fontSize={13} align="center" display={'block'}>
               Don't worry, features are still being added!
             </Typography>
           </Box>
-          <Box sx={{minHeight: 100, textAlign: 'center'}}>
-            <Button component={Link} variant="link" target="_blank" to="https://github.com/nemasu/puddle-farm"><GitHubIcon style={{transform: 'scale(0.35)'}}/></Button>
-            <Button component={Link} variant="link" target="_blank" to="https://discord.gg/vY4mE8exXB"><DiscordIcon style={{transform: 'scale(0.65)'}}/></Button>
-            <Button component={Link} variant="link" target="_blank" to="https://patreon.com/nemasu"><PatreonIcon style={{transform: 'scale(0.65)'}}/></Button>
+          <Box sx={{ minHeight: 100, textAlign: 'center' }}>
+            <Button component={Link} variant="link" target="_blank" to="https://github.com/nemasu/puddle-farm"><GitHubIcon style={{ transform: 'scale(0.65)' }} /></Button>
+            <Button component={Link} variant="link" target="_blank" to="https://discord.gg/vY4mE8exXB"><DiscordIcon style={{ transform: 'scale(0.65)' }} /></Button>
+            <Button component={Link} variant="link" target="_blank" to="https://patreon.com/nemasu"><PatreonIcon style={{ transform: 'scale(0.55)', position: 'relative', top: '7px' }} /></Button>
           </Box>
         </ThemeManager>
       </Box>
