@@ -112,10 +112,10 @@ function Row(props) {
 
   const { item } = props;
 
-  function onMouseDown(event) {
+  function onProfileClick(event) {
     if (event.button === 1) { //Middle mouse click
       window.open(`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`, '_blank');
-    } else {
+    } else if (event.button === 0) { //Left mouse click
       navigate(`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`);
     }
   }
@@ -134,13 +134,13 @@ function Row(props) {
         </TableCell>
         <TableCell component="th" scope="row">{item.timestamp}</TableCell>
         <TableCell align="right">{item.floor === '99' ? 'C' : item.floor}</TableCell>
-        <TableCell align="right">{item.matches[item.matches.length - 1].own_rating_value.toFixed(2)} ±{item.matches[item.matches.length - 1].own_rating_deviation.toFixed(2)}</TableCell>
-        <TableCell><Button onMouseDown={(event) => { onMouseDown(event) }} component={Link} variant="link">{item.opponent_name}</Button></TableCell>
+        <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].own_rating_value}>{item.matches[item.matches.length - 1].own_rating_value.toFixed(0)}</Box> <Box component={'span'} title={item.matches[item.matches.length - 1].own_rating_deviation}>±{item.matches[item.matches.length - 1].own_rating_deviation.toFixed(0)}</Box></TableCell>
+        <TableCell><Button onMouseDown={(event) => { onProfileClick(event) }} component={Link} variant="link" >{item.opponent_name}</Button></TableCell>
         <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
-        <TableCell align="right">{item.matches[item.matches.length - 1].opponent_rating_value.toFixed(2)} ±{item.matches[item.matches.length - 1].opponent_rating_deviation.toFixed(2)}</TableCell>
+        <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_value}>{item.matches[item.matches.length - 1].opponent_rating_value.toFixed(0)}</Box> <Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_deviation}>±{item.matches[item.matches.length - 1].opponent_rating_deviation.toFixed(0)}</Box></TableCell>
         <TableCell align="right">{item.wins} - {item.losses}</TableCell>
         <TableCell align="right">{(item.odds === 1.0 || item.odds === 0.0) ? '' : (item.odds * 100).toFixed(1) + '%'}</TableCell>
-        <TableCell align="right">{item.ratingChange.toFixed(2) > 0 ? '+' : ''}{item.ratingChange.toFixed(2)}</TableCell>
+        <TableCell align="right">{item.ratingChange.toFixed(0) > 0 ? '+' : ''}{item.ratingChange.toFixed(1)}</TableCell>
       </TableRow>
       <TableRow id={item.timestamp}>
         <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
@@ -196,6 +196,14 @@ const Player = () => {
   let player_id_checked = player_id;
   if (player_id_checked.match(/[a-zA-Z]/)) {
     player_id_checked = BigInt('0x' + player_id_checked);
+  }
+
+  function onProfileClick(event, url) {
+    if (event.button === 1) { //Middle mouse click
+      window.open(url, '_blank');
+    } else if (event.button === 0) { //Left mouse click
+      navigate(url);
+    }
   }
 
   useEffect(() => {
@@ -360,21 +368,35 @@ const Player = () => {
       </AppBar>
       <Box sx={{ display: 'flex', flexWrap: 'nowrap' }}>
         <Box m={4} sx={{ width: .7 }}>
-          <Box sx={{ maxWidth: 1000 }}>
+          <Box sx={{ minWidth: 1000, maxWidth: 1100 }}>
             {currentCharData ? (
-              <Typography variant='h6'>
-                {currentCharData.character} Rating: {currentCharData.rating} ±{currentCharData.deviation} ({currentCharData.match_count} games)
+              <React.Fragment>
+              <Typography variant='h5' my={2}>
+                {currentCharData.character} Rating: <Box title={currentCharData.rating} component={"span"}>{Math.round(currentCharData.rating)}</Box> ±<Box title={currentCharData.deviation} component={"span"}>{Math.round(currentCharData.deviation)}</Box> ({currentCharData.match_count} games)
                 {currentCharData.top_char !== 0 ? (
                   <Typography variant="char_rank">
                     #{currentCharData.top_char}
                   </Typography>
                 ) : null}
               </Typography>
+
+              <Typography variant='h7'>
+                Top Rating: <Box title={currentCharData.top_rating.value} component={"span"}>{Math.round(currentCharData.top_rating.value)}</Box> ±<Box title={currentCharData.top_rating.deviation} component={"span"}>{Math.round(currentCharData.top_rating.deviation)}</Box> ({currentCharData.top_rating.timestamp})
+              </Typography>
+              <br />
+              
+              {currentCharData.top_defeated.value !== 0.0 ? (
+                <Typography variant='h7'>
+                Top Defeated: <Button sx={{fontSize: '110%'}} component={Link} variant="link" onMouseDown={(event) => onProfileClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name}</Button> <Box title={currentCharData.top_defeated.value} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({currentCharData.top_defeated.timestamp})
+                </Typography>
+              ) : null}
+              
+              </React.Fragment>
             ) : null}
 
             {history ? (
               <React.Fragment>
-                <Box mx={3} maxWidth="800px" minWidth="800px" sx={{ display: 'inline-block' }}>
+                <Box mx={3}>
                   <Button onClick={(event) => onPrev(event)}>Prev</Button>
                   <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
                 </Box>
@@ -383,12 +405,12 @@ const Player = () => {
                     <TableHead>
                       <TableRow>
                         <TableCell></TableCell>
-                        <TableCell>Timestamp</TableCell>
-                        <TableCell align="right">Floor</TableCell>
-                        <TableCell align="right">Rating</TableCell>
+                        <TableCell width="170px">Timestamp</TableCell>
+                        <TableCell>Floor</TableCell>
+                        <TableCell width="100px" align="right">Rating</TableCell>
                         <TableCell>Opponent</TableCell>
                         <TableCell align="right">Character</TableCell>
-                        <TableCell align="right">Rating</TableCell>
+                        <TableCell width="100px" align="right">Rating</TableCell>
                         <TableCell align="right">Result</TableCell>
                         <TableCell align="right">Odds</TableCell>
                         <TableCell align="right">Change</TableCell>
@@ -401,7 +423,7 @@ const Player = () => {
                     </TableBody>
                   </Table>
                 </TableContainer>
-                <Box mx={3} maxWidth="800px" minWidth="800px" sx={{ display: 'inline-block' }}>
+                <Box mx={3}>
                   <Button onClick={(event) => onPrev(event)}>Prev</Button>
                   <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
                 </Box>

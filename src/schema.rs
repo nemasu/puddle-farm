@@ -66,15 +66,6 @@ diesel::table! {
         value -> Float4,
         deviation -> Float4,
         last_decay -> Timestamp,
-        top_rating_value -> Nullable<Float4>,
-        top_rating_deviation -> Nullable<Float4>,
-        top_rating_timestamp -> Nullable<Timestamp>,
-        top_defeated_id -> Nullable<Int8>,
-        top_defeated_char_id -> Nullable<Int2>,
-        top_defeated_name -> Nullable<Text>,
-        top_defeated_value -> Nullable<Float4>,
-        top_defeated_deviation -> Nullable<Float4>,
-        top_defeated_timestamp -> Nullable<Timestamp>,
     }
 }
 

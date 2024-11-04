@@ -84,6 +84,8 @@ Themes.set('Sol', createTheme({
                 style: {
                   textTransform: 'none',
                   color: '#F8B552',
+                  padding: '5px 0px 5px 0px',
+                  justifyContent: 'left',
                 }
               }
             ],
@@ -189,6 +191,8 @@ Themes.set('Ky', createTheme({
               style: {
                 textTransform: 'none',
                 color: '#F8B552',
+                padding: '5px 0px 5px 0px',
+                justifyContent: 'left',
               }
             }
           ],
@@ -294,6 +298,8 @@ Themes.set('Nagoriyuki', createTheme({
               style: {
                 textTransform: 'none',
                 color: '#da2a46',
+                padding: '5px 0px 5px 0px',
+                justifyContent: 'left',
               }
             }
           ],
@@ -399,6 +405,8 @@ Themes.set('Bedman?', createTheme({
               style: {
                 textTransform: 'none',
                 color: '#F8B552',
+                padding: '5px 0px 5px 0px',
+                justifyContent: 'left',
               }
             }
           ],

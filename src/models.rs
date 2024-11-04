@@ -79,15 +79,6 @@ pub struct PlayerRating {
     pub value: f32,
     pub deviation: f32,
     pub last_decay: NaiveDateTime,
-    pub top_rating_value: Option<f32>,
-    pub top_rating_deviation: Option<f32>,
-    pub top_rating_timestamp: Option<NaiveDateTime>,
-    pub top_defeated_id: Option<i64>,
-    pub top_defeated_char_id: Option<i16>,
-    pub top_defeated_name: Option<String>,
-    pub top_defeated_value: Option<f32>,
-    pub top_defeated_deviation: Option<f32>,
-    pub top_defeated_timestamp: Option<NaiveDateTime>,
 }
 
 #[derive(Debug, PartialEq, FromSqlRow, AsExpression, Eq, Clone)]

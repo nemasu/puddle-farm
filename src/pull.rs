@@ -337,15 +337,6 @@ async fn update_ratings(connection: &mut AsyncPgConnection, new_games: &Vec<Game
                     value: 1500.0,
                     deviation: 250.0,
                     last_decay: g.timestamp,
-                    top_rating_value: None,
-                    top_rating_deviation: None,
-                    top_rating_timestamp: None,
-                    top_defeated_id: None,
-                    top_defeated_char_id: None,
-                    top_defeated_name: None,
-                    top_defeated_value: None,
-                    top_defeated_deviation: None,
-                    top_defeated_timestamp: None,
                 };
 
                 diesel::insert_into(player_ratings::table)
@@ -375,15 +366,6 @@ async fn update_ratings(connection: &mut AsyncPgConnection, new_games: &Vec<Game
                     value: 1500.0,
                     deviation: 250.0,
                     last_decay: g.timestamp,
-                    top_rating_value: None,
-                    top_rating_deviation: None,
-                    top_rating_timestamp: None,
-                    top_defeated_id: None,
-                    top_defeated_char_id: None,
-                    top_defeated_name: None,
-                    top_defeated_value: None,
-                    top_defeated_deviation: None,
-                    top_defeated_timestamp: None,
                 };
 
                 diesel::insert_into(player_ratings::table)

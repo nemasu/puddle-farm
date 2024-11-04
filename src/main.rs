@@ -228,7 +228,27 @@ struct PlayerResponsePlayer  {
     character: String,
     match_count: i32,
     top_char: i32,
+    top_defeated: TopDefeated,
+    top_rating: TopRating,
 }
+
+#[derive(Serialize, Clone)]
+struct TopDefeated {
+    timestamp: String,
+    id: i64,
+    name: String,
+    char_short: String,
+    value: f32,
+    deviation: f32,
+}
+
+#[derive(Serialize, Clone)]
+struct TopRating {
+    timestamp: String,
+    value: f32,
+    deviation: f32,
+}
+
 #[get("/api/player/<player_id>")]
 async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse> {
     
@@ -263,6 +283,8 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
 
     let mut match_counts = HashMap::new();
     let mut top_chars = HashMap::new();
+    let mut top_defeated = HashMap::new();
+    let mut top_rating = HashMap::new();
 
     let top_global = match schema::global_ranks::table
     .filter(schema::global_ranks::id.eq(id))
@@ -297,7 +319,100 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
 
         top_chars.insert(rating.char_id, top_char);
 
- 
+        let top_defeated_res: Vec<(chrono::NaiveDateTime, i64, String, i16, Option<f32>, Option<f32>, Option<f32>)> =
+            schema::games::table
+                .select(
+                    (schema::games::timestamp,
+                        schema::games::id_b,
+                        schema::games::name_b,
+                        schema::games::char_b,
+                        schema::games::value_b,
+                        schema::games::deviation_b,
+                        schema::games::value_b - schema::games::deviation_b
+                    )
+                )
+                .filter(
+                    schema::games::id_a.eq(id)
+                        .and(schema::games::char_a.eq(rating.char_id))
+                        .and(schema::games::winner.eq(1))
+                        .and(schema::games::deviation_b.lt(30.0))
+                    )
+                .order((schema::games::value_b - schema::games::deviation_b).desc())
+                .limit(1)
+                .union(
+                    schema::games::table.select(
+                        (schema::games::timestamp,
+                            schema::games::id_a,
+                            schema::games::name_a,
+                            schema::games::char_a,
+                            schema::games::value_a,
+                            schema::games::deviation_a,
+                            schema::games::value_a - schema::games::deviation_a)
+                        )
+                    .filter(
+                        schema::games::id_b.eq(id)
+                        .and(schema::games::char_b.eq(rating.char_id))
+                        .and(schema::games::winner.eq(0))
+                        .and(schema::games::deviation_a.lt(30.0))
+                    )
+                    .order((schema::games::value_a - schema::games::deviation_a).desc())
+                    .limit(1)
+                )
+                .load::<(chrono::NaiveDateTime, i64, String, i16, Option<f32>, Option<f32>, Option<f32>)>(&mut db)
+                .await
+                .expect("Error loading games");
+
+        if top_defeated_res.len() > 0 {
+            top_defeated.insert(rating.char_id, TopDefeated{
+                timestamp: top_defeated_res[0].0.to_string(),
+                id: top_defeated_res[0].1,
+                name: top_defeated_res[0].2.clone(),
+                char_short: CHAR_NAMES[ top_defeated_res[0].3 as usize].0.to_string(),
+                value: top_defeated_res[0].4.unwrap_or(0.0),
+                deviation: top_defeated_res[0].5.unwrap_or(0.0),
+            });
+        }
+
+        let top_rating_res: Vec<(chrono::NaiveDateTime, Option<f32>, Option<f32>, Option<f32>)> =
+            schema::games::table
+                .select(
+                    (schema::games::timestamp,
+                        schema::games::value_a,
+                        schema::games::deviation_a,
+                        schema::games::value_a - schema::games::deviation_a
+                    )
+                )
+                .filter(
+                    schema::games::id_a.eq(id)
+                        .and(schema::games::char_a.eq(rating.char_id))
+                    )
+                .order((schema::games::value_a - schema::games::deviation_a).desc())
+                .limit(1)
+                .union(
+                    schema::games::table.select(
+                        (schema::games::timestamp,
+                            schema::games::value_b,
+                            schema::games::deviation_b,
+                            schema::games::value_b - schema::games::deviation_b)
+                        )
+                    .filter(
+                        schema::games::id_b.eq(id)
+                        .and(schema::games::char_b.eq(rating.char_id))
+                    )
+                    .order((schema::games::value_b - schema::games::deviation_b).desc())
+                    .limit(1)
+                )
+                .load::<(chrono::NaiveDateTime, Option<f32>, Option<f32>, Option<f32>)>(&mut db)
+                .await
+                .expect("Error loading games");
+
+        if top_rating_res.len() > 0 {
+            top_rating.insert(rating.char_id, TopRating{
+                timestamp: top_rating_res[0].0.to_string(),
+                value: top_rating_res[0].1.unwrap(),
+                deviation: top_rating_res[0].2.unwrap(),
+            });
+        }
     }
 
     let ratings: Vec<PlayerResponsePlayer> = player_char.iter().map(|p| {
@@ -308,6 +423,19 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
             character: CHAR_NAMES[ p.1.char_id as usize].1.to_string(),
             match_count: match_counts.get(&p.1.char_id).unwrap().clone(),
             top_char: top_chars.get(&p.1.char_id).unwrap().clone(),
+            top_defeated: top_defeated.get(&p.1.char_id).unwrap_or(&TopDefeated{
+                timestamp: "N/A".to_string(),
+                id: 0,
+                name: "N/A".to_string(),
+                char_short: "N/A".to_string(),
+                value: 0.0,
+                deviation: 0.0,
+            }).clone(),
+            top_rating: top_rating.get(&p.1.char_id).unwrap_or(&TopRating{
+                timestamp: "N/A".to_string(),
+                value: 0.0,
+                deviation: 0.0,
+            }).clone(),
         }
     }).collect();
 

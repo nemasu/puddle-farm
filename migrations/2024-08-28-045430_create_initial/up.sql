@@ -18,18 +18,6 @@ CREATE TABLE player_ratings (
     value REAL NOT NULL,
     deviation REAL NOT NULL,
     last_decay TIMESTAMP NOT NULL,
-
-    top_rating_value REAL,
-    top_rating_deviation REAL,
-    top_rating_timestamp TIMESTAMP,
-
-    top_defeated_id BIGINT,
-    top_defeated_char_id SMALLINT,
-    top_defeated_name TEXT,
-    top_defeated_value REAL,
-    top_defeated_deviation REAL,
-    top_defeated_timestamp TIMESTAMP,
-
     PRIMARY KEY(id, char_id)
 );
 
