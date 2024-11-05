@@ -153,7 +153,7 @@ Themes.set('Ky', createTheme({
               props: { variant: 'char_rank' },
               style: {
                 fontSize: '.8rem',
-                backgroundColor: '#811104',
+                backgroundColor: '#217DBB',
                 color: 'white',
                 fontWeight: 'bold',
                 borderRadius: '8px',
@@ -261,7 +261,7 @@ Themes.set('Nagoriyuki', createTheme({
               props: { variant: 'char_rank' },
               style: {
                 fontSize: '.8rem',
-                backgroundColor: '#811104',
+                backgroundColor: '#60304f',
                 color: 'white',
                 fontWeight: 'bold',
                 borderRadius: '8px',
@@ -369,7 +369,7 @@ Themes.set('Bedman?', createTheme({
               props: { variant: 'char_rank' },
               style: {
                 fontSize: '.8rem',
-                backgroundColor: '#811104',
+                backgroundColor: '#471d37',
                 color: 'white',
                 fontWeight: 'bold',
                 borderRadius: '8px',
