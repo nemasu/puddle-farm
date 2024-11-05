@@ -952,24 +952,41 @@ async fn get_ratings(mut db: Connection<Db>, player_id: &str, char_id: &str) -> 
 async fn main() {
     dotenv().expect("dotenv failed");
     
-    CombinedLogger::init(
-        vec![
-            TermLogger::new(LevelFilter::Info, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
-            WriteLogger::new(LevelFilter::Info, Config::default(), File::create("output.log").unwrap()),
-        ]
-    ).unwrap();
-
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     match args.get(0).map(|r| r.deref()) {
         //This runs the timed jobs: grab replay, update ratings, update ranking, etc.
         Some("pull") => {
+
+            CombinedLogger::init(
+                vec![
+                    TermLogger::new(LevelFilter::Info, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
+                    WriteLogger::new(LevelFilter::Info, Config::default(), File::create("pull.log").unwrap()),
+                ]
+            ).unwrap();
+
             pull::pull_and_update_continuous().await;
         },
         //This skips checking last_rank_update, but it does set it.
         Some("hourly") => {
+
+            CombinedLogger::init(
+                vec![
+                    TermLogger::new(LevelFilter::Info, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
+                    WriteLogger::new(LevelFilter::Info, Config::default(), File::create("hourly.log").unwrap()),
+                ]
+            ).unwrap();
+
             pull::do_hourly_update_once().await
         },
         _ => {
+
+            CombinedLogger::init(
+                vec![
+                    TermLogger::new(LevelFilter::Info, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
+                    WriteLogger::new(LevelFilter::Info, Config::default(), File::create("output.log").unwrap()),
+                ]
+            ).unwrap();
+
             run().await;
         }
     }

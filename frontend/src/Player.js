@@ -161,7 +161,7 @@ function Row(props) {
         <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_value}>{item.matches[item.matches.length - 1].opponent_rating_value.toFixed(0)}</Box> <Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_deviation}>±{item.matches[item.matches.length - 1].opponent_rating_deviation.toFixed(0)}</Box></TableCell>
         <TableCell align="right">{item.wins} - {item.losses}</TableCell>
         <TableCell align="right">{(item.odds === 1.0 || item.odds === 0.0) ? '' : (item.odds * 100).toFixed(1) + '%'}</TableCell>
-        <TableCell align="right">{item.ratingChange.toFixed(0) > 0 ? '+' : ''}{item.ratingChange.toFixed(1)}</TableCell>
+        <TableCell align="right">{item.ratingChange > 0 ? '+' : ''}{item.ratingChange.toFixed(1)}</TableCell>
       </TableRow>
       <TableRow id={item.timestamp}>
         <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
@@ -183,7 +183,7 @@ function Row(props) {
                     <TableCell align="right">{item.own_rating_value.toFixed(2)} ±{item.own_rating_deviation.toFixed(2)}</TableCell>
                     <TableCell align="right">{item.opponent_rating_value.toFixed(2)} ±{item.opponent_rating_deviation.toFixed(2)}</TableCell>
                     <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
-                    <TableCell align='right'>{item.ratingChange}</TableCell>
+                    <TableCell align='right'>{item.ratingChange > 0 ? '+' : ''}{item.ratingChange}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
