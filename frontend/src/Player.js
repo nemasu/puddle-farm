@@ -16,6 +16,16 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import { JSONParse } from 'json-with-bigint';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Dialog from '@mui/material/Dialog';
@@ -23,7 +33,18 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
+import { Line } from 'react-chartjs-2';
 /* global BigInt */
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 function getCurrentPlayerRating(player, char_short) {
   for (var key in player.ratings) {
@@ -193,6 +214,9 @@ const Player = () => {
 
   const [hideClaim, setHideClaim] = useState(false);
 
+  const [lineChartOptions, setLineChartOptions] = useState({});
+  const [lineChartData, setLineChartData] = useState(null);
+
   let player_id_checked = player_id;
   if (player_id_checked.match(/[a-zA-Z]/)) {
     player_id_checked = BigInt('0x' + player_id_checked);
@@ -228,7 +252,7 @@ const Player = () => {
 
         if (player_result.name === 'Player not found' && player_result.id === 0) {
           setHideClaim(true);
-        } else if (player_result.id === 0 ) {
+        } else if (player_result.id === 0) {
           setHistory(null);
           setCurrentCharData(null);
           setAlias(null);
@@ -250,9 +274,11 @@ const Player = () => {
           return;
         }
 
+        var currentCharKey = null;
         for (var key in player_result.ratings) {
           if (player_result.ratings[key].char_short === char_short) {
             setCurrentCharData(player_result.ratings[key]);
+            currentCharKey = key;
           }
         }
 
@@ -290,6 +316,50 @@ const Player = () => {
           }
           setAlias(alias_result);
         }
+
+        const rating_history_response = await fetch(API_ENDPOINT + '/ratings/' + player_id_checked + '/' + char_short);
+        const rating_history_result = await rating_history_response.json();
+
+        if (rating_history_result !== null) {
+
+          rating_history_result.reverse();
+
+          //Add current rating to the end
+          rating_history_result.push({
+            timestamp: "Now",
+            rating: player_result.ratings[currentCharKey].rating,
+          });
+
+          const lineChartOptions = {
+            responsive: true,
+            width: 400,
+            plugins: {
+              legend: {
+                position: 'top',
+              },
+              title: {
+                display: true,
+                text: 'Rating History (100 matches)',
+              },
+            },
+          };
+          setLineChartOptions(lineChartOptions);
+
+
+          var lineChartData = {
+            labels: rating_history_result.map(item => item.timestamp),
+            datasets: [
+              {
+                label: 'Rating',
+                data: rating_history_result.map(item => item.rating),
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              },
+            ],
+          };
+        }
+
+        setLineChartData(lineChartData);
 
         setLoading(false);
 
@@ -371,26 +441,26 @@ const Player = () => {
           <Box sx={{ minWidth: 1000, maxWidth: 1100 }}>
             {currentCharData ? (
               <React.Fragment>
-              <Typography variant='h5' my={2}>
-                {currentCharData.character} Rating: <Box title={currentCharData.rating} component={"span"}>{Math.round(currentCharData.rating)}</Box> ±<Box title={currentCharData.deviation} component={"span"}>{Math.round(currentCharData.deviation)}</Box> ({currentCharData.match_count} games)
-                {currentCharData.top_char !== 0 ? (
-                  <Typography variant="char_rank">
-                    #{currentCharData.top_char}
+                <Typography variant='h5' my={2}>
+                  {currentCharData.character} Rating: <Box title={currentCharData.rating} component={"span"}>{Math.round(currentCharData.rating)}</Box> ±<Box title={currentCharData.deviation} component={"span"}>{Math.round(currentCharData.deviation)}</Box> ({currentCharData.match_count} games)
+                  {currentCharData.top_char !== 0 ? (
+                    <Typography variant="char_rank">
+                      #{currentCharData.top_char}
+                    </Typography>
+                  ) : null}
+                </Typography>
+
+                <Typography variant='h7'>
+                  Top Rating: <Box title={currentCharData.top_rating.value} component={"span"}>{Math.round(currentCharData.top_rating.value)}</Box> ±<Box title={currentCharData.top_rating.deviation} component={"span"}>{Math.round(currentCharData.top_rating.deviation)}</Box> ({currentCharData.top_rating.timestamp})
+                </Typography>
+                <br />
+
+                {currentCharData.top_defeated.value !== 0.0 ? (
+                  <Typography variant='h7'>
+                    Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} variant="link" onMouseDown={(event) => onProfileClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({currentCharData.top_defeated.timestamp})
                   </Typography>
                 ) : null}
-              </Typography>
 
-              <Typography variant='h7'>
-                Top Rating: <Box title={currentCharData.top_rating.value} component={"span"}>{Math.round(currentCharData.top_rating.value)}</Box> ±<Box title={currentCharData.top_rating.deviation} component={"span"}>{Math.round(currentCharData.top_rating.deviation)}</Box> ({currentCharData.top_rating.timestamp})
-              </Typography>
-              <br />
-              
-              {currentCharData.top_defeated.value !== 0.0 ? (
-                <Typography variant='h7'>
-                Top Defeated: <Button sx={{fontSize: '16px'}}component={Link} variant="link" onMouseDown={(event) => onProfileClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name}</Button> <Box title={currentCharData.top_defeated.value} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({currentCharData.top_defeated.timestamp})
-                </Typography>
-              ) : null}
-              
               </React.Fragment>
             ) : null}
 
@@ -430,6 +500,9 @@ const Player = () => {
               </React.Fragment>
             ) : null}
           </Box>
+          {lineChartData ? (
+            <Line options={lineChartOptions} data={lineChartData} />
+          ) : null}
         </Box>
         <Box marginLeft={10} marginTop={13} sx={{ width: .18, maxWidth: '235px' }}>
           {player && player.id !== 0 ? (

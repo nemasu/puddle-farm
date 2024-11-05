@@ -14,6 +14,8 @@ use std::fs::File;
 
 use uuid::Uuid;
 
+//use diesel::query_dsl::positional_order_dsl::{OrderColumn, PositionalOrderDsl, IntoOrderColumn};
+
 #[macro_use] extern crate rocket;
 
 use std::ops::Deref;
@@ -328,17 +330,16 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
                         schema::games::char_b,
                         schema::games::value_b,
                         schema::games::deviation_b,
-                        schema::games::value_b - schema::games::deviation_b
+                        schema::games::value_b - schema::games::deviation_b)
                     )
-                )
                 .filter(
                     schema::games::id_a.eq(id)
                         .and(schema::games::char_a.eq(rating.char_id))
                         .and(schema::games::winner.eq(1))
                         .and(schema::games::deviation_b.lt(30.0))
                     )
-                .order((schema::games::value_b - schema::games::deviation_b).desc())
-                .limit(1)
+                    .order((schema::games::value_b - schema::games::deviation_b).desc())
+                    .limit(1)
                 .union(
                     schema::games::table.select(
                         (schema::games::timestamp,
@@ -349,27 +350,37 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
                             schema::games::deviation_a,
                             schema::games::value_a - schema::games::deviation_a)
                         )
+                        .order((schema::games::value_a - schema::games::deviation_a).desc())
+                        .limit(1)
                     .filter(
                         schema::games::id_b.eq(id)
                         .and(schema::games::char_b.eq(rating.char_id))
-                        .and(schema::games::winner.eq(0))
+                        .and(schema::games::winner.eq(2))
                         .and(schema::games::deviation_a.lt(30.0))
                     )
-                    .order((schema::games::value_a - schema::games::deviation_a).desc())
-                    .limit(1)
                 )
+                //HELP: This doesn't work, limit(1) is causing a compile error, why?
+                //.positional_order_by(OrderColumn::from(6).desc())
+                //.limit(1)
                 .load::<(chrono::NaiveDateTime, i64, String, i16, Option<f32>, Option<f32>, Option<f32>)>(&mut db)
                 .await
                 .expect("Error loading games");
 
-        if top_defeated_res.len() > 0 {
+        if top_defeated_res.len() > 1 {
+
+            //HELP: Shouldn't need to do this (see above), but limit doesn't work.
+            let mut highest_index = 0;
+            if top_defeated_res[0].6.unwrap() < top_defeated_res[1].6.unwrap() {
+                highest_index = 1;
+            }
+
             top_defeated.insert(rating.char_id, TopDefeated{
-                timestamp: top_defeated_res[0].0.to_string(),
-                id: top_defeated_res[0].1,
-                name: top_defeated_res[0].2.clone(),
-                char_short: CHAR_NAMES[ top_defeated_res[0].3 as usize].0.to_string(),
-                value: top_defeated_res[0].4.unwrap_or(0.0),
-                deviation: top_defeated_res[0].5.unwrap_or(0.0),
+                timestamp: top_defeated_res[highest_index].0.to_string(),
+                id: top_defeated_res[highest_index].1,
+                name: top_defeated_res[highest_index].2.clone(),
+                char_short: CHAR_NAMES[ top_defeated_res[highest_index].3 as usize].0.to_string(),
+                value: top_defeated_res[highest_index].4.unwrap_or(0.0),
+                deviation: top_defeated_res[highest_index].5.unwrap_or(0.0),
             });
         }
 
@@ -402,15 +413,25 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
                     .order((schema::games::value_b - schema::games::deviation_b).desc())
                     .limit(1)
                 )
+                //HELP: This doesn't work, limit(1) is causing a compile error, why?
+                //.positional_order_by(OrderColumn::from(6).desc())
+                //.limit(1)
                 .load::<(chrono::NaiveDateTime, Option<f32>, Option<f32>, Option<f32>)>(&mut db)
                 .await
                 .expect("Error loading games");
 
-        if top_rating_res.len() > 0 {
+        if top_rating_res.len() > 1 {
+
+            //HELP: Shouldn't need to do this (see above), but limit doesn't work.
+            let mut highest_index = 0;
+            if top_rating_res[0].3.unwrap() < top_rating_res[1].3.unwrap() {
+                highest_index = 1;
+            }
+
             top_rating.insert(rating.char_id, TopRating{
-                timestamp: top_rating_res[0].0.to_string(),
-                value: top_rating_res[0].1.unwrap(),
-                deviation: top_rating_res[0].2.unwrap(),
+                timestamp: top_rating_res[highest_index].0.to_string(),
+                value: top_rating_res[highest_index].1.unwrap(),
+                deviation: top_rating_res[highest_index].2.unwrap(),
             });
         }
     }
@@ -864,6 +885,69 @@ async fn get_alias(mut db: Connection<Db>, player_id: &str) -> Json<Vec<String>>
     Json(alias)
 }
 
+#[derive(Serialize)] 
+struct RatingsResponse {
+    timestamp: String,
+    rating: f32,
+}
+use diesel::sql_types::{Float, Timestamp, Nullable};
+
+#[derive(QueryableByName, Queryable)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+struct RatingResult {
+    #[diesel(sql_type = Timestamp)]
+    timestamp: chrono::NaiveDateTime,
+    #[diesel(sql_type = Nullable<Float>)]
+    value: Option<f32>,
+}
+#[get("/api/ratings/<player_id>/<char_id>")]
+async fn get_ratings(mut db: Connection<Db>, player_id: &str, char_id: &str) -> Json<Vec<RatingsResponse>> {
+    
+    let id = match i64::from_str_radix(player_id, 10) {
+        Ok(id) => id,
+        Err(_) => {
+            return Json(vec![]);
+        }
+    };
+
+    let char_id = match CHAR_NAMES.iter().position(|(c, _)| *c == char_id) {
+        Some(id) => {
+            id as i16
+        },
+        None => {
+            return Json(vec![RatingsResponse { timestamp: "N/A".to_string(), rating: 0.0 }]);
+        }
+    };
+
+    //HELP: positional_order_by + limit does not work, so we need to use SQL for this.
+    let results = diesel::sql_query("
+        (SELECT timestamp, value_a value
+        FROM games
+        WHERE id_a = $1 AND char_a = $2
+        UNION
+        SELECT timestamp, value_b value
+        FROM games
+        WHERE id_b = $1 AND char_b = $2)
+        ORDER BY timestamp desc
+        LIMIT $3;
+    ");
+    let results = results
+        .bind::<diesel::sql_types::BigInt, _>(i64::try_from(id).unwrap())
+        .bind::<diesel::sql_types::Integer, _>(i32::try_from(char_id).unwrap())
+        .bind::<diesel::sql_types::Integer, _>(i32::try_from(100).unwrap())
+        .get_results::<RatingResult>(&mut db).await.unwrap();
+
+    let ratings = results.iter().map(|p| {
+        RatingsResponse {
+            timestamp: p.timestamp.to_string(),
+            rating: p.value.unwrap_or(0.0),
+        }
+    }).collect();
+
+    Json(ratings)
+}
+
+
 #[rocket::main]
 async fn main() {
     dotenv().expect("dotenv failed");
@@ -925,6 +1009,7 @@ pub async fn run() {
         toggle_private,
         get_settings_data,
         get_alias,
+        get_ratings,
     ];
 
     if cfg!(debug_assertions) {//Cors only used for development
