@@ -135,7 +135,7 @@ const TopGlobal = () => {
                   <TableCell>{player.rank}</TableCell>
                   <TableCell><TextButton component={Link} variant="link" to={`/player/${player.id}/${player.char_short}`}>{player.name}</TextButton></TableCell>
                   <TableCell>{player.char_short}</TableCell>
-                  <TableCell>{player.rating} ±{player.deviation}</TableCell>
+                  <TableCell><Box component={'span'} title={player.rating}>{Number(player.rating).toFixed(0)}</Box> <Box component={'span'} title={player.deviation}>±{Number(player.deviation).toFixed(0)}</Box></TableCell>
                 </TableRow>
               ))}
             </TableBody>

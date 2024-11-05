@@ -148,7 +148,7 @@ const TopPlayer = () => {
                   <TableCell>{player.rank}</TableCell>
                   <TableCell><Button component={Link} variant="link" to={`/player/${player.id}/${player.char_short}`}>{player.name}</Button></TableCell>
                   <TableCell>{player.char_short}</TableCell>
-                  <TableCell>{player.rating} ±{player.deviation}</TableCell>
+                  <TableCell><Box component={'span'} title={player.rating}>{Number(player.rating).toFixed(0)}</Box> <Box component={'span'} title={player.deviation}>±{Number(player.deviation).toFixed(0)}</Box></TableCell>
                 </TableRow>
               ))}
             </TableBody>
