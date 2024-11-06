@@ -21,6 +21,7 @@ var pages = [
   {name:'Characters', list:[]},
   {name:'About', link:'./about'},
   {name:'Settings', link:'./settings'},
+  {name:'Stats', link:'./stats'}
 ];
 
 function resetCharacters() {

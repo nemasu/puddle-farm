@@ -1,7 +1,6 @@
 import { CircularProgress } from '@mui/material';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
-import { default as Button, default as TextButton } from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -12,21 +11,18 @@ import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import { JSONParse } from 'json-with-bigint';
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 // eslint-disable-next-line
 /* global BigInt */
 
-const Search = () => {
+const Stats = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
   const navigate = useNavigate();
 
-  let { search_string, exact } = useParams();
-
-  const [results, setResults] = useState([]);
-
-  const [loading, setLoading ] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -35,17 +31,15 @@ const Search = () => {
       setLoading(true);
       try {
         const url = API_ENDPOINT
-          + '/player/search?'
-          + 'search_string=' + search_string
-          + '&exact=' + ((exact && exact === 'exact') ? 'true' : 'false');
+          + '/stats';
         const response = await fetch(url);
 
         // eslint-disable-next-line
         const result = await response.text().then(body => {
-          
+
           var parsed = JSONParse(body);
-          
-          setResults(parsed.results);
+
+          setStats(parsed);
 
           return parsed;
         });
@@ -57,53 +51,64 @@ const Search = () => {
     };
 
     fetchResults();
-  }, [search_string, exact, API_ENDPOINT]);
+  }, [API_ENDPOINT]);
 
   return (
     <React.Fragment>
       <AppBar position="static"
-        style={{backgroundImage: "none"}}
-        sx={{backgroundColor:"secondary.main"}}
+        style={{ backgroundImage: "none" }}
+        sx={{ backgroundColor: "secondary.main" }}
       >
-        { loading ?
+        {loading ?
           <CircularProgress
             size={60}
             variant="indeterminate"
             disableShrink={true}
-            sx={{ position: 'absolute', top:'-1px', color:'white' }}
+            sx={{ position: 'absolute', top: '-1px', color: 'white' }}
           />
           : null
         }
-        <Box sx={{minHeight:100, paddingTop:'30px'}}>
-        <Typography align='center' variant="pageHeader">
-          Search Results
-        </Typography>
+        <Box sx={{ minHeight: 100, paddingTop: '30px' }}>
+          <Typography align='center' variant="pageHeader">
+            Stats
+          </Typography>
         </Box>
       </AppBar>
       <Box m={4} maxWidth="700px">
+
+        <Typography my={3} variant='h5'>Games</Typography>
         <TableContainer component={Paper}>
-          <Table size="small">
+          <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Player</TableCell>
-                <TableCell>Character</TableCell>
-                <TableCell>Rating</TableCell>
+                <TableCell>Last Checked</TableCell>
+                <TableCell>Total</TableCell>
+                <TableCell>Past Month</TableCell>
+                <TableCell>Past Week</TableCell>
+                <TableCell>Past Day</TableCell>
+                <TableCell>Past Hour</TableCell>
+
               </TableRow>
             </TableHead>
             <TableBody>
-              {results.map((player, index) => (
-                <TableRow key={index}>
-                  <TableCell><TextButton component={Link} variant="link" to={`/player/${player.id}/${player.char_short}`}>{player.name}</TextButton></TableCell>
-                  <TableCell>{player.char_short}</TableCell>
-                  <TableCell><Box component={'span'} title={player.rating}>{Number(player.rating).toFixed(0)}</Box> <Box component={'span'} title={player.deviation}>±{Number(player.deviation).toFixed(0)}</Box></TableCell>
+              {stats ?
+                <TableRow>
+                  <TableCell>{stats.timestamp}</TableCell>
+                  <TableCell>{stats.total_games.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</TableCell>
+                  <TableCell>{stats.one_month_games.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</TableCell>
+                  <TableCell>{stats.one_week_games.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</TableCell>
+                  <TableCell>{stats.one_day_games.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</TableCell>
+                  <TableCell>{stats.one_hour_games.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</TableCell>
                 </TableRow>
-              ))}
+                : null}
             </TableBody>
           </Table>
         </TableContainer>
+        <Typography my={10}>Statistics are updated once an hour.</Typography>
+
       </Box>
     </React.Fragment>
   );
 };
 
-export default Search;
+export default Stats;

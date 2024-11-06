@@ -21,6 +21,7 @@ import ThemeManager from './ThemeManager';
 import Settings from './Settings';
 import { Typography } from '@mui/material';
 import About from './About';
+import Stats from './Stats';
 
 const App = () => {
   return (
@@ -65,6 +66,11 @@ const App = () => {
             <Route
               path="/search/:search_string/:exact?"
               element={<Search />}
+            />
+
+            <Route
+              path="/stats"
+              element={<Stats />}
             />
 
           </Routes>

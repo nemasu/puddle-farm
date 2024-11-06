@@ -1,5 +1,6 @@
 extern crate simplelog;
 
+use chrono::{Duration, NaiveDateTime};
 use diesel::update;
 use log::LevelFilter;
 use models::{CharacterRank, GlobalRank, Player, PlayerRating, Status};
@@ -13,6 +14,8 @@ use std::collections::HashMap;
 use std::fs::File;
 
 use uuid::Uuid;
+
+use tokio::sync::Mutex;
 
 //use diesel::query_dsl::positional_order_dsl::{OrderColumn, PositionalOrderDsl, IntoOrderColumn};
 
@@ -31,6 +34,14 @@ mod ggst_api;
 mod requests;
 mod responses;
 mod models;
+
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref STATS_CACHE: Mutex<HashMap<String,i64>>  = Mutex::new({
+        HashMap::new()
+    });
+}
 
 #[derive(Database)]
 #[database("ratings")]
@@ -359,7 +370,7 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
                         .and(schema::games::deviation_a.lt(30.0))
                     )
                 )
-                //HELP: This doesn't work, limit(1) is causing a compile error, why?
+                //TODO use this instead when positional_order_by + limit is released
                 //.positional_order_by(OrderColumn::from(6).desc())
                 //.limit(1)
                 .load::<(chrono::NaiveDateTime, i64, String, i16, Option<f32>, Option<f32>, Option<f32>)>(&mut db)
@@ -368,7 +379,6 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
 
         if top_defeated_res.len() > 1 {
 
-            //HELP: Shouldn't need to do this (see above), but limit doesn't work.
             let mut highest_index = 0;
             if top_defeated_res[0].6.unwrap() < top_defeated_res[1].6.unwrap() {
                 highest_index = 1;
@@ -413,7 +423,7 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
                     .order((schema::games::value_b - schema::games::deviation_b).desc())
                     .limit(1)
                 )
-                //HELP: This doesn't work, limit(1) is causing a compile error, why?
+                //TODO use this instead when positional_order_by + limit is released
                 //.positional_order_by(OrderColumn::from(6).desc())
                 //.limit(1)
                 .load::<(chrono::NaiveDateTime, Option<f32>, Option<f32>, Option<f32>)>(&mut db)
@@ -422,7 +432,6 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
 
         if top_rating_res.len() > 1 {
 
-            //HELP: Shouldn't need to do this (see above), but limit doesn't work.
             let mut highest_index = 0;
             if top_rating_res[0].3.unwrap() < top_rating_res[1].3.unwrap() {
                 highest_index = 1;
@@ -919,7 +928,7 @@ async fn get_ratings(mut db: Connection<Db>, player_id: &str, char_id: &str) -> 
         }
     };
 
-    //HELP: positional_order_by + limit does not work, so we need to use SQL for this.
+    //TODO when positional_order_by + limit is released, change this to ORM query.
     let results = diesel::sql_query("
         (SELECT timestamp, value_a value
         FROM games
@@ -947,6 +956,102 @@ async fn get_ratings(mut db: Connection<Db>, player_id: &str, char_id: &str) -> 
     Json(ratings)
 }
 
+#[derive(Serialize)]
+struct StatsResponse {
+    timestamp: String,
+    total_games: i64,
+    one_month_games: i64,
+    one_week_games: i64,
+    one_day_games: i64,
+    one_hour_games: i64,
+}
+#[get("/api/stats")]
+async fn get_stats(mut db: Connection<Db>) -> Json<StatsResponse> {
+    let timestamp;
+    let total_games;
+    let one_month_games;
+    let one_week_games;
+    let one_day_games;
+    let one_hour_games;
+
+    {
+        let mut locked = STATS_CACHE.lock().await;
+        let now = chrono::Utc::now().naive_utc();
+
+        let value = locked.get("last_update").unwrap_or(&0).clone();
+        info!("Last update: {}", value);
+        let ts: NaiveDateTime = chrono::DateTime::from_timestamp(value, 0).unwrap().naive_utc();
+
+        if ts < now - Duration::hours(1) {
+            
+            info!("Updating stats");
+
+            // Get total game count
+            total_games = schema::games::table
+                .count()
+                .get_result::<i64>(&mut db)
+                .await
+                .expect("Error loading games");
+            locked.insert("total_games".to_string(), total_games);
+
+            // Get one month game count
+            one_month_games = schema::games::table
+                .filter(schema::games::timestamp.gt(chrono::Utc::now().naive_utc() - Duration::days(30)))
+                .count()
+                .get_result::<i64>(&mut db)
+                .await
+                .expect("Error loading games");
+            locked.insert("one_month_games".to_string(), one_month_games);
+
+            // Get one week game count
+            one_week_games = schema::games::table
+                .filter(schema::games::timestamp.gt(chrono::Utc::now().naive_utc() - Duration::days(7)))
+                .count()
+                .get_result::<i64>(&mut db)
+                .await
+                .expect("Error loading games");
+            locked.insert("one_week_games".to_string(), one_week_games);
+
+            // Get one day game count
+            one_day_games = schema::games::table
+                .filter(schema::games::timestamp.gt(chrono::Utc::now().naive_utc() - Duration::days(1)))
+                .count()
+                .get_result::<i64>(&mut db)
+                .await
+                .expect("Error loading games");
+            locked.insert("one_day_games".to_string(), one_day_games);
+
+            // Get one hour game count
+            one_hour_games = schema::games::table
+                .filter(schema::games::timestamp.gt(chrono::Utc::now().naive_utc() - Duration::hours(1)))
+                .count()
+                .get_result::<i64>(&mut db)
+                .await
+                .expect("Error loading games");
+            locked.insert("one_hour_games".to_string(), one_hour_games);
+
+            // Set timestamp
+            timestamp = now.and_utc().timestamp();
+            locked.insert("last_update".to_string(), timestamp);
+        } else {
+            timestamp = locked.get("last_update").unwrap().clone();
+            total_games = locked.get("total_games").unwrap().clone();
+            one_month_games = locked.get("one_month_games").unwrap().clone();
+            one_week_games = locked.get("one_week_games").unwrap().clone();
+            one_day_games = locked.get("one_day_games").unwrap().clone();
+            one_hour_games = locked.get("one_hour_games").unwrap().clone();
+        }
+    }
+
+    return Json(StatsResponse {
+        timestamp: chrono::DateTime::from_timestamp(timestamp, 0).unwrap().naive_utc().to_string(),
+        total_games,
+        one_month_games,
+        one_week_games,
+        one_day_games,
+        one_hour_games,
+    });
+}
 
 #[rocket::main]
 async fn main() {
@@ -1027,6 +1132,7 @@ pub async fn run() {
         get_settings_data,
         get_alias,
         get_ratings,
+        get_stats,
     ];
 
     if cfg!(debug_assertions) {//Cors only used for development

@@ -78,6 +78,7 @@ Themes.set('Sol', createTheme({
       MuiButton: {
         styleOverrides: {
           root: {
+            color: '#C00000',
             variants: [
               {
                 props: { variant: 'link' },
@@ -186,6 +187,7 @@ Themes.set('Ky', createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
+          color: '#DDDBD5',
           variants: [
             {
               props: { variant: 'link'},
@@ -294,6 +296,7 @@ Themes.set('Nagoriyuki', createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
+          color: '#DDDBD5',
           variants: [
             {
               props: { variant: 'link'},
@@ -333,7 +336,7 @@ Themes.set('Bedman?', createTheme({
       main: '#471d37',
     },
     secondary: {
-      main: '#a83b5e',
+      main: '#A83B5E',
     },
     background: {
       default: '#171717',
@@ -402,6 +405,7 @@ Themes.set('Bedman?', createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
+          color: '#A83B5E',
           variants: [
             {
               props: { variant: 'link'},

@@ -513,7 +513,7 @@ const Player = () => {
               </Typography>
               {player.ratings && player.ratings.map((item, i) => (
                 <Box key={i}>
-                  <Button variant="text" onClick={() => { navigate(`/player/${player.id}/${item.char_short}`) }} sx={{ textAlign: 'left' }} color='text' >
+                  <Button variant="text" onClick={() => { navigate(`/player/${player.id}/${item.char_short}`) }} sx={{ textAlign: 'left', color: 'white' }}>
                     <Typography fontSize={12.5} my={0.3}>
                       {item.character} {item.rating} ±{item.deviation}<br />({item.match_count} games)
                     </Typography>
