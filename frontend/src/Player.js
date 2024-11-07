@@ -320,7 +320,7 @@ const Player = () => {
         const rating_history_response = await fetch(API_ENDPOINT + '/ratings/' + player_id_checked + '/' + char_short);
         const rating_history_result = await rating_history_response.json();
 
-        if (rating_history_result !== null) {
+        if (rating_history_result !== null && currentCharKey in player_result.ratings) {
 
           rating_history_result.reverse();
 
@@ -450,10 +450,14 @@ const Player = () => {
                   ) : null}
                 </Typography>
 
-                <Typography variant='h7'>
-                  Top Rating: <Box title={currentCharData.top_rating.value} component={"span"}>{Math.round(currentCharData.top_rating.value)}</Box> ±<Box title={currentCharData.top_rating.deviation} component={"span"}>{Math.round(currentCharData.top_rating.deviation)}</Box> ({currentCharData.top_rating.timestamp})
-                </Typography>
-                <br />
+                {currentCharData.top_rating.value !== 0 ? (
+                  <React.Fragment>
+                    <Typography variant='h7'>
+                      Top Rating: <Box title={currentCharData.top_rating.value} component={"span"}>{Math.round(currentCharData.top_rating.value)}</Box> ±<Box title={currentCharData.top_rating.deviation} component={"span"}>{Math.round(currentCharData.top_rating.deviation)}</Box> ({currentCharData.top_rating.timestamp})
+                    </Typography>
+                    <br />
+                  </React.Fragment>
+                ) : null}
 
                 {currentCharData.top_defeated.value !== 0.0 ? (
                   <Typography variant='h7'>

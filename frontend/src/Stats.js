@@ -87,7 +87,6 @@ const Stats = () => {
                 <TableCell>Past Week</TableCell>
                 <TableCell>Past Day</TableCell>
                 <TableCell>Past Hour</TableCell>
-
               </TableRow>
             </TableHead>
             <TableBody>

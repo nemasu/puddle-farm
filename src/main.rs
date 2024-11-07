@@ -406,6 +406,7 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
                 .filter(
                     schema::games::id_a.eq(id)
                         .and(schema::games::char_a.eq(rating.char_id))
+                        .and(schema::games::deviation_a.lt(30.0))
                     )
                 .order((schema::games::value_a - schema::games::deviation_a).desc())
                 .limit(1)
@@ -419,6 +420,7 @@ async fn player(mut db: Connection<Db>, player_id: &str) -> Json<PlayerResponse>
                     .filter(
                         schema::games::id_b.eq(id)
                         .and(schema::games::char_b.eq(rating.char_id))
+                        .and(schema::games::deviation_b.lt(30.0))
                     )
                     .order((schema::games::value_b - schema::games::deviation_b).desc())
                     .limit(1)
