@@ -6,4 +6,6 @@ Xvfb $DISPLAY -screen 0 1920x1080x16 &
 sleep 1
 x11vnc -nodpms -forever -nopw &
 sleep 1
+fluxbox &
+sleep 3
 /usr/games/steam &
