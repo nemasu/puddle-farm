@@ -38,19 +38,9 @@ pub async fn pull_and_update_continuous() {
         interval.tick().await;
 
         connection.transaction::<_, diesel::result::Error, _>(|conn| async move {
-            let game_count_results = games::table
-                .select(count(games::id_a))
-                .load::<i64>(conn)
-                .await.unwrap();
-            let game_count_before = game_count_results[0];
-
             match grab_games(conn).await {
                 Ok(new_games) => {
-                    let game_count_results = games::table
-                    .select(count(games::id_a))
-                    .load::<i64>(conn)
-                    .await.unwrap();
-                    info!("New games: {:?}", game_count_results[0] - game_count_before);
+                    info!("New games: {:?}", new_games.len());
 
                     if let Err(e) = update_ratings(conn, &new_games).await {
                         error!("update_ratings failed: {e}");
