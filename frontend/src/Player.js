@@ -291,76 +291,82 @@ const Player = () => {
           + '/history?count=' + ((has_offset && offset !== '0') ? Number(count) + 1 : '100')
           + '&offset=' + (has_offset && offset !== '0' ? Number(offset) - 1 : '0');
         const history_response = await fetch(url);
-        const history_result = await history_response.json();
+        if (history_response.status === 200) {
+          const history_result = await history_response.json();
 
-        if (history_result.history.length < (count ? count : defaultCount)) {
-          setShowNext(false);
-        } else {
-          setShowNext(true);
-        }
+          if (history_result.history.length < (count ? count : defaultCount)) {
+            setShowNext(false);
+          } else {
+            setShowNext(true);
+          }
 
-        if (history_result.history.length !== 0) {
-          const groupedData = groupMatches(history_result.history, player_result, char_short, has_offset);
-          setHistory(groupedData);
+          if (history_result.history.length !== 0) {
+            const groupedData = groupMatches(history_result.history, player_result, char_short, has_offset);
+            setHistory(groupedData);
+          }
         }
 
         const alias_response = await fetch(API_ENDPOINT + '/alias/' + player_id_checked);
-        const alias_result = await alias_response.json();
 
-        if (alias_result !== null) {
-          //loop through alias_result and remove current player name
-          for (var key in alias_result) {
-            if (alias_result[key] === player_result.name) {
-              alias_result.splice(key, 1);
+        if (alias_response.status === 200) {
+          const alias_result = await alias_response.json();
+
+          if (alias_result !== null) {
+            //loop through alias_result and remove current player name
+            for (var key in alias_result) {
+              if (alias_result[key] === player_result.name) {
+                alias_result.splice(key, 1);
+              }
             }
+            setAlias(alias_result);
           }
-          setAlias(alias_result);
         }
 
         const rating_history_response = await fetch(API_ENDPOINT + '/ratings/' + player_id_checked + '/' + char_short);
-        const rating_history_result = await rating_history_response.json();
+        if (rating_history_response.status === 200) {
+          const rating_history_result = await rating_history_response.json();
 
-        if (rating_history_result !== null && currentCharKey in player_result.ratings) {
+          if (rating_history_result !== null && currentCharKey in player_result.ratings) {
 
-          rating_history_result.reverse();
+            rating_history_result.reverse();
 
-          //Add current rating to the end
-          rating_history_result.push({
-            timestamp: "Now",
-            rating: player_result.ratings[currentCharKey].rating,
-          });
+            //Add current rating to the end
+            rating_history_result.push({
+              timestamp: "Now",
+              rating: player_result.ratings[currentCharKey].rating,
+            });
 
-          const lineChartOptions = {
-            responsive: true,
-            width: 400,
-            plugins: {
-              legend: {
-                position: 'top',
+            const lineChartOptions = {
+              responsive: true,
+              width: 400,
+              plugins: {
+                legend: {
+                  position: 'top',
+                },
+                title: {
+                  display: true,
+                  text: 'Rating History (100 matches)',
+                },
               },
-              title: {
-                display: true,
-                text: 'Rating History (100 matches)',
-              },
-            },
-          };
-          setLineChartOptions(lineChartOptions);
+            };
+            setLineChartOptions(lineChartOptions);
 
 
-          var lineChartData = {
-            labels: rating_history_result.map(item => item.timestamp),
-            datasets: [
-              {
-                label: 'Rating',
-                data: rating_history_result.map(item => item.rating),
-                borderColor: 'rgb(75, 192, 192)',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-              },
-            ],
-          };
+            var lineChartData = {
+              labels: rating_history_result.map(item => item.timestamp),
+              datasets: [
+                {
+                  label: 'Rating',
+                  data: rating_history_result.map(item => item.rating),
+                  borderColor: 'rgb(75, 192, 192)',
+                  backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                },
+              ],
+            };
+          }
+
+          setLineChartData(lineChartData);
         }
-
-        setLineChartData(lineChartData);
-
         setLoading(false);
 
       } catch (error) {

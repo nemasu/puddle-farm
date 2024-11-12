@@ -4,15 +4,19 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rocket = { git = "https://github.com/rwf2/Rocket", features=["json"] }
+axum = {version = "0.7.7", features = ["macros"] }
+tower-http = { version = "0.6.1", features = ["cors"] }
+bb8 = "0.8"
+bb8-postgres = "0.8.1"
+bb8-memcached = { git = "https://github.com/nemasu/bb8-memcached" }
 diesel = { version = "2.2.3", features = ["postgres", "chrono"] }
-diesel-async = { version = "0.5.0", features = ["postgres"] }
-rocket_db_pools = { git = "https://github.com/rwf2/Rocket", features = ["diesel_postgres"] }
+diesel-async = { version = "0.5.0", features = ["postgres", "bb8"] }
 dotenv = "0.15.0"
-tokio = { version = "1.39.3", features = ["time"] }
+tokio = { version = "1.39.3", features = ["time", "rt-multi-thread"] }
 lazy_static = "1.5.0"
-log = "0.4.22"
-simplelog = { version = "0.12.2", features = ["paris"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2.3"
 steamworks = { git = "https://github.com/Noxime/steamworks-rs.git"}
 serde = { version = "1", features = ["derive"] }
 serde_derive = "1"
@@ -23,6 +27,5 @@ hex = "0.4"
 base64-url = "1.4"
 chrono = "0.4"
 rstat = "0.6.0"
-rusqlite = { version = "0.32", features = ["bundled", "functions"] }
 rand = "0.8.5"
 uuid = {version = "1.11.0", features = ["v4", "fast-rng"]}

@@ -5,7 +5,7 @@ This project is aimed to become a replacement for [Rating Update](https://github
 It is currently being hosted at [Puddle.farm](https://puddle.farm)
 
 ### Major Changes
-- Rocket 0.5 => Rocket (git) for now, considering Axum.
+- Rocket 0.5 => Axum
 - Sqlite3 => Postgres with Diesel ORM
 - Handlebars (templated frontend) => React
 - Rating algorithm
@@ -23,6 +23,8 @@ cargo install diesel_cli
 source .env
 diesel --database-url "${DATABASE_PATH}" migration run
 ```
+
+For stats to work, a memcached server needs to be running.
 
 `cargo run` to start the server.
 

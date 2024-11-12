@@ -1,9 +1,8 @@
-use log::{info, error};
+use tracing::{info, error};
 use std::time::Duration;
 use diesel::prelude::*;
 use diesel_async::{RunQueryDsl, AsyncConnection, AsyncPgConnection};
 use tokio::time;
-use lazy_static::lazy_static;
 use crate::{ggst_api, CHAR_NAMES};
 
 use crate::schema::{player_ratings, players, player_names, games, constants, global_ranks, character_ranks};
@@ -21,17 +20,11 @@ use diesel::sql_types::Integer;
 
 pub const ONE_HOUR: i64 = 1 * 60 * 60;
 
-lazy_static! {
-    pub static ref DB_NAME: String = dotenv::var("DATABASE_PATH").expect("DATABASE_PATH must be set.");
-}
+pub async fn pull_and_update_continuous(
+    pool: bb8::Pool<diesel_async::pooled_connection::AsyncDieselConnectionManager<AsyncPgConnection>>
+) {
 
-pub async fn establish_connection() -> AsyncPgConnection {
-    AsyncPgConnection::establish(&DB_NAME).await.unwrap()
-}
-
-pub async fn pull_and_update_continuous() {
-
-    let mut connection = establish_connection().await;
+    let mut connection = pool.get().await.unwrap();
     let mut interval = time::interval(Duration::from_secs(60));
 
     loop {
@@ -76,8 +69,10 @@ pub async fn pull_and_update_continuous() {
     }
 }
 
-pub async fn do_hourly_update_once() {
-    let mut connection = establish_connection().await;
+pub async fn do_hourly_update_once(
+    pool: bb8::Pool<diesel_async::pooled_connection::AsyncDieselConnectionManager<AsyncPgConnection>>
+) {
+    let mut connection = pool.get().await.unwrap();
     connection.transaction::<_, diesel::result::Error, _>(|conn| async move {
         do_hourly_update(conn).await.unwrap();
         Ok(())

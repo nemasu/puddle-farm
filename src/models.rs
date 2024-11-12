@@ -12,7 +12,6 @@ use diesel::{
     sql_types::SqlType,
     prelude::*,
 };
-use rocket_db_pools::diesel::{PgPool, QueryResult};
 use crate::schema::{
     self, character_ranks, constants, games, global_ranks, player_names, player_ratings, players,
 };

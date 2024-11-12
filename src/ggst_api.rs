@@ -7,6 +7,7 @@ use hex;
 use lazy_static::lazy_static;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
+use tracing::{error, info, warn};
 use std::{error::Error, ops::Deref};
 use tokio::sync::Mutex;
 
@@ -112,6 +113,7 @@ pub async fn get_replays() -> Result<Vec<responses::Replay>, String> {
         let response = match form.send().await {
             Ok(resp) => resp,
             Err(err) => {
+                error!("get_replay send() error: {}", err);
                 panic!("get_replay send() error: {}", err); //force crash to restart server
             }
         };
@@ -119,6 +121,7 @@ pub async fn get_replays() -> Result<Vec<responses::Replay>, String> {
         let response_bytes = match response.bytes().await {
             Ok(resp_bytes) => resp_bytes,
             Err(err) => {
+                error!("get_replay bytes() error: {}", err);
                 panic!("get_replay bytes() error: {}", err); //force crash to restart server
             }
         };
@@ -126,6 +129,7 @@ pub async fn get_replays() -> Result<Vec<responses::Replay>, String> {
         match decrypt_response::<responses::Replays>(&response_bytes) {
             Ok(r) => replays.extend_from_slice(&r.body.replays),
             Err(err) => {
+                error!("get_replay decrypt_response() error: {}", err);
                 panic!("get_replay decrypt_response() error: {}", err); //force crash to restart server
             }
         };

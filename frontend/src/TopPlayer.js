@@ -42,9 +42,8 @@ const TopPlayer = () => {
       try {
 
         const url = API_ENDPOINT
-          + '/top_char?'
-          + 'char_id=' + char_short
-          + '&count=' + (count ? count : defaultCount)
+          + '/top_char/' + char_short
+          + '?count=' + (count ? count : defaultCount)
           + '&offset=' + (offset ? offset : 0);
         const response = await fetch(url);
         
