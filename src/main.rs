@@ -1,7 +1,6 @@
 use axum::extract::{Path, Query};
 use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, ORIGIN};
 use axum::http::Method;
-use axum::routing::post;
 use axum::{extract::State, http::StatusCode, response::Json, routing::get, Router};
 use chrono::Duration;
 use diesel::{prelude::*, update};
@@ -1235,7 +1234,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // set up connection pool
     let config = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(
-        std::env::var("DATABASE_PATH").expect("DATABASE_PATH"),
+        std::env::var("DATABASE_URL").expect("DATABASE_URL"),
     );
 
     let pool = bb8::Pool::builder().build(config).await?;
@@ -1254,7 +1253,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let _guard = init_tracing("web");
 
             let memcached_manager =
-                MemcacheConnectionManager::new("tcp://127.0.0.1:11211").unwrap();
+                MemcacheConnectionManager::new(std::env::var("MEMCACHED_URL").expect("MEMCACHED_URL")).unwrap();
             let memcached_pool = bb8::Pool::builder().build(memcached_manager).await?;
 
             let mut app = Router::new()
@@ -1267,11 +1266,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/top_char/:char_id", get(top_char))
                 .route("/api/characters", get(characters))
                 .route("/api/player/search", get(player_search))
-                .route("/api/claim/:player_id", post(claim))
-                .route("/api/claim/poll/:player_id", post(claim_poll))
+                .route("/api/claim/:player_id", get(claim))
+                .route("/api/claim/poll/:player_id", get(claim_poll))
                 .route("/api/settings/:key", get(settings))
-                .route("/api/toggle_private/:key", post(toggle_private))
-                .route("/api/alias", get(alias))
+                .route("/api/toggle_private/:key", get(toggle_private))
+                .route("/api/alias/:player_id", get(alias))
                 .route("/api/ratings/:player_id/:char_id", get(ratings))
                 .route("/api/stats", get(stats))
                 .with_state(AppState {

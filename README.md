@@ -14,17 +14,19 @@ It is currently being hosted at [Puddle.farm](https://puddle.farm)
 
 ### Backend
 
-A postgresql server needs to be available, set the DATABASE_PATH in your .env file accordingly.
-eg. `DATABASE_PATH="postgresql://user:password@localhost/puddle_farm"`
+A postgresql server needs to be available, set the DATABASE_URL in your .env file accordingly.
+eg. `DATABASE_URL="postgresql://user:password@localhost/puddle_farm"`
 
 Install diesel_cli, and create the database:
 ```
 cargo install diesel_cli
 source .env
-diesel --database-url "${DATABASE_PATH}" migration run
+diesel --database-url "${DATABASE_URL}" migration run
 ```
 
-For stats to work, a memcached server needs to be running.
+For stats to work, a memcached server needs to be running, set MEMCACHED_URL:
+eg. `MEMCACHED_URL="tcp://127.0.0.1:11211"`
+
 
 `cargo run` to start the server.
 

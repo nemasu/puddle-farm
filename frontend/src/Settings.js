@@ -23,14 +23,20 @@ const Settings = () => {
             + '/settings/'
             + key;
             const response = await fetch(url);
-            const result = await response.text().then(body => {
-                var parsed = JSONParse(body);
-                return parsed;
-              });
 
-            setSettings(result);
+            if( response.status === 200 ) {
+                const result = await response.text().then(body => {
+                    var parsed = JSONParse(body);
+                    return parsed;
+                });
 
-            if(result.id === 0) {
+                setSettings(result);
+                
+                if(result.id === 0) {
+                    localStorage.removeItem('key');
+                    window.location.reload();
+                }
+            } else if ( response.status === 404 ) {
                 localStorage.removeItem('key');
                 window.location.reload();
             }
