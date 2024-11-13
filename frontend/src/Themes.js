@@ -220,6 +220,115 @@ Themes.set('Ky', createTheme({
   },
 }));
 
+Themes.set('Ramlethal', createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#611A16', //Mostly just button border, also alias box background
+    },
+    secondary: {
+      main: '#E4E1DA', //Header (not appbar)
+    },
+    background: {
+      default: '#383733',//Main page background
+    },
+  },
+  typography: {
+    pageHeader: {
+      display: 'block',
+      fontSize: 34,
+      color: '#383733',//Page header text color
+    },
+  },
+  components: {
+    MuiTypography: {
+      styleOverrides: {
+        root: {
+          variants: [
+            {
+              props: { variant: 'platform' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: '#383733',
+                color: 'white',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            },
+            {
+              props: { variant: 'char_rank' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: '#611A16',
+                color: 'white',
+                fontWeight: 'bold',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            },
+            {
+              props: { variant: 'global_rank' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: '#A4FD33',
+                color: 'rgba(0, 0, 0, 0.7)',
+                fontWeight: 'bold',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            }
+          ],
+        }
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          color: '#DDDBD5',
+          variants: [
+            {
+              props: { variant: 'link'},
+              style: {
+                textTransform: 'none',
+                color: '#A4FD33',
+                padding: '5px 0px 5px 0px',
+                justifyContent: 'left',
+                verticalAlign: 'baseline',
+              }
+            }
+          ],
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#611A16',
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          background: '#383733',
+        },
+      },
+    },
+  },
+}));
+
 Themes.set('Nagoriyuki', createTheme({
   palette: {
     mode: 'dark',
@@ -237,7 +346,7 @@ Themes.set('Nagoriyuki', createTheme({
     pageHeader: {
       display: 'block',
       fontSize: 34,
-      color: '#da2a46',
+      color: '#DA2A46',
     },
   },
   components: {
@@ -278,7 +387,7 @@ Themes.set('Nagoriyuki', createTheme({
               props: { variant: 'global_rank' },
               style: {
                 fontSize: '.8rem',
-                backgroundColor: 'rgb(255, 224, 138)',
+                backgroundColor: '#DA2A46',
                 color: 'rgba(0, 0, 0, 0.7)',
                 fontWeight: 'bold',
                 borderRadius: '8px',
@@ -302,7 +411,7 @@ Themes.set('Nagoriyuki', createTheme({
               props: { variant: 'link'},
               style: {
                 textTransform: 'none',
-                color: '#da2a46',
+                color: '#DA2A46',
                 padding: '5px 0px 5px 0px',
                 justifyContent: 'left',
                 verticalAlign: 'baseline',

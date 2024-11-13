@@ -68,7 +68,7 @@ const Settings = () => {
                 <Box>
                     <Typography
                         align='center'
-                        variant="pageHeader"
+                        variant="h4"
                         sx={{ cursor: 'pointer' }}
                         onClick={() => navigate(`/player/${settings.id}`)}
                     >

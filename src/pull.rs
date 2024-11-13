@@ -161,6 +161,7 @@ async fn update_popularity(
     conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
     redis_connection: &mut PooledConnection<'_, RedisConnectionManager>,
 ) -> Result<(), String> {
+    info!("Updating popularity");
     //We're using subqueries here, so we need to use sql_query
 
     //Distinct player + character combination counts
@@ -266,7 +267,7 @@ async fn update_stats(
     conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
     redis_connection: &mut PooledConnection<'_, RedisConnectionManager>,
 ) -> Result<(), String> {
-    debug!("Updating stats");
+    info!("Updating stats");
 
     //Now
     let last_update =
@@ -392,6 +393,7 @@ struct InsertedRankRowId {
     rank: i32,
 }
 async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> {
+    info!("Updating ranks");
     //TODO change this to use Redis?
 
     //Delete all rows in the global_ranks and character_ranks tables
