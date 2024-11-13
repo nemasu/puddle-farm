@@ -28,10 +28,14 @@ pub const ONE_HOUR: i64 = 1 * 60 * 60;
 
 pub async fn pull_and_update_continuous(state: crate::AppState) {
     {
-        //Update stats at the start of pull
+        //Update stats, popularity at the start of pull
         let mut connection = state.db_pool.get().await.unwrap();
         let mut redis_connection = state.redis_pool.get().await.unwrap();
         update_stats(&mut connection, &mut redis_connection)
+            .await
+            .unwrap();
+
+        update_popularity(&mut connection, &mut redis_connection)
             .await
             .unwrap();
     }
@@ -127,6 +131,10 @@ async fn do_hourly_update(
         error!("update_stats failed: {e}");
     }
 
+    if let Err(e) = update_popularity(conn, redis_connection).await {
+        error!("update_popularity failed: {e}");
+    }
+
     //Update last_rank_update in the constants table
     diesel::update(constants::table)
         .filter(constants::key.eq("last_rank_update"))
@@ -134,6 +142,123 @@ async fn do_hourly_update(
         .execute(conn)
         .await
         .unwrap();
+    Ok(())
+}
+
+#[derive(QueryableByName)]
+struct PopularityResult {
+    #[diesel(sql_type = diesel::sql_types::SmallInt)]
+    c: i16,
+    #[diesel(sql_type = diesel::sql_types::BigInt)]
+    count: i64,
+}
+#[derive(QueryableByName)]
+struct PopularityResultTotal {
+    #[diesel(sql_type = diesel::sql_types::BigInt)]
+    count: i64,
+}
+async fn update_popularity(
+    conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
+    redis_connection: &mut PooledConnection<'_, RedisConnectionManager>,
+) -> Result<(), String> {
+    //We're using subqueries here, so we need to use sql_query
+
+    //Distinct player + character combination counts
+    let results = diesel::sql_query(
+        "
+        SELECT c, COUNT(id) as count
+        FROM (
+            SELECT g.char_a as c, g.id_a as id
+            FROM games g
+            WHERE g.timestamp > now() - interval '1 month'
+        UNION
+            SELECT g.char_b as c, g.id_b as id
+            FROM games g
+            WHERE g.timestamp > now() - interval '1 month'
+        ) as combined_results
+        GROUP BY c;
+    ",
+    );
+
+    let results: Vec<PopularityResult> =
+        results.get_results::<PopularityResult>(conn).await.unwrap();
+
+    for r in results {
+        let char_id = r.c as usize;
+        let count = r.count;
+
+        redis::cmd("SET")
+            .arg(format!("popularity_per_player_{}", CHAR_NAMES[char_id].0))
+            .arg(count)
+            .query_async::<String>(&mut **redis_connection)
+            .await
+            .expect("Error setting popularity per player");
+    }
+
+
+    //Total distinct player + character combination.
+    let results_total_players = diesel::sql_query(
+        "
+        SELECT COUNT(id) as count
+        FROM (
+            SELECT g.id_a as id
+            FROM games g
+            WHERE g.timestamp > now() - interval '1 month'
+        UNION
+            SELECT g.id_b as id
+            FROM games g
+            WHERE g.timestamp > now() - interval '1 month'
+        ) as combined_results;
+        ",
+    );
+
+    let results_total_players: Vec<PopularityResultTotal> = results_total_players
+        .get_results::<PopularityResultTotal>(conn)
+        .await
+        .unwrap();
+
+    redis::cmd("SET")
+        .arg("popularity_per_player_total")
+        .arg(results_total_players[0].count)
+        .query_async::<String>(&mut **redis_connection)
+        .await
+        .expect("Error setting popularity_total");
+
+
+    //Total game count per character (no total needed, we can use 'one_month_games' from stats)
+    let results = diesel::sql_query(
+        "
+        SELECT c, COUNT(c) as count
+        FROM (
+            SELECT g.char_a as c
+            FROM games g
+            WHERE g.timestamp > now() - interval '1 month'
+        UNION ALL
+            SELECT g.char_b as c
+            FROM games g
+            WHERE g.timestamp > now() - interval '1 month'
+        ) as combined_results
+        GROUP BY c;
+        "
+    );
+
+    let results: Vec<PopularityResult> =
+        results.get_results::<PopularityResult>(conn).await.unwrap();
+
+    for r in results {
+        let char_id = r.c as usize;
+        let count = r.count;
+
+        redis::cmd("SET")
+            .arg(format!("popularity_per_character_{}", CHAR_NAMES[char_id].0))
+            .arg(count)
+            .query_async::<String>(&mut **redis_connection)
+            .await
+            .expect("Error setting popularity per game");
+    }
+
+
+
     Ok(())
 }
 

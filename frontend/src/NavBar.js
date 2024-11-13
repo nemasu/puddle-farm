@@ -19,9 +19,10 @@ import Themes from './Themes';
 var pages = [
   {name:'Top', link:'./top_global'},
   {name:'Characters', list:[]},
+  {name:'Popularity', link:'./popularity'},
   {name:'About', link:'./about'},
   {name:'Settings', link:'./settings'},
-  {name:'Stats', link:'./stats'}
+  {name:'Stats', link:'./stats'},
 ];
 
 function resetCharacters() {

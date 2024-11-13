@@ -1129,6 +1129,81 @@ async fn stats(State(pools): State<AppState>) -> Result<Json<StatsResponse>, (St
     }))
 }
 
+#[derive(Serialize)]
+struct PopularityResultChar {
+    name: String,
+    value: i64,
+}
+#[derive(Serialize)]
+struct PopularityResult {
+    per_player: Vec<PopularityResultChar>,
+    per_character: Vec<PopularityResultChar>,
+    per_player_total: i64,
+    per_character_total: i64,
+    last_update: String,
+}
+async fn popularity(
+    State(pools): State<AppState>,
+) -> Result<Json<PopularityResult>, (StatusCode, String)> {
+    let mut redis = pools.redis_pool.get().await.unwrap();
+
+    let mut per_player: Vec<(String, i64)>  = vec![];
+    
+    for e in CHAR_NAMES.iter() {
+        let key = format!("popularity_per_player_{}", e.0);
+        let value: i64 = redis::cmd("GET")
+            .arg(key)
+            .query_async(&mut *redis)
+            .await
+            .expect("Error getting popularity");
+        per_player.push((e.1.to_string(), value));
+    }
+
+    let mut per_character: Vec<(String, i64)>  = vec![];
+    
+    for e in CHAR_NAMES.iter() {
+        let key = format!("popularity_per_character_{}", e.0);
+        let value: i64 = redis::cmd("GET")
+            .arg(key)
+            .query_async(&mut *redis)
+            .await
+            .expect("Error getting popularity");
+        per_character.push((e.1.to_string(), value));
+    }
+
+    let popularity_per_player_total = redis::cmd("GET")
+        .arg("popularity_per_player_total")
+        .query_async::<i64>(&mut *redis)
+        .await
+        .expect("Error getting popularity_total");
+
+    let one_month_games = redis::cmd("GET")
+        .arg("one_month_games")
+        .query_async::<i64>(&mut *redis)
+        .await
+        .expect("Error getting popularity_total");
+
+    let last_update = redis::cmd("GET")
+        .arg("last_update")
+        .query_async::<String>(&mut *redis)
+        .await
+        .expect("Error getting last_update");
+
+    Ok(Json(PopularityResult {
+        per_player: per_player.iter().map(|p| PopularityResultChar {
+            name: p.0.clone(),
+            value: p.1,
+        }).collect(),
+        per_character: per_character.iter().map(|p| PopularityResultChar {
+            name: p.0.clone(),
+            value: p.1,
+        }).collect(),
+        per_player_total: popularity_per_player_total,
+        per_character_total: one_month_games,
+        last_update,
+    }))
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().expect("Failed to read .env file");
@@ -1195,6 +1270,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/alias/:player_id", get(alias))
                 .route("/api/ratings/:player_id/:char_id", get(ratings))
                 .route("/api/stats", get(stats))
+                .route("/api/popularity", get(popularity))
                 .with_state(state);
 
             if cfg!(debug_assertions) {

@@ -22,6 +22,7 @@ import Settings from './Settings';
 import { Typography } from '@mui/material';
 import About from './About';
 import Stats from './Stats';
+import Popularity from './Popularity';
 
 const App = () => {
   return (
@@ -71,6 +72,11 @@ const App = () => {
             <Route
               path="/stats"
               element={<Stats />}
+            />
+
+            <Route
+              path="/popularity"
+              element={<Popularity />}
             />
 
           </Routes>
