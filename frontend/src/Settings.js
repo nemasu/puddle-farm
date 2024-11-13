@@ -8,15 +8,20 @@ const Settings = () => {
 
     const navigate = useNavigate();
 
-    const [key, setKey] = React.useState('');
+    const [key, setKey] = React.useState(null);
 
     const [settings, setSettings] = React.useState({});
     useEffect(() => {
 
-        const key = localStorage.getItem('key');
-        setKey(key);
-
         const fetchSettings = async () => {
+
+            const key = localStorage.getItem('key');
+
+            if( key === null ) {
+                return;
+            } 
+
+            setKey(key);
 
             //Get status from backend
             const url = API_ENDPOINT
@@ -42,11 +47,8 @@ const Settings = () => {
             }
         }
 
-        if( key ) {
-            fetchSettings();
-        }
-
-    }, [key]);
+        fetchSettings();
+    }, [API_ENDPOINT]);
 
     function toggleStatus() {
         const url = API_ENDPOINT
