@@ -8,7 +8,7 @@ axum = {version = "0.7.7", features = ["macros"] }
 tower-http = { version = "0.6.1", features = ["cors"] }
 bb8 = "0.8"
 bb8-postgres = "0.8.1"
-bb8-memcached = { git = "https://github.com/nemasu/bb8-memcached" }
+bb8-redis = "0.17.0"
 diesel = { version = "2.2.3", features = ["postgres", "chrono"] }
 diesel-async = { version = "0.5.0", features = ["postgres", "bb8"] }
 dotenv = "0.15.0"

@@ -2,7 +2,6 @@ use axum::extract::{Path, Query};
 use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, ORIGIN};
 use axum::http::Method;
 use axum::{extract::State, http::StatusCode, response::Json, routing::get, Router};
-use chrono::Duration;
 use diesel::{prelude::*, update};
 use diesel_async::{
     pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection, RunQueryDsl,
@@ -12,20 +11,20 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ops::Deref;
 use tower_http::cors::{Any, CorsLayer};
-use tracing::{error, debug, warn};
+use tracing::{error, warn};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::layer::SubscriberExt;
 //use diesel::query_dsl::positional_order_dsl::{OrderColumn, PositionalOrderDsl, IntoOrderColumn};
 
-use bb8_memcached::{bb8, MemcacheConnectionManager};
+use bb8_redis::{bb8, redis, RedisConnectionManager};
 
 type Pool = bb8::Pool<AsyncDieselConnectionManager<AsyncPgConnection>>;
-type MemcachedPool = bb8::Pool<MemcacheConnectionManager>;
+type RedisPool = bb8::Pool<RedisConnectionManager>;
 
 #[derive(Clone)]
 struct AppState {
     db_pool: Pool,
-    memcached_pool: MemcachedPool,
+    redis_pool: RedisPool,
 }
 
 mod ggst_api;
@@ -1082,136 +1081,51 @@ struct StatsResponse {
     one_hour_games: i64,
 }
 async fn stats(State(pools): State<AppState>) -> Result<Json<StatsResponse>, (StatusCode, String)> {
-    let expiry = Duration::hours(1).num_seconds() as u32;
+    let mut redis = pools.redis_pool.get().await.unwrap();
 
-    let mut db = pools.db_pool.get().await.unwrap();
-    let mut memcached = pools.memcached_pool.get().await.unwrap();
-
-    let now = chrono::Utc::now().naive_utc();
-
-    let timestamp;
-    let total_games;
-    let one_month_games;
-    let one_week_games;
-    let one_day_games;
-    let one_hour_games;
-
-    let last_update = memcached
-        .get(&"last_update")
+    let timestamp = redis::cmd("GET")
+        .arg("last_update")
+        .query_async::<String>(&mut *redis)
         .await
-        .ok()
-        .and_then(|data| String::from_utf8(data).ok())
-        .unwrap_or_default();
+        .expect("Error getting last_update");
 
-    if last_update.is_empty() {
-        debug!("Updating stats");
-
-        // Get total game count
-        total_games = schema::games::table
-            .count()
-            .get_result::<i64>(&mut db)
-            .await
-            .expect("Error loading games")
-            .to_string();
-        let (key, value) = ("total_games", total_games.as_bytes());
-        let _ = memcached.set(&key, value, expiry).await;
-
-        // Get one month game count
-        one_month_games = schema::games::table
-            .filter(
-                schema::games::timestamp.gt(chrono::Utc::now().naive_utc() - Duration::days(30)),
-            )
-            .count()
-            .get_result::<i64>(&mut db)
-            .await
-            .expect("Error loading games")
-            .to_string();
-        let (key, value) = ("one_month_games", one_month_games.as_bytes());
-        let _ = memcached.set(&key, value, expiry).await;
-
-        // Get one week game count
-        one_week_games = schema::games::table
-            .filter(schema::games::timestamp.gt(chrono::Utc::now().naive_utc() - Duration::days(7)))
-            .count()
-            .get_result::<i64>(&mut db)
-            .await
-            .expect("Error loading games")
-            .to_string();
-        let (key, value) = ("one_week_games", one_week_games.as_bytes());
-        let _ = memcached.set(&key, value, expiry).await;
-
-        // Get one day game count
-        one_day_games = schema::games::table
-            .filter(schema::games::timestamp.gt(chrono::Utc::now().naive_utc() - Duration::days(1)))
-            .count()
-            .get_result::<i64>(&mut db)
-            .await
-            .expect("Error loading games")
-            .to_string();
-        let (key, value) = ("one_day_games", one_day_games.as_bytes());
-        let _ = memcached.set(&key, value, expiry).await;
-
-        // Get one hour game count
-        one_hour_games = schema::games::table
-            .filter(
-                schema::games::timestamp.gt(chrono::Utc::now().naive_utc() - Duration::hours(1)),
-            )
-            .count()
-            .get_result::<i64>(&mut db)
-            .await
-            .expect("Error loading games")
-            .to_string();
-        let (key, value) = ("one_hour_games", one_hour_games.as_bytes());
-        let _ = memcached.set(&key, value, expiry).await;
-
-        // Set timestamp
-        timestamp = chrono::DateTime::from_timestamp(now.and_utc().timestamp(), 0).unwrap().naive_utc().to_string();
-        let (key, value) = ("last_update", timestamp.as_bytes());
-        let _ = memcached.set(&key, value, expiry).await;
-    } else {
-        debug!("Using cached stats");
-
-        total_games = memcached
-            .get(&"total_games")
-            .await
-            .ok()
-            .and_then(|data| String::from_utf8(data).ok())
-            .unwrap_or_default();
-        one_month_games = memcached
-            .get(&"one_month_games")
-            .await
-            .ok()
-            .and_then(|data| String::from_utf8(data).ok())
-            .unwrap_or_default();
-        one_week_games = memcached
-            .get(&"one_week_games")
-            .await
-            .ok()
-            .and_then(|data| String::from_utf8(data).ok())
-            .unwrap_or_default();
-        one_day_games = memcached
-            .get(&"one_day_games")
-            .await
-            .ok()
-            .and_then(|data| String::from_utf8(data).ok())
-            .unwrap_or_default();
-        one_hour_games = memcached
-            .get(&"one_hour_games")
-            .await
-            .ok()
-            .and_then(|data| String::from_utf8(data).ok())
-            .unwrap_or_default();
-
-        timestamp = last_update;
-    }
+    let total_games = redis::cmd("GET")
+        .arg("total_games")
+        .query_async::<i64>(&mut *redis)
+        .await
+        .expect("Error getting total_games");
     
+    let one_month_games = redis::cmd("GET")
+        .arg("one_month_games")
+        .query_async::<i64>(&mut *redis)
+        .await
+        .expect("Error getting one_month_games");
+
+    let one_week_games = redis::cmd("GET")
+        .arg("one_week_games")
+        .query_async::<i64>(&mut *redis)
+        .await
+        .expect("Error getting one_week_games");
+
+    let one_day_games = redis::cmd("GET")
+        .arg("one_day_games")
+        .query_async::<i64>(&mut *redis)
+        .await
+        .expect("Error getting one_day_games");
+
+    let one_hour_games = redis::cmd("GET")
+        .arg("one_hour_games")
+        .query_async::<i64>(&mut *redis)
+        .await
+        .expect("Error getting one_hour_games");
+
     Ok(Json(StatsResponse {
         timestamp,
-        total_games: total_games.parse().unwrap(),
-        one_month_games: one_month_games.parse().unwrap(),
-        one_week_games: one_week_games.parse().unwrap(),
-        one_day_games: one_day_games.parse().unwrap(),
-        one_hour_games: one_hour_games.parse().unwrap(),
+        total_games,
+        one_month_games,
+        one_week_games,
+        one_day_games,
+        one_hour_games,
     }))
 }
 
@@ -1237,24 +1151,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::env::var("DATABASE_URL").expect("DATABASE_URL"),
     );
 
+    //Postgres
     let pool = bb8::Pool::builder().build(config).await?;
+
+    //Redis
+    let manager =
+    RedisConnectionManager::new(std::env::var("REDIS_URL").expect("REDIS_URL"))
+        .unwrap();
+    let redis_pool = bb8::Pool::builder().build(manager).await.unwrap();
+
+    let state = AppState {
+        db_pool: pool,
+        redis_pool,
+    };
 
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     match args.get(0).map(|r| r.deref()) {
         //This runs the timed jobs: grab replay, update ratings, update ranking, etc.
         Some("pull") => {
             let _guard = init_tracing("pull");
-            pull::pull_and_update_continuous(pool).await;
+            pull::pull_and_update_continuous(state).await;
         }
         //This skips checking last_rank_update, but it does set it.
-        Some("hourly") => pull::do_hourly_update_once(pool).await,
+        Some("hourly") => pull::do_hourly_update_once(state).await,
         _ => {
             // No args, run the web server
             let _guard = init_tracing("web");
-
-            let memcached_manager =
-                MemcacheConnectionManager::new(std::env::var("MEMCACHED_URL").expect("MEMCACHED_URL")).unwrap();
-            let memcached_pool = bb8::Pool::builder().build(memcached_manager).await?;
 
             let mut app = Router::new()
                 .route("/api/player/:id", get(player))
@@ -1273,10 +1195,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/alias/:player_id", get(alias))
                 .route("/api/ratings/:player_id/:char_id", get(ratings))
                 .route("/api/stats", get(stats))
-                .with_state(AppState {
-                    db_pool: pool,
-                    memcached_pool,
-                });
+                .with_state(state);
 
             if cfg!(debug_assertions) {
                 //Cors only used for development

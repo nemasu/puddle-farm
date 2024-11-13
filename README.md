@@ -9,6 +9,7 @@ It is currently being hosted at [Puddle.farm](https://puddle.farm)
 - Sqlite3 => Postgres with Diesel ORM
 - Handlebars (templated frontend) => React
 - Rating algorithm
+- Redis for temporary data.
 
 ## Getting Started
 
@@ -24,13 +25,12 @@ source .env
 diesel --database-url "${DATABASE_URL}" migration run
 ```
 
-For stats to work, a memcached server needs to be running, set MEMCACHED_URL:
-eg. `MEMCACHED_URL="tcp://127.0.0.1:11211"`
-
+A Redis server also needs to be running. Set REDIS_URL:
+eg. `REDIS_URL="tcp://localhost:11211"`
 
 `cargo run` to start the server.
 
-`cargo run pull` will run the timed jobs continuously: grab replay, update ratings, update ranking, etc.
+`cargo run pull` will run the timed jobs continuously: grab replay, update ratings, update ranking, update redis, etc.
 
 `cargo run hourly` runs the hourly jobs once, then exits.
 
