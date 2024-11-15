@@ -13,7 +13,7 @@ use diesel::{
     prelude::*,
 };
 use crate::schema::{
-    self, character_ranks, constants, games, global_ranks, player_names, player_ratings, players,
+    self, character_ranks, games, global_ranks, player_names, player_ratings, players,
 };
 
 use chrono::NaiveDateTime;
@@ -23,13 +23,6 @@ pub struct CharacterRank {
     pub id: i64,
     pub char_id: i16,
     pub rank: i32,
-}
-
-#[derive(Selectable, Insertable, Queryable, Identifiable)]
-#[diesel(primary_key(key))]
-pub struct Constant {
-    pub key: String,
-    pub value: String,
 }
 
 #[derive(Selectable, Insertable, Queryable, Identifiable)]
@@ -51,6 +44,7 @@ pub struct Game {
     pub value_b: Option<f32>,
     pub deviation_b: Option<f32>,
     pub win_chance: Option<f32>,
+    pub real_timestamp: Option<NaiveDateTime>,
 }
 
 #[derive(Selectable, Insertable, Queryable, Identifiable)]

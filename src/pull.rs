@@ -1,6 +1,7 @@
 use crate::{ggst_api, schema, CHAR_NAMES};
+
 use bb8::PooledConnection;
-use bb8_redis::RedisConnectionManager;
+use bb8_redis::{redis, RedisConnectionManager};
 use diesel::prelude::*;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
@@ -8,10 +9,7 @@ use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error, info};
 
-use crate::schema::{
-    character_ranks, constants, games, global_ranks, player_names, player_ratings, players,
-};
-use bb8_redis::redis;
+use crate::schema::{character_ranks, games, global_ranks, player_names, player_ratings, players};
 use chrono::{NaiveDateTime, Utc};
 use diesel::dsl::*;
 
@@ -24,78 +22,126 @@ use diesel_async::scoped_futures::ScopedFutureExt;
 
 use diesel::sql_types::Integer;
 
-pub const ONE_HOUR: i64 = 1 * 60 * 60;
+define_sql_function! {
+    fn coalesce(x: diesel::sql_types::Nullable<diesel::sql_types::Timestamp>, y: diesel::sql_types::Timestamp) -> diesel::sql_types::Timestamp;
+}
+
+pub const ONE_MINUTE: u64 = 1 * 60;
 
 pub async fn pull_and_update_continuous(state: crate::AppState) {
-    {
-        //Update stats, popularity at the start of pull
-        let mut connection = state.db_pool.get().await.unwrap();
-        let mut redis_connection = state.redis_pool.get().await.unwrap();
-        update_stats(&mut connection, &mut redis_connection)
-            .await
-            .unwrap();
+    // Processing loop
+    let processing_state = state.clone();
+    let processing_task = tokio::spawn(async move {
+        let mut interval = time::interval(Duration::from_secs(ONE_MINUTE - 10));
 
-        update_popularity(&mut connection, &mut redis_connection)
-            .await
-            .unwrap();
-    }
+        loop {
+            interval.tick().await;
 
-    let mut interval = time::interval(Duration::from_secs(60));
+            info!("Processing");
 
-    loop {
-        let mut connection = state.db_pool.get().await.unwrap();
-        let mut redis_connection = state.redis_pool.get().await.unwrap();
+            let mut connection = processing_state.db_pool.get().await.unwrap();
+            let mut redis_connection = processing_state.redis_pool.get().await.unwrap();
 
-        interval.tick().await;
-
-        connection
-            .transaction::<_, diesel::result::Error, _>(|conn| {
-                async move {
-                    match grab_games(conn).await {
-                        Ok(new_games) => {
-                            info!("New games: {:?}", new_games.len());
-
-                            if let Err(e) = update_ratings(conn, &new_games).await {
-                                error!("update_ratings failed: {e}");
-                            }
+            if let Err(e) = connection
+                .transaction::<_, diesel::result::Error, _>(|conn| {
+                    async move {
+                        if let Err(e) = update_ratings(conn).await {
+                            error!("Rating update failed: {e}");
                         }
-                        Err(e) => {
-                            error!("grab_games failed: {e}");
-                        }
-                    };
-
-                    Ok(())
-                }
-                .scope_boxed()
-            })
-            .await
-            .unwrap();
-
-        connection
-            .transaction::<_, diesel::result::Error, _>(|conn| {
-                async move {
-                    //Hourly update ranks
-                    let last_hourly_update = &constants::table
-                        .select(constants::value)
-                        .filter(constants::key.eq("last_rank_update"))
-                        .load::<String>(conn)
-                        .await
-                        .unwrap()[0];
-
-                    //Convert String last_hourly_update to i64
-                    let last_hourly_update = last_hourly_update.parse::<i64>().unwrap();
-                    let current_time = Utc::now().timestamp();
-                    if current_time - last_hourly_update >= ONE_HOUR - 10 {
-                        //Give 10 seconds leeway
-                        do_hourly_update(conn, &mut redis_connection).await.unwrap();
+                        Ok(())
                     }
+                    .scope_boxed()
+                })
+                .await
+            {
+                error!("Rating update failed: {e}");
+            }
 
-                    Ok(())
+            //Get last_update_hourly from redis
+            let last_update_hourly: Result<String, redis::RedisError> = redis::cmd("GET")
+                .arg("last_update_hourly")
+                .query_async(&mut *redis_connection)
+                .await;
+
+            let last_update_hourly = match last_update_hourly {
+                Ok(s) => s,
+                Err(_) => {
+                    //If last_update_hourly doesn't exist, initialize to now minus 2 hours
+                    chrono::DateTime::from_timestamp(
+                        chrono::Utc::now().naive_utc().and_utc().timestamp() - (2 * 60 * 60),
+                        0,
+                    )
+                    .unwrap()
+                    .naive_utc()
+                    .to_string()
                 }
-                .scope_boxed()
-            })
-            .await
-            .unwrap();
+            };
+
+            //Parse last_update_hourly
+            let last_update_hourly =
+                NaiveDateTime::parse_from_str(&last_update_hourly, "%Y-%m-%d %H:%M:%S").unwrap();
+
+            //Only do this if "last_update_hourly" from redis is more than an hour ago
+            if last_update_hourly < Utc::now().naive_utc() - chrono::Duration::hours(1) {
+                info!("Hourly update");
+                if let Err(e) = connection
+                    .transaction::<_, diesel::result::Error, _>(|conn| {
+                        async move {
+                            do_hourly_update(conn, &mut redis_connection).await.unwrap();
+                            Ok(())
+                        }
+                        .scope_boxed()
+                    })
+                    .await
+                {
+                    error!("Hourly update failed: {e}");
+                } else {
+                    info!("Hourly update - Done");
+                }
+            }
+            info!("Processing - done");
+        }
+    });
+
+    // Replay pulling loop
+    let pull_state = state.clone();
+    let pull_task = tokio::spawn(async move {
+        let mut interval = time::interval(Duration::from_secs(ONE_MINUTE));
+
+        loop {
+            interval.tick().await;
+
+            info!("Replay pull");
+
+            let mut connection = pull_state.db_pool.get().await.unwrap();
+
+            if let Err(e) = connection
+                .transaction::<_, diesel::result::Error, _>(|conn| {
+                    async move {
+                        match grab_games(conn).await {
+                            Ok(new_games) => {
+                                info!("New games: {:?}", new_games.len());
+                            }
+                            Err(e) => {
+                                error!("grab_games failed: {e}");
+                            }
+                        };
+                        Ok(())
+                    }
+                    .scope_boxed()
+                })
+                .await
+            {
+                error!("Replay pull loop: {e}");
+            }
+
+            info!("Replay pull - Done");
+        }
+    });
+
+    tokio::select! {
+        _ = processing_task => {},
+        _ = pull_task => {},
     }
 }
 
@@ -135,13 +181,19 @@ async fn do_hourly_update(
         error!("update_popularity failed: {e}");
     }
 
-    //Update last_rank_update in the constants table
-    diesel::update(constants::table)
-        .filter(constants::key.eq("last_rank_update"))
-        .set(constants::value.eq(Utc::now().timestamp().to_string()))
-        .execute(conn)
+    //Now
+    let last_update =
+        chrono::DateTime::from_timestamp(chrono::Utc::now().naive_utc().and_utc().timestamp(), 0)
+            .unwrap()
+            .naive_utc()
+            .to_string();
+
+    redis::cmd("SET")
+        .arg("last_update_hourly")
+        .arg(last_update)
+        .query_async::<String>(&mut **redis_connection)
         .await
-        .unwrap();
+        .expect("Error setting last_update_hourly");
     Ok(())
 }
 
@@ -196,7 +248,6 @@ async fn update_popularity(
             .expect("Error setting popularity per player");
     }
 
-
     //Total distinct player + character combination.
     let results_total_players = diesel::sql_query(
         "
@@ -225,7 +276,6 @@ async fn update_popularity(
         .await
         .expect("Error setting popularity_total");
 
-
     //Total game count per character (no total needed, we can use 'one_month_games' from stats)
     let results = diesel::sql_query(
         "
@@ -240,7 +290,7 @@ async fn update_popularity(
             WHERE g.timestamp > now() - interval '1 month'
         ) as combined_results
         GROUP BY c;
-        "
+        ",
     );
 
     let results: Vec<PopularityResult> =
@@ -251,14 +301,15 @@ async fn update_popularity(
         let count = r.count;
 
         redis::cmd("SET")
-            .arg(format!("popularity_per_character_{}", CHAR_NAMES[char_id].0))
+            .arg(format!(
+                "popularity_per_character_{}",
+                CHAR_NAMES[char_id].0
+            ))
             .arg(count)
             .query_async::<String>(&mut **redis_connection)
             .await
             .expect("Error setting popularity per game");
     }
-
-
 
     Ok(())
 }
@@ -268,13 +319,6 @@ async fn update_stats(
     redis_connection: &mut PooledConnection<'_, RedisConnectionManager>,
 ) -> Result<(), String> {
     info!("Updating stats");
-
-    //Now
-    let last_update =
-        chrono::DateTime::from_timestamp(chrono::Utc::now().naive_utc().and_utc().timestamp(), 0)
-            .unwrap()
-            .naive_utc()
-            .to_string();
 
     // Get total game count
     let total_games: i64 = schema::games::table
@@ -359,13 +403,6 @@ async fn update_stats(
         .query_async::<String>(&mut **redis_connection)
         .await
         .expect("Error setting one_hour_games");
-
-    redis::cmd("SET")
-        .arg("last_update")
-        .arg(last_update)
-        .query_async::<String>(&mut **redis_connection)
-        .await
-        .expect("Error setting last_update");
 
     Ok(())
 }
@@ -527,7 +564,7 @@ async fn grab_games(connection: &mut AsyncPgConnection) -> Result<Vec<Game>, Str
 
     let replays = ggst_api::get_replays().await;
 
-    let replays = match replays {
+    let mut replays = match replays {
         Ok(replays) => replays,
         Err(e) => {
             return Err(e);
@@ -537,19 +574,37 @@ async fn grab_games(connection: &mut AsyncPgConnection) -> Result<Vec<Game>, Str
     let num_replays = replays.len();
     info!("Got {num_replays} replays.");
 
+    replays.reverse();
+
     let mut new_games = Vec::new();
+    
+    //Try to keep order if possible
+    let mut seconds_offset = 0;
+    
     for r in replays {
         let game_timestamp =
             NaiveDateTime::parse_from_str(&r.timestamp, "%Y-%m-%d %H:%M:%S").unwrap();
 
+        let fixed_timestamp;
+
+        // If the game_timestamp is more than 2 seconds in the future, set it to current time
+        if game_timestamp > Utc::now().naive_utc()
+            && game_timestamp > Utc::now().naive_utc() + chrono::Duration::seconds(2)
+        {
+            fixed_timestamp = Some(chrono::SubsecRound::round_subsecs(Utc::now().naive_utc() + chrono::Duration::seconds(seconds_offset), 0));
+        } else {
+            fixed_timestamp = None;
+        }
+
         let new_game = Game {
             timestamp: game_timestamp,
+            real_timestamp: fixed_timestamp,
             id_a: r.player1.id.parse::<i64>().unwrap(),
-            name_a: r.player1.name,
+            name_a: r.player1.name.clone(),
             char_a: i16::try_from(r.player1_character).ok().unwrap(),
             platform_a: i16::try_from(r.player1.platform).ok().unwrap(),
             id_b: r.player2.id.parse::<i64>().unwrap(),
-            name_b: r.player2.name,
+            name_b: r.player2.name.clone(),
             char_b: i16::try_from(r.player2_character).ok().unwrap(),
             platform_b: i16::try_from(r.player2.platform).ok().unwrap(),
             winner: i16::try_from(r.winner).ok().unwrap(),
@@ -565,21 +620,6 @@ async fn grab_games(connection: &mut AsyncPgConnection) -> Result<Vec<Game>, Str
             error!("update_player_info failed: {e}");
         }
 
-        //Skip the game if either player a or player b is not Public
-        let player_a = players::table
-            .filter(players::id.eq(new_game.id_a))
-            .get_result::<Player>(connection)
-            .await
-            .unwrap();
-        let player_b = players::table
-            .filter(players::id.eq(new_game.id_b))
-            .get_result::<Player>(connection)
-            .await
-            .unwrap();
-        if player_a.status != Some(Status::Public) || player_b.status != Some(Status::Public) {
-            continue;
-        }
-
         let count = insert_into(games::table)
             .values(&new_game)
             .on_conflict_do_nothing()
@@ -588,23 +628,46 @@ async fn grab_games(connection: &mut AsyncPgConnection) -> Result<Vec<Game>, Str
             .unwrap();
 
         if count > 0 {
+            if fixed_timestamp.is_some() {
+                seconds_offset += 1;
+                debug!(
+                    "Fixing timestamp {} -> {} - {} vs {}",
+                    r.timestamp, fixed_timestamp.unwrap(), r.player1.name, r.player2.name
+                );
+            }
+
             new_games.push(new_game);
         }
     }
 
-    //Sort new_games by timestamp in ascending order
-    //This is so that we process older games first
-    new_games.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
-
     Ok(new_games)
 }
 
-async fn update_ratings(
-    connection: &mut AsyncPgConnection,
-    new_games: &Vec<Game>,
-) -> Result<(), String> {
+async fn update_ratings(connection: &mut AsyncPgConnection) -> Result<(), String> {
     info!("Updating ratings");
-    for g in new_games {
+
+    //Find all games for public players that are missing ratings
+    let players_b = diesel::alias!(players as players_b);
+
+    let new_games = games::table
+        .inner_join(players::table.on(games::id_a.eq(players::id)))
+        .inner_join(players_b.on(games::id_b.eq(players_b.field(players::id))))
+        .select((
+            games::all_columns,
+            players::status,
+            players_b.field(players::status),
+        ))
+        .filter(games::value_a.is_null())
+        .order(coalesce(games::real_timestamp, games::timestamp).asc())
+        .get_results::<(Game, Option<Status>, Option<Status>)>(connection)
+        .await
+        .unwrap();
+
+    info!("Found {} games without ratings", new_games.len());
+
+    for entry in new_games {
+        let g = entry.0;
+
         //Get the player_rating a
         let player_rating_a = match player_ratings::table
             .filter(player_ratings::id.eq(g.id_a))
@@ -664,9 +727,15 @@ async fn update_ratings(
             }
         };
 
-        //Calculate value and deviation
-        let (new_value_a, new_value_b, new_deviation_a, new_deviation_b, win_prob) =
-            update_mean_and_variance(
+        if Some(Status::Public) == entry.1 && Some(Status::Public) == entry.2 {
+            //Calculate value and deviation
+            let (
+                new_value_a,
+                new_value_b,
+                new_deviation_a,
+                new_deviation_b,
+                win_prob,
+            ) = update_mean_and_variance(
                 player_rating_a.value as f64,
                 player_rating_a.deviation as f64,
                 player_rating_b.value as f64,
@@ -674,51 +743,72 @@ async fn update_ratings(
                 g.winner == 1,
             );
 
-        //Update game table with player ratings
-        diesel::update(games::table)
-            .filter(games::timestamp.eq(g.timestamp))
-            .filter(games::id_a.eq(g.id_a))
-            .filter(games::char_a.eq(g.char_a))
-            .filter(games::platform_a.eq(g.platform_a))
-            .filter(games::id_b.eq(g.id_b))
-            .filter(games::char_b.eq(g.char_b))
-            .filter(games::platform_b.eq(g.platform_b))
-            .set((
-                games::value_a.eq(player_rating_a.value),
-                games::deviation_a.eq(player_rating_a.deviation),
-                games::value_b.eq(player_rating_b.value),
-                games::deviation_b.eq(player_rating_b.deviation),
-                games::win_chance.eq(win_prob as f32),
-            ))
-            .execute(connection)
-            .await
-            .unwrap();
+            //Update game table with player ratings
+            diesel::update(games::table)
+                .filter(games::timestamp.eq(g.timestamp))
+                .filter(games::id_a.eq(g.id_a))
+                .filter(games::char_a.eq(g.char_a))
+                .filter(games::platform_a.eq(g.platform_a))
+                .filter(games::id_b.eq(g.id_b))
+                .filter(games::char_b.eq(g.char_b))
+                .filter(games::platform_b.eq(g.platform_b))
+                .set((
+                    games::value_a.eq(player_rating_a.value),
+                    games::deviation_a.eq(player_rating_a.deviation),
+                    games::value_b.eq(player_rating_b.value),
+                    games::deviation_b.eq(player_rating_b.deviation),
+                    games::win_chance.eq(win_prob as f32),
+                ))
+                .execute(connection)
+                .await
+                .unwrap();
 
-        //Update player_rating a
-        diesel::update(player_ratings::table)
-            .filter(player_ratings::id.eq(g.id_a))
-            .filter(player_ratings::char_id.eq(g.char_a))
-            .set((
-                player_ratings::value.eq(new_value_a as f32),
-                player_ratings::deviation.eq(new_deviation_a as f32),
-            ))
-            .execute(connection)
-            .await
-            .unwrap();
+            //Update player_rating a
+            diesel::update(player_ratings::table)
+                .filter(player_ratings::id.eq(g.id_a))
+                .filter(player_ratings::char_id.eq(g.char_a))
+                .set((
+                    player_ratings::value.eq(new_value_a as f32),
+                    player_ratings::deviation.eq(new_deviation_a as f32),
+                ))
+                .execute(connection)
+                .await
+                .unwrap();
 
-        //Update player_rating b
-        diesel::update(player_ratings::table)
-            .filter(player_ratings::id.eq(g.id_b))
-            .filter(player_ratings::char_id.eq(g.char_b))
-            .set((
-                player_ratings::value.eq(new_value_b as f32),
-                player_ratings::deviation.eq(new_deviation_b as f32),
-            ))
-            .execute(connection)
-            .await
-            .unwrap();
+            //Update player_rating b
+            diesel::update(player_ratings::table)
+                .filter(player_ratings::id.eq(g.id_b))
+                .filter(player_ratings::char_id.eq(g.char_b))
+                .set((
+                    player_ratings::value.eq(new_value_b as f32),
+                    player_ratings::deviation.eq(new_deviation_b as f32),
+                ))
+                .execute(connection)
+                .await
+                .unwrap();
+        } else {
+            tracing::debug!("Hidden game: {} - {}", g.name_a, g.name_b);
+            //Player is not public, so update game with 0s
+            diesel::update(games::table)
+                .filter(games::timestamp.eq(g.timestamp))
+                .filter(games::id_a.eq(g.id_a))
+                .filter(games::char_a.eq(g.char_a))
+                .filter(games::platform_a.eq(g.platform_a))
+                .filter(games::id_b.eq(g.id_b))
+                .filter(games::char_b.eq(g.char_b))
+                .filter(games::platform_b.eq(g.platform_b))
+                .set((
+                    games::value_a.eq(0.0),
+                    games::deviation_a.eq(0.0),
+                    games::value_b.eq(0.0),
+                    games::deviation_b.eq(0.0),
+                    games::win_chance.eq(0.0),
+                ))
+                .execute(connection)
+                .await
+                .unwrap();
+        }
     }
-    info!("Updating ratings - done.");
     Ok(())
 }
 

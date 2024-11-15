@@ -39,6 +39,7 @@ diesel::table! {
         value_b -> Nullable<Float4>,
         deviation_b -> Nullable<Float4>,
         win_chance -> Nullable<Float4>,
+        real_timestamp -> Nullable<Timestamp>,
     }
 }
 

@@ -57,6 +57,8 @@ function getCurrentPlayerRating(player, char_short) {
 function groupMatches(data, player, char_short, has_offset) {
   const groupedData = [];
   let currentGroup = null;
+  let lastValidGroup = null;
+  let lastValidMatch = null;
   data.reverse();
 
   let limit;
@@ -68,35 +70,42 @@ function groupMatches(data, player, char_short, has_offset) {
 
   for (let i = 0; i < limit; i++) {
     const match = data[i];
-    const prevMatch = i > 0 ? data[i - 1] : null;
 
     if (
       currentGroup &&
-      (prevMatch.opponent_id === match.opponent_id) &&
-      (prevMatch.opponent_character_short === match.opponent_character_short)
+      (currentGroup.opponent_id === match.opponent_id) &&
+      (currentGroup.opponent_character_short === match.opponent_character_short)
     ) {
       // Continue the current group if the opponent and character are the same as the previous match
       currentGroup.matches.push(match);
       currentGroup.wins += match.result_win ? 1 : 0;
       currentGroup.losses += match.result_win ? 0 : 1;
-      if (prevMatch) {
-        prevMatch.ratingChange = parseFloat(match.own_rating_value - prevMatch.own_rating_value);
-        currentGroup.ratingChange += prevMatch.ratingChange;
-        prevMatch.ratingChange = prevMatch.ratingChange.toFixed(2);
+      if (match.own_rating_value !== 0) {
+        if (lastValidMatch) {
+          const ratingChange = parseFloat(match.own_rating_value - lastValidMatch.own_rating_value);
+          currentGroup.ratingChange += ratingChange;
+          lastValidMatch.ratingChange = ratingChange.toFixed(2);
+        }
       }
     } else {
-
       if (currentGroup) {
-        const lastChange = match.own_rating_value - currentGroup.matches[currentGroup.matches.length - 1].own_rating_value;
-        currentGroup.ratingChange += lastChange;
-        currentGroup.matches.reverse();
-        currentGroup.matches[0].ratingChange = lastChange.toFixed(2);
+        // Only calculate rating change if the last match in the current group is valid
+        // This will not calculate the rating change for the most recent match for the group before a hidden group
+        if (lastValidMatch && match.own_rating_value !== 0 && currentGroup.matches[0].own_rating_value !== 0) {
+          const lastChange = match.own_rating_value - lastValidMatch.own_rating_value;
+          currentGroup.ratingChange += lastChange;
+          currentGroup.matches.reverse();
+          currentGroup.matches[0].ratingChange = lastChange.toFixed(2);
+        } else {
+          currentGroup.matches.reverse();
+        }
       }
 
       // Start a new group
       currentGroup = {
         opponent_id: match.opponent_id,
         opponent_name: match.opponent_name,
+        opponent_character_short: match.opponent_character_short,
         floor: match.floor,
         matches: [match],
         wins: match.result_win ? 1 : 0,
@@ -106,7 +115,28 @@ function groupMatches(data, player, char_short, has_offset) {
         timestamp: match.timestamp,
       };
 
+      //This calculates the rating change for the most recent match for the group before a hidden group
+      if (currentGroup != lastValidGroup
+        && match.own_rating_value !== 0
+        && lastValidGroup
+        && !lastValidGroup.matches[0].ratingChange) {
+
+        const lastChange = match.own_rating_value - lastValidMatch.own_rating_value;
+        lastValidGroup.ratingChange += lastChange;
+        //lastValidGroup.matches.reverse();
+        lastValidGroup.matches[0].ratingChange = lastChange.toFixed(2);
+      }
+
+      if (match.own_rating_value !== 0) {
+        lastValidGroup = currentGroup;
+      }
+
       groupedData.push(currentGroup);
+    }
+
+    // Update lastValidMatch if the current match is valid
+    if (match.own_rating_value !== 0) {
+      lastValidMatch = match;
     }
   }
 
@@ -120,9 +150,15 @@ function groupMatches(data, player, char_short, has_offset) {
     player_rating = getCurrentPlayerRating(player, char_short);
   }
 
-  const lastChange = player_rating.rating - groupedData[0].matches[0].own_rating_value;
-  groupedData[0].ratingChange += lastChange;
-  groupedData[0].matches[0].ratingChange = lastChange.toFixed(2);
+  // Calculate the final rating change with the first good match
+  for (let i = 0; i < groupedData.length; i++) {
+    if (groupedData[i].matches[0].own_rating_value !== 0) {
+      const lastChange = player_rating.rating - groupedData[i].matches[0].own_rating_value;
+      groupedData[i].ratingChange += lastChange;
+      groupedData[i].matches[0].ratingChange = lastChange.toFixed(2);
+      break;
+    }
+  }
 
   return groupedData;
 }
@@ -153,15 +189,31 @@ function Row(props) {
             {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
           </IconButton>
         </TableCell>
-        <TableCell component="th" scope="row">{item.timestamp}</TableCell>
-        <TableCell align="right">{item.floor === '99' ? 'C' : item.floor}</TableCell>
-        <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].own_rating_value}>{item.matches[item.matches.length - 1].own_rating_value.toFixed(0)}</Box> <Box component={'span'} title={item.matches[item.matches.length - 1].own_rating_deviation}>±{item.matches[item.matches.length - 1].own_rating_deviation.toFixed(0)}</Box></TableCell>
-        <TableCell><Button onMouseDown={(event) => { onProfileClick(event) }} component={Link} variant="link" >{item.opponent_name}</Button></TableCell>
-        <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
-        <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_value}>{item.matches[item.matches.length - 1].opponent_rating_value.toFixed(0)}</Box> <Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_deviation}>±{item.matches[item.matches.length - 1].opponent_rating_deviation.toFixed(0)}</Box></TableCell>
-        <TableCell align="right">{item.wins} - {item.losses}</TableCell>
-        <TableCell align="right">{(item.odds === 1.0 || item.odds === 0.0) ? '' : (item.odds * 100).toFixed(1) + '%'}</TableCell>
-        <TableCell align="right">{item.ratingChange > 0 ? '+' : ''}{item.ratingChange.toFixed(1)}</TableCell>
+        {item.opponent_id == 0 ? (
+          <React.Fragment>
+            <TableCell component="th" scope="row">{item.timestamp}</TableCell>
+            <TableCell align="right">{item.floor === '99' ? 'C' : item.floor}</TableCell>
+            <TableCell align="right"></TableCell>
+            <TableCell><Button component={Link} variant="link" >{item.opponent_name}</Button></TableCell>
+            <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
+            <TableCell align="right"></TableCell>
+            <TableCell align="right">{item.wins} - {item.losses}</TableCell>
+            <TableCell align="right"></TableCell>
+            <TableCell align="right"></TableCell>
+          </React.Fragment>
+        ) : (
+          <React.Fragment>
+            <TableCell component="th" scope="row">{item.timestamp}</TableCell>
+            <TableCell align="right">{item.floor === '99' ? 'C' : item.floor}</TableCell>
+            <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].own_rating_value}>{item.matches[item.matches.length - 1].own_rating_value.toFixed(0)}</Box> <Box component={'span'} title={item.matches[item.matches.length - 1].own_rating_deviation}>±{item.matches[item.matches.length - 1].own_rating_deviation.toFixed(0)}</Box></TableCell>
+            <TableCell><Button onMouseDown={(event) => { onProfileClick(event) }} component={Link} variant="link" >{item.opponent_name}</Button></TableCell>
+            <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
+            <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_value}>{item.matches[item.matches.length - 1].opponent_rating_value.toFixed(0)}</Box> <Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_deviation}>±{item.matches[item.matches.length - 1].opponent_rating_deviation.toFixed(0)}</Box></TableCell>
+            <TableCell align="right">{item.wins} - {item.losses}</TableCell>
+            <TableCell align="right">{(item.odds === 1.0 || item.odds === 0.0) ? '' : (item.odds * 100).toFixed(1) + '%'}</TableCell>
+            <TableCell align="right">{item.ratingChange > 0 ? '+' : ''}{item.ratingChange.toFixed(1)}</TableCell>
+          </React.Fragment>
+        )}
       </TableRow>
       <TableRow id={item.timestamp}>
         <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
@@ -179,11 +231,23 @@ function Row(props) {
               <TableBody>
                 {item.matches.map((item, i) => (
                   <TableRow key={item.timestamp}>
-                    <TableCell component="th" scope="row">{item.timestamp}</TableCell>
-                    <TableCell align="right">{item.own_rating_value.toFixed(2)} ±{item.own_rating_deviation.toFixed(2)}</TableCell>
-                    <TableCell align="right">{item.opponent_rating_value.toFixed(2)} ±{item.opponent_rating_deviation.toFixed(2)}</TableCell>
-                    <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
-                    <TableCell align='right'>{item.ratingChange > 0 ? '+' : ''}{item.ratingChange}</TableCell>
+                    {item.opponent_id == 0 ? (
+                      <React.Fragment>
+                        <TableCell component="th" scope="row">{item.timestamp}</TableCell>
+                        <TableCell align="right"></TableCell>
+                        <TableCell align="right"></TableCell>
+                        <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
+                        <TableCell align='right'>{item.ratingChange > 0 ? '+' : ''}{item.ratingChange}</TableCell>
+                      </React.Fragment>
+                    ) : (
+                      <React.Fragment>
+                        <TableCell component="th" scope="row">{item.timestamp}</TableCell>
+                        <TableCell align="right">{item.own_rating_value.toFixed(2)} ±{item.own_rating_deviation.toFixed(2)}</TableCell>
+                        <TableCell align="right">{item.opponent_rating_value.toFixed(2)} ±{item.opponent_rating_deviation.toFixed(2)}</TableCell>
+                        <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
+                        <TableCell align='right'>{item.ratingChange > 0 ? '+' : ''}{item.ratingChange}</TableCell>
+                      </React.Fragment>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -191,7 +255,7 @@ function Row(props) {
           </Collapse>
         </TableCell>
       </TableRow>
-    </React.Fragment>
+    </React.Fragment >
   );
 }
 

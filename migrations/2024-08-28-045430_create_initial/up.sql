@@ -57,10 +57,3 @@ CREATE TABLE character_ranks (
     rank INT NOT NULL,
     PRIMARY KEY (rank, char_id)
 );
-
-CREATE TABLE constants (
-    key TEXT NOT NULL PRIMARY KEY,
-    value TEXT NOT NULL
-);
-
-INSERT INTO constants (key, value) VALUES ('last_ranking_period', '1725291382');

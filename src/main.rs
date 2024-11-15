@@ -404,9 +404,6 @@ struct PlayerSet {
     floor: String,
     opponent_name: String,
     opponent_platform: &'static str,
-    opponent_vip: Option<&'static str>,
-    opponent_cheater: Option<&'static str>,
-    opponent_hidden: Option<&'static str>,
     opponent_id: String,
     opponent_character: &'static str,
     opponent_character_short: &'static str,
@@ -463,7 +460,10 @@ async fn player_history(
                 .eq(player_id)
                 .and(schema::games::char_b.eq(char_id as i16))),
         )
-        .order(schema::games::timestamp.desc())
+        .filter(schema::games::value_a.is_not_null())
+        .order(
+            crate::pull::coalesce(schema::games::real_timestamp, schema::games::timestamp).desc(),
+        )
         .limit(count)
         .offset(offset)
         .load(&mut db)
@@ -473,56 +473,73 @@ async fn player_history(
     let mut response: PlayerGamesResponse = PlayerGamesResponse { history: vec![] };
 
     for game in games {
+        let is_hidden = game.value_a == Some(0.0);
+
         let own_rating_value = if game.id_a == player_id {
             game.value_a.unwrap()
         } else {
             game.value_b.unwrap()
         };
+
         let own_rating_deviation = if game.id_a == player_id {
             game.deviation_a.unwrap()
         } else {
             game.deviation_b.unwrap()
         };
-        let opponent_id = if game.id_a == player_id {
+
+        let opponent_id = if is_hidden {
+            0
+        } else if game.id_a == player_id {
             game.id_b
         } else {
             game.id_a
         };
-        let opponent_name = if game.id_a == player_id {
+
+        let opponent_name = if is_hidden {
+            "Hidden".to_string()
+        } else if game.id_a == player_id {
             game.name_b.clone()
         } else {
             game.name_a.clone()
         };
+
         let opponent_platform = if game.id_a == player_id {
             game.platform_b
         } else {
             game.platform_a
         };
-        let opponent_vip = None;
-        let opponent_cheater = None;
-        let opponent_hidden = None;
+
         let opponent_character = if game.id_a == player_id {
             CHAR_NAMES[game.char_b as usize].1
         } else {
             CHAR_NAMES[game.char_a as usize].1
         };
+
         let opponent_character_short = if game.id_a == player_id {
             CHAR_NAMES[game.char_b as usize].0
         } else {
             CHAR_NAMES[game.char_a as usize].0
         };
+
         let opponent_rating_value = if game.id_a == player_id {
             game.value_b.unwrap()
         } else {
             game.value_a.unwrap()
         };
+
         let opponent_rating_deviation = if game.id_a == player_id {
             game.deviation_b.unwrap()
         } else {
             game.deviation_a.unwrap()
         };
-        let timestamp = game.timestamp.to_string();
+
+        let timestamp = match game.real_timestamp {
+            Some(ts) => ts.to_string(),
+            None => game.timestamp.to_string(),
+        };
+
         let floor = game.game_floor.to_string();
+
         let result_win = if game.id_a == player_id && game.winner == 1
             || game.id_b == player_id && game.winner == 2
         {
@@ -530,7 +547,10 @@ async fn player_history(
         } else {
             false
         };
-        let odds = if game.id_a == player_id {
+
+        let odds = if is_hidden {
+            0.0
+        } else if game.id_a == player_id {
             game.win_chance.unwrap_or(0.0)
         } else {
             1.0 - game.win_chance.unwrap_or(0.0)
@@ -548,9 +568,6 @@ async fn player_history(
                 3 => "PC",
                 _ => "??",
             },
-            opponent_vip,
-            opponent_cheater,
-            opponent_hidden,
             opponent_id: opponent_id.to_string(),
             opponent_character,
             opponent_character_short,
@@ -1002,11 +1019,17 @@ async fn ratings(
         "
         (SELECT timestamp, value_a value
         FROM games
-        WHERE id_a = $1 AND char_a = $2
+        WHERE id_a = $1
+        AND char_a = $2
+        AND value_a != 0
+        AND value_a IS NOT NULL
         UNION
         SELECT timestamp, value_b value
         FROM games
-        WHERE id_b = $1 AND char_b = $2)
+        WHERE id_b = $1
+        AND char_b = $2
+        AND value_b != 0
+        AND value_b IS NOT NULL)
         ORDER BY timestamp desc
         LIMIT $3;
     ",
@@ -1084,17 +1107,17 @@ async fn stats(State(pools): State<AppState>) -> Result<Json<StatsResponse>, (St
     let mut redis = pools.redis_pool.get().await.unwrap();
 
     let timestamp = redis::cmd("GET")
-        .arg("last_update")
+        .arg("last_update_hourly")
         .query_async::<String>(&mut *redis)
         .await
-        .expect("Error getting last_update");
+        .expect("Error getting last_update_hourly");
 
     let total_games = redis::cmd("GET")
         .arg("total_games")
         .query_async::<i64>(&mut *redis)
         .await
         .expect("Error getting total_games");
-    
+
     let one_month_games = redis::cmd("GET")
         .arg("one_month_games")
         .query_async::<i64>(&mut *redis)
@@ -1147,8 +1170,8 @@ async fn popularity(
 ) -> Result<Json<PopularityResult>, (StatusCode, String)> {
     let mut redis = pools.redis_pool.get().await.unwrap();
 
-    let mut per_player: Vec<(String, i64)>  = vec![];
-    
+    let mut per_player: Vec<(String, i64)> = vec![];
+
     for e in CHAR_NAMES.iter() {
         let key = format!("popularity_per_player_{}", e.0);
         let value: i64 = redis::cmd("GET")
@@ -1159,8 +1182,8 @@ async fn popularity(
         per_player.push((e.1.to_string(), value));
     }
 
-    let mut per_character: Vec<(String, i64)>  = vec![];
-    
+    let mut per_character: Vec<(String, i64)> = vec![];
+
     for e in CHAR_NAMES.iter() {
         let key = format!("popularity_per_character_{}", e.0);
         let value: i64 = redis::cmd("GET")
@@ -1184,27 +1207,33 @@ async fn popularity(
         .expect("Error getting popularity_total");
 
     let last_update = redis::cmd("GET")
-        .arg("last_update")
+        .arg("last_update_hourly")
         .query_async::<String>(&mut *redis)
         .await
-        .expect("Error getting last_update");
+        .expect("Error getting last_update_hourly");
 
     Ok(Json(PopularityResult {
-        per_player: per_player.iter().map(|p| PopularityResultChar {
-            name: p.0.clone(),
-            value: p.1,
-        }).collect(),
-        per_character: per_character.iter().map(|p| PopularityResultChar {
-            name: p.0.clone(),
-            value: p.1,
-        }).collect(),
+        per_player: per_player
+            .iter()
+            .map(|p| PopularityResultChar {
+                name: p.0.clone(),
+                value: p.1,
+            })
+            .collect(),
+        per_character: per_character
+            .iter()
+            .map(|p| PopularityResultChar {
+                name: p.0.clone(),
+                value: p.1,
+            })
+            .collect(),
         per_player_total: popularity_per_player_total,
         per_character_total: one_month_games,
         last_update,
     }))
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 5)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().expect("Failed to read .env file");
 
@@ -1231,8 +1260,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     //Redis
     let manager =
-    RedisConnectionManager::new(std::env::var("REDIS_URL").expect("REDIS_URL"))
-        .unwrap();
+        RedisConnectionManager::new(std::env::var("REDIS_URL").expect("REDIS_URL")).unwrap();
     let redis_pool = bb8::Pool::builder().build(manager).await.unwrap();
 
     let state = AppState {
@@ -1247,7 +1275,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let _guard = init_tracing("pull");
             pull::pull_and_update_continuous(state).await;
         }
-        //This skips checking last_rank_update, but it does set it.
         Some("hourly") => pull::do_hourly_update_once(state).await,
         _ => {
             // No args, run the web server
