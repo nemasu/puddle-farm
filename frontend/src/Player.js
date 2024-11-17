@@ -34,6 +34,8 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import { Line } from 'react-chartjs-2';
+import { StorageUtils } from './Storage';
+import { Utils } from './Utils';
 /* global BigInt */
 
 ChartJS.register(
@@ -116,7 +118,7 @@ function groupMatches(data, player, char_short, has_offset) {
       };
 
       //This calculates the rating change for the most recent match for the group before a hidden group
-      if (currentGroup != lastValidGroup
+      if (currentGroup !== lastValidGroup
         && match.own_rating_value !== 0
         && lastValidGroup
         && !lastValidGroup.matches[0].ratingChange) {
@@ -189,9 +191,9 @@ function Row(props) {
             {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
           </IconButton>
         </TableCell>
-        {item.opponent_id == 0 ? (
+        {item.opponent_id === 0 ? (
           <React.Fragment>
-            <TableCell component="th" scope="row">{item.timestamp}</TableCell>
+            <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
             <TableCell align="right">{item.floor === '99' ? 'C' : item.floor}</TableCell>
             <TableCell align="right"></TableCell>
             <TableCell><Button component={Link} variant="link" >{item.opponent_name}</Button></TableCell>
@@ -203,7 +205,7 @@ function Row(props) {
           </React.Fragment>
         ) : (
           <React.Fragment>
-            <TableCell component="th" scope="row">{item.timestamp}</TableCell>
+            <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
             <TableCell align="right">{item.floor === '99' ? 'C' : item.floor}</TableCell>
             <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].own_rating_value}>{item.matches[item.matches.length - 1].own_rating_value.toFixed(0)}</Box> <Box component={'span'} title={item.matches[item.matches.length - 1].own_rating_deviation}>±{item.matches[item.matches.length - 1].own_rating_deviation.toFixed(0)}</Box></TableCell>
             <TableCell><Button onMouseDown={(event) => { onProfileClick(event) }} component={Link} variant="link" >{item.opponent_name}</Button></TableCell>
@@ -211,7 +213,9 @@ function Row(props) {
             <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_value}>{item.matches[item.matches.length - 1].opponent_rating_value.toFixed(0)}</Box> <Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_deviation}>±{item.matches[item.matches.length - 1].opponent_rating_deviation.toFixed(0)}</Box></TableCell>
             <TableCell align="right">{item.wins} - {item.losses}</TableCell>
             <TableCell align="right">{(item.odds === 1.0 || item.odds === 0.0) ? '' : (item.odds * 100).toFixed(1) + '%'}</TableCell>
-            <TableCell align="right">{item.ratingChange > 0 ? '+' : ''}{item.ratingChange.toFixed(1)}</TableCell>
+            <TableCell align="right">
+              {Utils.colorChange(item.ratingChange.toFixed(1))}
+            </TableCell>
           </React.Fragment>
         )}
       </TableRow>
@@ -231,9 +235,9 @@ function Row(props) {
               <TableBody>
                 {item.matches.map((item, i) => (
                   <TableRow key={item.timestamp}>
-                    {item.opponent_id == 0 ? (
+                    {item.opponent_id === 0 ? (
                       <React.Fragment>
-                        <TableCell component="th" scope="row">{item.timestamp}</TableCell>
+                        <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
                         <TableCell align="right"></TableCell>
                         <TableCell align="right"></TableCell>
                         <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
@@ -241,7 +245,7 @@ function Row(props) {
                       </React.Fragment>
                     ) : (
                       <React.Fragment>
-                        <TableCell component="th" scope="row">{item.timestamp}</TableCell>
+                        <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
                         <TableCell align="right">{item.own_rating_value.toFixed(2)} ±{item.own_rating_deviation.toFixed(2)}</TableCell>
                         <TableCell align="right">{item.opponent_rating_value.toFixed(2)} ±{item.opponent_rating_deviation.toFixed(2)}</TableCell>
                         <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
@@ -327,10 +331,10 @@ const Player = () => {
 
           let highest_rating = 0;
           let highest_char = 'SO';
-          for (var key in player_result.ratings) {
-            if (player_result.ratings[key].rating > highest_rating) {
-              highest_rating = player_result.ratings[key].rating;
-              highest_char = player_result.ratings[key].char_short;
+          for (var pkey in player_result.ratings) {
+            if (player_result.ratings[pkey].rating > highest_rating) {
+              highest_rating = player_result.ratings[pkey].rating;
+              highest_char = player_result.ratings[pkey].char_short;
             }
           }
 
@@ -339,10 +343,10 @@ const Player = () => {
         }
 
         var currentCharKey = null;
-        for (var key in player_result.ratings) {
-          if (player_result.ratings[key].char_short === char_short) {
-            setCurrentCharData(player_result.ratings[key]);
-            currentCharKey = key;
+        for (var ckey in player_result.ratings) {
+          if (player_result.ratings[ckey].char_short === char_short) {
+            setCurrentCharData(player_result.ratings[ckey]);
+            currentCharKey = ckey;
           }
         }
 
@@ -377,9 +381,9 @@ const Player = () => {
 
           if (alias_result !== null) {
             //loop through alias_result and remove current player name
-            for (var key in alias_result) {
-              if (alias_result[key] === player_result.name) {
-                alias_result.splice(key, 1);
+            for (var akey in alias_result) {
+              if (alias_result[akey] === player_result.name) {
+                alias_result.splice(akey, 1);
               }
             }
             setAlias(alias_result);
@@ -523,7 +527,7 @@ const Player = () => {
                 {currentCharData.top_rating.value !== 0 ? (
                   <React.Fragment>
                     <Typography variant='h7'>
-                      Top Rating: <Box title={currentCharData.top_rating.value} component={"span"}>{Math.round(currentCharData.top_rating.value)}</Box> ±<Box title={currentCharData.top_rating.deviation} component={"span"}>{Math.round(currentCharData.top_rating.deviation)}</Box> ({currentCharData.top_rating.timestamp})
+                      Top Rating: <Box title={currentCharData.top_rating.value} component={"span"}>{Math.round(currentCharData.top_rating.value)}</Box> ±<Box title={currentCharData.top_rating.deviation} component={"span"}>{Math.round(currentCharData.top_rating.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_rating.timestamp)})
                     </Typography>
                     <br />
                   </React.Fragment>
@@ -531,7 +535,7 @@ const Player = () => {
 
                 {currentCharData.top_defeated.value !== 0.0 ? (
                   <Typography variant='h7'>
-                    Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} variant="link" onMouseDown={(event) => onProfileClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({currentCharData.top_defeated.timestamp})
+                    Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} variant="link" onMouseDown={(event) => onProfileClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
                   </Typography>
                 ) : null}
 
@@ -629,7 +633,7 @@ const ClaimDialog = ({ playerId, setLoading, API_ENDPOINT }) => {
   const handleClickOpen = async () => {
 
     //If 'key' is set in localstorage, just redirect to settings
-    if (localStorage.getItem('key')) {
+    if (StorageUtils.getApiKey()) {
       document.location.href = '/settings';
       return;
     }
@@ -676,7 +680,7 @@ const ClaimDialog = ({ playerId, setLoading, API_ENDPOINT }) => {
           clearInterval(timerRef.current);
 
           setTimeout(() => {
-            localStorage.setItem('key', resp);
+            StorageUtils.setApiKey(resp);
             document.location.href = '/settings';
           }, 2000);
         }

@@ -15,14 +15,15 @@ import SearchIcon from '@mui/icons-material/Search';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import { useNavigate } from 'react-router-dom';
 import Themes from './Themes';
+import { StorageUtils } from './Storage';
 
 var pages = [
-  {name:'Top', link:'./top_global'},
-  {name:'Characters', list:[]},
-  {name:'Popularity', link:'./popularity'},
-  {name:'About', link:'./about'},
-  {name:'Settings', link:'./settings'},
-  {name:'Stats', link:'./stats'},
+  { name: 'Top', link: './top_global' },
+  { name: 'Characters', list: [] },
+  { name: 'Popularity', link: './popularity' },
+  { name: 'About', link: './about' },
+  { name: 'Settings', link: './settings' },
+  { name: 'Stats', link: './stats' },
 ];
 
 function resetCharacters() {
@@ -45,6 +46,7 @@ function NavBar() {
 
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
+  // eslint-disable-next-line
   const [characters, setCharacters] = useState([]);
 
   const handleSearchChange = (event) => {
@@ -71,16 +73,17 @@ function NavBar() {
 
         const response = await fetch(API_ENDPOINT
           + '/characters');
-          
+
+        // eslint-disable-next-line
         const result = await response.text().then(body => {
-          
+
           var parsed = JSONParse(body);
 
           resetCharacters();
-          for( var key in parsed ) {
-            pages[1].list.push({key:key, name:parsed[key][1], link:'/top/' + parsed[key][0]});
+          for (var key in parsed) {
+            pages[1].list.push({ key: key, name: parsed[key][1], link: '/top/' + parsed[key][0] });
           }
-          
+
           setCharacters(parsed);
 
           return parsed;
@@ -113,15 +116,15 @@ function NavBar() {
   };
   const handleCloseThemeNavMenu = (char) => {
     setThemeElNav(null);
-    
-    if( Array.from(themes.values()).includes(char) ) {
-      localStorage.setItem('theme', char);
+
+    if (Array.from(themes.values()).includes(char)) {
+      StorageUtils.setTheme(char);
       window.location.reload();
     }
   };
 
   return (
-    <AppBar position="static" style={{backgroundImage: "none"}}>
+    <AppBar position="static" style={{ backgroundImage: "none" }}>
       <Container maxWidth="md">
         <Toolbar variant='dense' disableGutters>
           <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>{/* Mobile view */}
@@ -149,27 +152,27 @@ function NavBar() {
               }}
               open={Boolean(anchorElNav)}
               onClose={handleCloseNavMenu}
-              sx={{ display: { xs: 'block', md: 'none' } }} 
+              sx={{ display: { xs: 'block', md: 'none' } }}
             > {/* Mobile view - menu */}
               {pages.map((page) => (
                 //If the page has a 'list' attribute that is an array, render a submenu
                 'list' in page ? (
-                  <Box key={page.name} style={{display: 'flex', flexWrap: 'wrap', maxWidth: '450px', borderBottom: '1px solid', borderTop: '1px solid'}}>
-                      {page['list'].map((char) => (
-                        <MenuItem
-                          component={Link}
-                          to={char.link}
-                          key={char.name}
-                          sx={{ my: 1, color: 'white', display: 'block' }}
-                          onClick={handleCloseNavMenu}
-                        >
-                          <Box sx={{display: {width: 80}}}>{char.name}</Box>
-                        </MenuItem>
-                      ))}
+                  <Box key={page.name} style={{ display: 'flex', flexWrap: 'wrap', maxWidth: '450px', borderBottom: '1px solid', borderTop: '1px solid' }}>
+                    {page['list'].map((char) => (
+                      <MenuItem
+                        component={Link}
+                        to={char.link}
+                        key={char.name}
+                        sx={{ my: 1, color: 'white', display: 'block' }}
+                        onClick={handleCloseNavMenu}
+                      >
+                        <Box sx={{ display: { width: 80 } }}>{char.name}</Box>
+                      </MenuItem>
+                    ))}
                   </Box>
                 ) : (
                   <MenuItem key={page.name}
-                    component={Link} 
+                    component={Link}
                     to={page.link}
                     sx={{ my: 1, color: 'white', display: 'block' }}
                     onClick={handleCloseNavMenu}
@@ -180,16 +183,16 @@ function NavBar() {
               ))}
             </Menu>
             {/* Mobile View - Search */}
-            <TextField size="small" id="search_string" variant="outlined" label="Search..." style={{marginTop: 10}} value={searchString} onChange={handleSearchChange} onKeyDown={handleSearchKeyDown}/>
+            <TextField size="small" id="search_string" variant="outlined" label="Search..." style={{ marginTop: 10 }} value={searchString} onChange={handleSearchChange} onKeyDown={handleSearchKeyDown} />
             <Box>
-              <SearchIcon style={{marginTop: 5, fontSize: 25, display: 'block', cursor: 'pointer'}}onClick={handleSearchClick} />
-              <ZoomInIcon style={{fontSize: 25, cursor: 'pointer'}} onClick={handleExactSearchClick} />
+              <SearchIcon style={{ marginTop: 5, fontSize: 25, display: 'block', cursor: 'pointer' }} onClick={handleSearchClick} />
+              <ZoomInIcon style={{ fontSize: 25, cursor: 'pointer' }} onClick={handleExactSearchClick} />
             </Box>
-            <Button m={0} 
-              component={Link} 
+            <Button m={0}
+              component={Link}
               onClick={handleOpenThemeNavMenu}
               sx={{ my: 1.5, color: 'white', display: 'block' }
-            }> {/* Mobile view - theme button */}
+              }> {/* Mobile view - theme button */}
               Theme
             </Button>
             <Menu
@@ -208,12 +211,12 @@ function NavBar() {
               onClose={handleCloseThemeNavMenu}
               sx={{ display: { xs: 'flex', md: 'none' } }}
             >
-              <Box style={{display: 'flex', flexWrap: 'wrap', maxWidth: '500px'}}>
-              {themes.map((char) => (
-                <MenuItem component={Link} key={char} onClick={() => handleCloseThemeNavMenu(char)}>
-                  {char}
-                </MenuItem>
-              ))}
+              <Box style={{ display: 'flex', flexWrap: 'wrap', maxWidth: '500px' }}>
+                {themes.map((char) => (
+                  <MenuItem component={Link} key={char} onClick={() => handleCloseThemeNavMenu(char)}>
+                    {char}
+                  </MenuItem>
+                ))}
               </Box>
             </Menu>
           </Box>
@@ -223,11 +226,11 @@ function NavBar() {
               'list' in page ? (
                 <Box key={page.name}>
                   <Button m={0} key={page.name}
-                    component={Link} 
+                    component={Link}
                     to={page.link}
                     onClick={handleOpenCharNavMenu}
                     sx={{ my: 1, color: 'white', display: 'block' }
-                  }>
+                    }>
                     {page.name}
                   </Button> {/* Desktop view - character menu*/}
                   <Menu
@@ -246,23 +249,23 @@ function NavBar() {
                     onClose={handleCloseCharNavMenu}
                     sx={{ display: { xs: 'none', md: 'flex' } }}
                   >
-                    <Box style={{display: 'flex', flexWrap: 'wrap', maxWidth: '450px'}}>
-                    {page['list'].map((char) => (
-                      <MenuItem component={Link} to={char.link} key={char.name} onClick={handleCloseCharNavMenu}>
-                        <Box sx={{display: {width: 80}}}>{char.name}</Box>
-                      </MenuItem>
-                    ))}
+                    <Box style={{ display: 'flex', flexWrap: 'wrap', maxWidth: '450px' }}>
+                      {page['list'].map((char) => (
+                        <MenuItem component={Link} to={char.link} key={char.name} onClick={handleCloseCharNavMenu}>
+                          <Box sx={{ display: { width: 80 } }}>{char.name}</Box>
+                        </MenuItem>
+                      ))}
                     </Box>
                   </Menu>
                 </Box>
 
               ) : (
                 <MenuItem key={page.name}
-                  component={Link} 
+                  component={Link}
                   to={page.link}
                   onClick={handleCloseCharNavMenu}
                   sx={{ my: 1, color: 'white', display: 'block' }
-                }> {/* Desktop view  - button*/}
+                  }> {/* Desktop view  - button*/}
                   {page.name}
                 </MenuItem>
               )
@@ -270,16 +273,16 @@ function NavBar() {
           </Box>
           <Box sx={{ display: { xs: 'none', md: 'flex' } }}> {/* Desktop view - right box */}
             {/* Desktop View - Search */}
-            <TextField size="small" id="search_string" variant="outlined" label="Search..." style={{marginTop: 10}} value={searchString} onChange={handleSearchChange} onKeyDown={handleSearchKeyDown}/>
+            <TextField size="small" id="search_string" variant="outlined" label="Search..." style={{ marginTop: 10 }} value={searchString} onChange={handleSearchChange} onKeyDown={handleSearchKeyDown} />
             <Box>
-              <SearchIcon style={{marginTop: 5, fontSize: 25, display: 'block', cursor: 'pointer'}}onClick={handleSearchClick} />
-              <ZoomInIcon style={{fontSize: 25, cursor: 'pointer'}} onClick={handleExactSearchClick} />
+              <SearchIcon style={{ marginTop: 5, fontSize: 25, display: 'block', cursor: 'pointer' }} onClick={handleSearchClick} />
+              <ZoomInIcon style={{ fontSize: 25, cursor: 'pointer' }} onClick={handleExactSearchClick} />
             </Box>
             <Button m={0}
-                component={Link} 
-                onClick={handleOpenThemeNavMenu}
-                sx={{ my: 1.5, color: 'white', display: 'block' }}
-              >
+              component={Link}
+              onClick={handleOpenThemeNavMenu}
+              sx={{ my: 1.5, color: 'white', display: 'block' }}
+            >
               Theme
             </Button> {/* Desktop view - theme button */}
             <Menu
@@ -298,12 +301,12 @@ function NavBar() {
               onClose={handleCloseThemeNavMenu}
               sx={{ display: { xs: 'none', md: 'flex' } }}
             >
-              <Box style={{display: 'flex', flexWrap: 'wrap', maxWidth: '500px'}}>
-              {themes.map((char) => (
-                <MenuItem component={Link} key={char} onClick={() => handleCloseThemeNavMenu(char)}>
-                  {char}
-                </MenuItem>
-              ))}
+              <Box style={{ display: 'flex', flexWrap: 'wrap', maxWidth: '500px' }}>
+                {themes.map((char) => (
+                  <MenuItem component={Link} key={char} onClick={() => handleCloseThemeNavMenu(char)}>
+                    {char}
+                  </MenuItem>
+                ))}
               </Box>
             </Menu>
           </Box>

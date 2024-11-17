@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import Themes from './Themes';
 import { ThemeProvider } from '@mui/material/styles';
+import { StorageUtils } from './Storage';
 
 const ThemeManager = ({children}) => {
     const [theme, setTheme] = useState('Sol');
 
     useEffect(() => {
-        const theme = localStorage.getItem('theme');
+        const theme = StorageUtils.getTheme();
+
         if(theme) {
             setTheme(theme);
         } else {

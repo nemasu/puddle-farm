@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
-import { Box, Button, Typography } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { Box, Button, Typography, FormGroup, FormControlLabel, Switch, Paper } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { JSONParse } from 'json-with-bigint';
+import { StorageUtils } from './Storage';
 
 const Settings = () => {
     const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
@@ -10,39 +11,54 @@ const Settings = () => {
 
     const [key, setKey] = React.useState(null);
 
-    const [settings, setSettings] = React.useState({});
+    const [settings, setSettings] = useState(StorageUtils.getPreferences());
+
+    // useEffect(() => {
+    //     setSettings(StorageUtils.getPreferences());
+    // }, [settings]);
+
+    const handleChange = (event) => {
+        const newSettings = {
+            ...settings,
+            [event.target.name]: Boolean(event.target.checked) ? true : null
+        };
+        setSettings(newSettings);
+        StorageUtils.savePreferences(newSettings);
+    };
+
+
     useEffect(() => {
 
         const fetchSettings = async () => {
 
-            const key = localStorage.getItem('key');
+            const key = StorageUtils.getApiKey();
 
-            if( key === null ) {
+            if (key === null) {
                 return;
-            } 
+            }
 
             setKey(key);
 
             //Get status from backend
             const url = API_ENDPOINT
-            + '/settings/'
-            + key;
+                + '/settings/'
+                + key;
             const response = await fetch(url);
 
-            if( response.status === 200 ) {
+            if (response.status === 200) {
                 const result = await response.text().then(body => {
                     var parsed = JSONParse(body);
                     return parsed;
                 });
 
                 setSettings(result);
-                
-                if(result.id === 0) {
-                    localStorage.removeItem('key');
+
+                if (result.id === 0) {
+                    StorageUtils.removeApiKey();
                     window.location.reload();
                 }
-            } else if ( response.status === 404 ) {
-                localStorage.removeItem('key');
+            } else if (response.status === 404) {
+                StorageUtils.removeApiKey();
                 window.location.reload();
             }
         }
@@ -52,9 +68,9 @@ const Settings = () => {
 
     function toggleStatus() {
         const url = API_ENDPOINT
-        + '/toggle_private/'
-        + key;
-        
+            + '/toggle_private/'
+            + key;
+
         fetch(url)
             .then(response => response)
             .then(result => {
@@ -64,43 +80,117 @@ const Settings = () => {
 
     return (
         <React.Fragment>
-            {key !== null ? ( //If we have a key set
-                <Box>
-                    <Typography
-                        align='center'
-                        variant="h4"
-                        sx={{ cursor: 'pointer' }}
-                        onClick={() => navigate(`/player/${settings.id}`)}
-                    >
-                        {settings.name}'s Settings
+
+            <Box m={2}>
+                <Paper elevation={2} sx={{ p: 3 }}>
+                    <Typography variant="h6" gutterBottom>
+                        Display Settings
                     </Typography>
+                    <FormGroup>
+                        <FormControlLabel
+                            sx={{my: 1}}
+                            control={
+                                <Switch
+                                    checked={settings.useLocalTime ? true : false}
+                                    onChange={handleChange}
+                                    name="useLocalTime"
+                                />
+                            }
+                            label={
+                                <Box>
+                                    <Typography variant="body1">Local Time</Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Display timestamps in your local timezone instead of UTC
+                                    </Typography>
+                                </Box>
+                            }
+                        />
+                        <FormControlLabel
+                            sx={{my: 1}}
+                            control={
+                                <Switch
+                                    checked={settings.disableRatingColors ? true : false}
+                                    onChange={handleChange}
+                                    name="disableRatingColors"
+                                />
+                            }
+                            label={
+                                <Box>
+                                    <Typography variant="body1">Plain Rating Change</Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Disable color for rating changes
+                                    </Typography>
+                                </Box>
+                            }
+                        />
+                        {/* <FormControlLabel
+                            sx={{my: 1}}
+                            control={
+                                <Switch
+                                    checked={settings.autoUpdate ? true : false}
+                                    onChange={handleChange}
+                                    name="autoUpdate"
+                                />
+                            }
+                            label={
+                                <Box>
+                                    <Typography variant="body1">Auto Update</Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Automatically refresh when new matches are available.
+                                    </Typography>
+                                </Box>
+                            }
+                        /> */}
+                    </FormGroup>
+                </Paper>
+            </Box>
+            <Box m={2}>
+                <Paper elevation={2} sx={{ p: 3 }}>
+                    {key !== null ? ( //If we have a key set
+                        <Box>
+                            <Typography
+                                variant="h6"
+                                gutterBottom
+                                sx={{ cursor: 'pointer' }}
+                                onClick={() => navigate(`/player/${settings.id}`)}
+                            >
+                                {settings.name}'s Settings
+                            </Typography>
 
-                    <Box sx={{margin: 10}}>
-                        Your profile is: {settings.status} <br />
-                        Click <Button onClick={toggleStatus}>HERE</Button> to toggle.
-                    </Box>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={settings.status === 'Hidden'}
+                                        onChange={toggleStatus}
+                                        name="status"
+                                    />
+                                }
+                                label={
+                                    <Box>
+                                        <Typography variant="body1">Private Profile</Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            Hide your profile from the public.
+                                        </Typography>
+                                    </Box>
+                                }
+                            />
 
-                    <Box sx={{ borderColor: '#F8B552', borderWidth: '2px', borderStyle: 'dashed', p: '20px', m: '50px'}}>
-                        <Typography variant='body1'>Note: If you use the same browser, you can revisit this page without reauthenticating to change settings.</Typography>
-                        <Typography variant='body1'>If you don't want that, click <Button onClick={() => {localStorage.removeItem('key'); window.location.reload();}}>here</Button> to clear browser data.</Typography>
-                    </Box>
-                </Box>
 
-            ) : (//If we don't have a key set
-                <Box
-                    sx={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        minHeight: '100vh',
-                        textAlign: 'center',
-                    }}
-                >
-                    <Typography variant="h6">
-                        Use "claim profile" feature to access settings page.
-                    </Typography>
-                </Box>
-            )}
+                            <Box sx={{ borderColor: '#F8B552', borderWidth: '2px', borderStyle: 'dashed', p: '20px', m: '50px' }}>
+                                <Typography variant='body1'>Note: If you use the same browser, you can revisit this page without reauthenticating to change settings.</Typography>
+                                <Typography variant='body1'>If you don't want that, click <Button onClick={() => { StorageUtils.removeApiKey(); window.location.reload(); }}>here</Button> to clear browser data.</Typography>
+                            </Box>
+                        </Box>
+
+                    ) : (//If we don't have a key set
+                        <Box>
+                            <Typography variant="h6">
+                                Use "claim profile" feature to access player settings like hide profile.
+                            </Typography>
+                        </Box>
+                    )}
+                </Paper>
+            </Box>
         </React.Fragment>
     );
 };

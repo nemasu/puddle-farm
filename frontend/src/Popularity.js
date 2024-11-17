@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import { Utils } from './Utils';
 
 const Popularity = () => {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ const Popularity = () => {
               acc[groupIndex].push(e);
               return acc;
             }, []).map((group, groupIndex) => (
-              <Box width={'300px'}>
+              <Box key={groupIndex} width={'300px'}>
                 <TableContainer component={Paper} sx={{ marginBottom: 4, marginRight: 2 }} key={groupIndex}>
                   <Table>
                     <TableHead>
@@ -86,7 +87,7 @@ const Popularity = () => {
               acc[groupIndex].push(e);
               return acc;
             }, []).map((group, groupIndex) => (
-              <Box width={'300px'}>
+              <Box key={groupIndex} width={'300px'}>
                 <TableContainer component={Paper} sx={{ marginBottom: 4, marginRight: 2 }} key={groupIndex}>
                   <Table>
                     <TableHead>
@@ -113,7 +114,7 @@ const Popularity = () => {
         <Box>
           {popularity && (
             <Typography variant="body1">
-              Last updated: {popularity['last_update']}
+              Last updated: {Utils.formatUTCToLocal(popularity['last_update'])}
             </Typography>
           )}
         </Box>

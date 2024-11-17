@@ -12,6 +12,7 @@ import Typography from '@mui/material/Typography';
 import { JSONParse } from 'json-with-bigint';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Utils } from './Utils';
 
 // eslint-disable-next-line
 /* global BigInt */
@@ -92,7 +93,7 @@ const Stats = () => {
             <TableBody>
               {stats ?
                 <TableRow>
-                  <TableCell>{stats.timestamp}</TableCell>
+                  <TableCell>{Utils.formatUTCToLocal(stats.timestamp)}</TableCell>
                   <TableCell>{stats.total_games.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</TableCell>
                   <TableCell>{stats.one_month_games.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</TableCell>
                   <TableCell>{stats.one_week_games.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</TableCell>
