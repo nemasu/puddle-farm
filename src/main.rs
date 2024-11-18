@@ -1105,15 +1105,24 @@ struct StatsResponse {
     one_week_games: i64,
     one_day_games: i64,
     one_hour_games: i64,
+    total_players: i64,
+    one_month_players: i64,
+    one_week_players: i64,
+    one_day_players: i64,
+    one_hour_players: i64,
 }
 async fn stats(State(pools): State<AppState>) -> Result<Json<StatsResponse>, (StatusCode, String)> {
     let mut redis = pools.redis_pool.get().await.unwrap();
 
-    let timestamp = redis::cmd("GET")
+    let timestamp = match redis::cmd("GET")
         .arg("last_update_hourly")
         .query_async::<String>(&mut *redis)
-        .await
-        .expect("Error getting last_update_hourly");
+        .await {
+            Ok(ts) => ts,
+            Err(_) => {
+                return Err((StatusCode::NOT_FOUND, "Stats not found".to_string()));
+            }
+        };
 
     let total_games = redis::cmd("GET")
         .arg("total_games")
@@ -1145,6 +1154,36 @@ async fn stats(State(pools): State<AppState>) -> Result<Json<StatsResponse>, (St
         .await
         .expect("Error getting one_hour_games");
 
+    let total_players = redis::cmd("GET")
+        .arg("total_players")
+        .query_async::<i64>(&mut *redis)
+        .await
+        .expect("Error getting total_players");
+
+    let one_month_players = redis::cmd("GET")
+        .arg("one_month_players")
+        .query_async::<i64>(&mut *redis)
+        .await
+        .expect("Error getting one_month_players");
+
+    let one_week_players = redis::cmd("GET")
+        .arg("one_week_players")
+        .query_async::<i64>(&mut *redis)
+        .await
+        .expect("Error getting one_week_players");
+
+    let one_day_players = redis::cmd("GET")
+        .arg("one_day_players")
+        .query_async::<i64>(&mut *redis)
+        .await
+        .expect("Error getting one_day_players");
+
+    let one_hour_players = redis::cmd("GET")
+        .arg("one_hour_players")
+        .query_async::<i64>(&mut *redis)
+        .await
+        .expect("Error getting one_hour_players");
+
     Ok(Json(StatsResponse {
         timestamp,
         total_games,
@@ -1152,6 +1191,11 @@ async fn stats(State(pools): State<AppState>) -> Result<Json<StatsResponse>, (St
         one_week_games,
         one_day_games,
         one_hour_games,
+        total_players,
+        one_month_players,
+        one_week_players,
+        one_day_players,
+        one_hour_players,
     }))
 }
 

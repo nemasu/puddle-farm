@@ -20,7 +20,7 @@ use rstat::Distribution;
 
 use diesel_async::scoped_futures::ScopedFutureExt;
 
-use diesel::sql_types::Integer;
+use diesel::sql_types::{BigInt, Integer};
 
 define_sql_function! {
     fn coalesce(x: diesel::sql_types::Nullable<diesel::sql_types::Timestamp>, y: diesel::sql_types::Timestamp) -> diesel::sql_types::Timestamp;
@@ -201,7 +201,7 @@ async fn do_hourly_update(
     Ok(())
 }
 
-#[derive(QueryableByName, serde::Serialize , serde::Deserialize)]
+#[derive(QueryableByName, serde::Serialize, serde::Deserialize)]
 pub struct Matchup {
     #[diesel(sql_type = diesel::sql_types::SmallInt)]
     opponent_char: i16,
@@ -391,6 +391,12 @@ async fn update_popularity(
     Ok(())
 }
 
+#[derive(QueryableByName, Queryable)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+struct CountResult {
+    #[diesel(sql_type = BigInt)]
+    count: i64,
+}
 async fn update_stats(
     conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
     redis_connection: &mut PooledConnection<'_, RedisConnectionManager>,
@@ -446,6 +452,98 @@ async fn update_stats(
         .await
         .expect("Error loading games");
 
+    // Get total player count
+    let total_players = schema::players::table
+        .count()
+        .get_result::<i64>(conn)
+        .await
+        .expect("Error loading players");
+
+    // Get past month player count
+    let one_month_players = diesel::sql_query(
+        "
+        select count(id)
+        from (
+            select id_a as id
+            from games
+            where timestamp > now() - interval '1 month'
+            union
+            select id_b as id
+            from games
+            where timestamp > now() - interval '1 month'
+        ) as combined_result;
+        ",
+    );
+    let one_month_players = one_month_players
+        .get_results::<CountResult>(conn)
+        .await
+        .unwrap();
+    let one_month_players = one_month_players[0].count;
+
+    // Get past month player count
+    let one_week_players = diesel::sql_query(
+        "
+        select count(id)
+        from (
+            select id_a as id
+            from games
+            where timestamp > now() - interval '1 week'
+            union
+            select id_b as id
+            from games
+            where timestamp > now() - interval '1 week'
+        ) as combined_result;
+        ",
+    );
+    let one_week_players = one_week_players
+        .get_results::<CountResult>(conn)
+        .await
+        .unwrap();
+    let one_week_players = one_week_players[0].count;
+
+    // Get past day player count
+    let one_day_players = diesel::sql_query(
+        "
+        select count(id)
+        from (
+            select id_a as id
+            from games
+            where timestamp > now() - interval '1 day'
+            union
+            select id_b as id
+            from games
+            where timestamp > now() - interval '1 day'
+        ) as combined_result;
+        ",
+    );
+    let one_day_players = one_day_players
+        .get_results::<CountResult>(conn)
+        .await
+        .unwrap();
+    let one_day_players = one_day_players[0].count;
+
+    // Get past hour player count
+    let one_hour_players = diesel::sql_query(
+        "
+        select count(id)
+        from (
+            select id_a as id
+            from games
+            where timestamp > now() - interval '1 hour'
+            union
+            select id_b as id
+            from games
+            where timestamp > now() - interval '1 hour'
+        ) as combined_result;
+        ",
+    );
+    let one_hour_players = one_hour_players
+        .get_results::<CountResult>(conn)
+        .await
+        .unwrap();
+    let one_hour_players = one_hour_players[0].count;
+
+       
     redis::cmd("SET")
         .arg("total_games")
         .arg(total_games)
@@ -480,6 +578,41 @@ async fn update_stats(
         .query_async::<String>(&mut **redis_connection)
         .await
         .expect("Error setting one_hour_games");
+
+    redis::cmd("SET")
+        .arg("total_players")
+        .arg(total_players)
+        .query_async::<String>(&mut **redis_connection)
+        .await
+        .expect("Error setting total_players");
+
+    redis::cmd("SET")
+        .arg("one_month_players")
+        .arg(one_month_players)
+        .query_async::<String>(&mut **redis_connection)
+        .await
+        .expect("Error setting one_month_players");
+
+    redis::cmd("SET")
+        .arg("one_week_players")
+        .arg(one_week_players)
+        .query_async::<String>(&mut **redis_connection)
+        .await
+        .expect("Error setting one_week_players");
+
+    redis::cmd("SET")
+        .arg("one_day_players")
+        .arg(one_day_players)
+        .query_async::<String>(&mut **redis_connection)
+        .await
+        .expect("Error setting one_day_players");
+
+    redis::cmd("SET")
+        .arg("one_hour_players")
+        .arg(one_hour_players)
+        .query_async::<String>(&mut **redis_connection)
+        .await
+        .expect("Error setting one_hour_players");
 
     Ok(())
 }

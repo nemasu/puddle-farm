@@ -76,7 +76,35 @@ const Stats = () => {
         </Box>
       </AppBar>
       <Box m={4} maxWidth="700px">
-
+        <Typography my={3} variant='h5'>Players</Typography>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Last Checked</TableCell>
+                <TableCell>Total</TableCell>
+                <TableCell>Past Month</TableCell>
+                <TableCell>Past Week</TableCell>
+                <TableCell>Past Day</TableCell>
+                <TableCell>Past Hour</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {stats ?
+                <TableRow>
+                  <TableCell>{Utils.formatUTCToLocal(stats.timestamp)}</TableCell>
+                  <TableCell>{stats.total_players.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</TableCell>
+                  <TableCell>{stats.one_month_players.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</TableCell>
+                  <TableCell>{stats.one_week_players.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</TableCell>
+                  <TableCell>{stats.one_day_players.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</TableCell>
+                  <TableCell>{stats.one_hour_players.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</TableCell>
+                </TableRow>
+                : null}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
+      <Box m={4} maxWidth="700px">
         <Typography my={3} variant='h5'>Games</Typography>
         <TableContainer component={Paper}>
           <Table>
@@ -105,7 +133,6 @@ const Stats = () => {
           </Table>
         </TableContainer>
         <Typography my={10}>Statistics are updated once an hour.</Typography>
-
       </Box>
     </React.Fragment>
   );

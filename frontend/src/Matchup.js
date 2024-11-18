@@ -59,6 +59,7 @@ const Matchup = () => {
               </TableBody>
             </Table>
           </TableContainer>
+          <Typography marginTop={5}>Statistics are updated once an hour.</Typography>
         </Paper>
       </Box>
     </React.Fragment>
