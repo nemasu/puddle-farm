@@ -1177,11 +1177,17 @@ async fn popularity(
 
     for e in CHAR_NAMES.iter() {
         let key = format!("popularity_per_player_{}", e.0);
-        let value: i64 = redis::cmd("GET")
+        
+        let value: i64 = match redis::cmd("GET")
             .arg(key)
             .query_async(&mut *redis)
-            .await
-            .expect("Error getting popularity");
+            .await {
+            Ok(v) => v,
+            Err(_) => {
+                return Err((StatusCode::NOT_FOUND, "Popularity not found".to_string()));
+            }
+        };
+
         per_player.push((e.1.to_string(), value));
     }
 
@@ -1252,12 +1258,14 @@ async fn matchups(
 
     for c in 0..CHAR_NAMES.len() {
         let key = format!("matchup_{}", c);
-        let value: String = redis::cmd("GET")
-            .arg(key)
-            .query_async(&mut *redis)
-            .await
-            .expect("Error getting matchup");
-        
+
+        let value: String = match redis::cmd("GET").arg(key).query_async(&mut *redis).await {
+            Ok(v) => v,
+            Err(_) => {
+                return Err((StatusCode::NOT_FOUND, "Matchup not found".to_string()));
+            }
+        };
+
         let matchups_data: Vec<crate::pull::Matchup> = serde_json::from_str(&value).unwrap();
         let char_name = CHAR_NAMES[c].1.to_string();
         let char_short = CHAR_NAMES[c].0.to_string();
@@ -1265,11 +1273,13 @@ async fn matchups(
         let matchup = MatchupResponse {
             char_name,
             char_short,
-            matchups: matchups_data.iter().map(|m| (m.wins, m.total_games)).collect(),
+            matchups: matchups_data
+                .iter()
+                .map(|m| (m.wins, m.total_games))
+                .collect(),
         };
 
         matchups.push(matchup);
-
     }
 
     Ok(Json(matchups))
