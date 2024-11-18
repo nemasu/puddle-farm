@@ -181,6 +181,10 @@ async fn do_hourly_update(
         error!("update_popularity failed: {e}");
     }
 
+    if let Err(e) = update_matchups(conn, redis_connection).await {
+        error!("update_matchups failed: {e}");
+    }
+
     //Now
     let last_update =
         chrono::DateTime::from_timestamp(chrono::Utc::now().naive_utc().and_utc().timestamp(), 0)
@@ -194,6 +198,79 @@ async fn do_hourly_update(
         .query_async::<String>(&mut **redis_connection)
         .await
         .expect("Error setting last_update_hourly");
+    Ok(())
+}
+
+#[derive(QueryableByName, serde::Serialize , serde::Deserialize)]
+pub struct Matchup {
+    #[diesel(sql_type = diesel::sql_types::SmallInt)]
+    opponent_char: i16,
+    #[diesel(sql_type = diesel::sql_types::BigInt)]
+    pub wins: i64,
+    #[diesel(sql_type = diesel::sql_types::BigInt)]
+    pub total_games: i64,
+}
+async fn update_matchups(
+    conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
+    redis_connection: &mut PooledConnection<'_, RedisConnectionManager>,
+) -> Result<(), String> {
+    info!("Updating matchups");
+
+    let mut all_characters: std::collections::HashMap<i16, Vec<Matchup>> =
+        std::collections::HashMap::new();
+
+    for c in 0..CHAR_NAMES.len() {
+        let results = diesel::sql_query(
+            "
+            SELECT 
+                opponent_char,
+                SUM(CASE 
+                    WHEN (position = 'a' AND winner = 1) OR (position = 'b' AND winner = 2)
+                    THEN 1 
+                    ELSE 0 
+                END) as wins,
+                COUNT(*) as total_games
+            FROM (
+                SELECT 
+                    char_b as opponent_char, 
+                    winner,
+                    'a' as position
+                FROM games
+                WHERE char_a = $1
+                AND timestamp > now() - interval '3 month'
+                UNION ALL
+                SELECT 
+                    char_a as opponent_char, 
+                    winner,
+                    'b' as position
+                FROM games
+                WHERE char_b = $1
+                AND timestamp > now() - interval '3 month'
+            ) as combined_results
+            GROUP BY opponent_char
+            ORDER BY opponent_char;
+            ",
+        );
+        let results: Vec<Matchup> = results
+            .bind::<Integer, _>(i32::try_from(c).unwrap())
+            .get_results(conn)
+            .await
+            .unwrap();
+
+        all_characters.insert(i16::try_from(c).unwrap(), results);
+    }
+
+    for (char_id, matchups) in all_characters {
+        let char_id = char_id as usize;
+
+        redis::cmd("SET")
+            .arg(format!("matchup_{}", char_id))
+            .arg(serde_json::to_string(&matchups).unwrap())
+            .query_async::<String>(&mut **redis_connection)
+            .await
+            .expect("Error setting matchup");
+    }
+
     Ok(())
 }
 
@@ -577,10 +654,10 @@ async fn grab_games(connection: &mut AsyncPgConnection) -> Result<Vec<Game>, Str
     replays.reverse();
 
     let mut new_games = Vec::new();
-    
+
     //Try to keep order if possible
     let mut seconds_offset = 0;
-    
+
     for r in replays {
         let game_timestamp =
             NaiveDateTime::parse_from_str(&r.timestamp, "%Y-%m-%d %H:%M:%S").unwrap();
@@ -591,7 +668,10 @@ async fn grab_games(connection: &mut AsyncPgConnection) -> Result<Vec<Game>, Str
         if game_timestamp > Utc::now().naive_utc()
             && game_timestamp > Utc::now().naive_utc() + chrono::Duration::seconds(2)
         {
-            fixed_timestamp = Some(chrono::SubsecRound::round_subsecs(Utc::now().naive_utc() + chrono::Duration::seconds(seconds_offset), 0));
+            fixed_timestamp = Some(chrono::SubsecRound::round_subsecs(
+                Utc::now().naive_utc() + chrono::Duration::seconds(seconds_offset),
+                0,
+            ));
         } else {
             fixed_timestamp = None;
         }
@@ -632,7 +712,10 @@ async fn grab_games(connection: &mut AsyncPgConnection) -> Result<Vec<Game>, Str
                 seconds_offset += 1;
                 debug!(
                     "Fixing timestamp {} -> {} - {} vs {}",
-                    r.timestamp, fixed_timestamp.unwrap(), r.player1.name, r.player2.name
+                    r.timestamp,
+                    fixed_timestamp.unwrap(),
+                    r.player1.name,
+                    r.player2.name
                 );
             }
 
@@ -729,19 +812,14 @@ async fn update_ratings(connection: &mut AsyncPgConnection) -> Result<(), String
 
         if Some(Status::Public) == entry.1 && Some(Status::Public) == entry.2 {
             //Calculate value and deviation
-            let (
-                new_value_a,
-                new_value_b,
-                new_deviation_a,
-                new_deviation_b,
-                win_prob,
-            ) = update_mean_and_variance(
-                player_rating_a.value as f64,
-                player_rating_a.deviation as f64,
-                player_rating_b.value as f64,
-                player_rating_b.deviation as f64,
-                g.winner == 1,
-            );
+            let (new_value_a, new_value_b, new_deviation_a, new_deviation_b, win_prob) =
+                update_mean_and_variance(
+                    player_rating_a.value as f64,
+                    player_rating_a.deviation as f64,
+                    player_rating_b.value as f64,
+                    player_rating_b.deviation as f64,
+                    g.winner == 1,
+                );
 
             //Update game table with player ratings
             diesel::update(games::table)

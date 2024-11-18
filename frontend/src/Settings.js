@@ -11,25 +11,32 @@ const Settings = () => {
 
     const [key, setKey] = React.useState(null);
 
-    const [settings, setSettings] = useState(StorageUtils.getPreferences());
+    //Server settings
+    const [settings, setSettings] = useState({});
 
-    // useEffect(() => {
-    //     setSettings(StorageUtils.getPreferences());
-    // }, [settings]);
+    //Client settings
+    const [preferences, setPreferences] = useState({
+        useLocalTime: false,
+        disableRatingColors: false,
+        //autoUpdate: false
+    });
 
     const handleChange = (event) => {
-        const newSettings = {
-            ...settings,
+        const newPreferences = {
+            ...preferences,
             [event.target.name]: Boolean(event.target.checked) ? true : null
         };
-        setSettings(newSettings);
-        StorageUtils.savePreferences(newSettings);
+        setPreferences(newPreferences);
+        StorageUtils.savePreferences(newPreferences);
     };
 
 
     useEffect(() => {
 
         const fetchSettings = async () => {
+
+            const preferences = StorageUtils.getPreferences();
+            setPreferences(preferences);
 
             const key = StorageUtils.getApiKey();
 
@@ -91,7 +98,7 @@ const Settings = () => {
                             sx={{my: 1}}
                             control={
                                 <Switch
-                                    checked={settings.useLocalTime ? true : false}
+                                    checked={preferences.useLocalTime ? true : false}
                                     onChange={handleChange}
                                     name="useLocalTime"
                                 />
@@ -109,7 +116,7 @@ const Settings = () => {
                             sx={{my: 1}}
                             control={
                                 <Switch
-                                    checked={settings.disableRatingColors ? true : false}
+                                    checked={preferences.disableRatingColors ? true : false}
                                     onChange={handleChange}
                                     name="disableRatingColors"
                                 />
@@ -127,7 +134,7 @@ const Settings = () => {
                             sx={{my: 1}}
                             control={
                                 <Switch
-                                    checked={settings.autoUpdate ? true : false}
+                                    checked={preferences.autoUpdate ? true : false}
                                     onChange={handleChange}
                                     name="autoUpdate"
                                 />

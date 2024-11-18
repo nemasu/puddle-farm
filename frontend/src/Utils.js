@@ -21,7 +21,7 @@ const Utils = {
         }
         return dateTimeString;
     },
-    colorChange: (change) => {
+    colorChangeForRating: (change) => {
         if (StorageUtils.getDisableRatingColors()) {
             return <React.Fragment>{change}</React.Fragment>;
         }
@@ -38,7 +38,18 @@ const Utils = {
         } else { // Greater than 10
             return <Typography sx={{ paddingRight: '3px', display: 'inline', fontSize: '0.875rem', color: '#087F23' }}>{change}</Typography>;
         }
-    }
+    },
+    colorChangeForPercent: (percent) => {
+        if (percent > 55) { // Greater than 55%
+            return <Typography sx={{ paddingRight: '3px', display: 'inline', fontSize: '0.875rem', color: '#087F23' }}>{percent}%</Typography>;
+        } else if (percent > 50) { // Between 50 and 55 (not inclusive)
+            return <Typography sx={{ paddingRight: '3px', display: 'inline', fontSize: '0.875rem', color: '#A8E6A3' }}>{percent}%</Typography>;
+        } else if (percent > 45) { // Between 45 and 50 (not inclusive)
+            return <Typography sx={{ paddingRight: '3px', display: 'inline', fontSize: '0.875rem', color: '#FF8A80' }}>{percent}%</Typography>;
+        } else { // Less than or equal to 45%
+            return <Typography sx={{ paddingRight: '3px', display: 'inline', fontSize: '0.875rem', color: '#D32F2F' }}>{percent}%</Typography>;
+        }
+    },
 }
 
 export { Utils };

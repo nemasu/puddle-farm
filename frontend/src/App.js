@@ -23,6 +23,7 @@ import { Typography } from '@mui/material';
 import About from './About';
 import Stats from './Stats';
 import Popularity from './Popularity';
+import Matchup from './Matchup';
 
 const App = () => {
   return (
@@ -77,6 +78,11 @@ const App = () => {
             <Route
               path="/popularity"
               element={<Popularity />}
+            />
+
+            <Route
+              path="/matchup"
+              element={<Matchup />}
             />
 
           </Routes>

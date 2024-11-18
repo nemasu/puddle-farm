@@ -21,6 +21,7 @@ var pages = [
   { name: 'Top', link: './top_global' },
   { name: 'Characters', list: [] },
   { name: 'Popularity', link: './popularity' },
+  { name: 'Matchup', link: './matchup' },
   { name: 'About', link: './about' },
   { name: 'Settings', link: './settings' },
   { name: 'Stats', link: './stats' },

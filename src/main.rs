@@ -10,6 +10,7 @@ use models::{CharacterRank, GlobalRank, Player, PlayerRating, Status};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::ops::Deref;
+use std::vec;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, warn};
 use tracing_appender::non_blocking::WorkerGuard;
@@ -163,6 +164,7 @@ async fn player(
     let mut top_defeated = HashMap::new();
     let mut top_rating = HashMap::new();
 
+    //TODO Use Redis for this?
     let top_global = match schema::global_ranks::table
         .filter(schema::global_ranks::id.eq(id))
         .select(schema::global_ranks::rank)
@@ -192,6 +194,7 @@ async fn player(
 
         match_counts.insert(rating.char_id, match_count as i32);
 
+        //TODO Use Redis for this?
         let top_char = match schema::character_ranks::table
             .filter(schema::character_ranks::char_id.eq(rating.char_id))
             .filter(schema::character_ranks::id.eq(player.id))
@@ -1233,6 +1236,45 @@ async fn popularity(
     }))
 }
 
+#[derive(Serialize)]
+struct MatchupResponse {
+    char_name: String,
+    char_short: String,
+    matchups: Vec<(i64, i64)>, //Wins, Total Games
+}
+
+async fn matchups(
+    State(pools): State<AppState>,
+) -> Result<Json<Vec<MatchupResponse>>, (StatusCode, String)> {
+    let mut redis = pools.redis_pool.get().await.unwrap();
+
+    let mut matchups = vec![];
+
+    for c in 0..CHAR_NAMES.len() {
+        let key = format!("matchup_{}", c);
+        let value: String = redis::cmd("GET")
+            .arg(key)
+            .query_async(&mut *redis)
+            .await
+            .expect("Error getting matchup");
+        
+        let matchups_data: Vec<crate::pull::Matchup> = serde_json::from_str(&value).unwrap();
+        let char_name = CHAR_NAMES[c].1.to_string();
+        let char_short = CHAR_NAMES[c].0.to_string();
+
+        let matchup = MatchupResponse {
+            char_name,
+            char_short,
+            matchups: matchups_data.iter().map(|m| (m.wins, m.total_games)).collect(),
+        };
+
+        matchups.push(matchup);
+
+    }
+
+    Ok(Json(matchups))
+}
+
 #[tokio::main(flavor = "multi_thread", worker_threads = 5)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().expect("Failed to read .env file");
@@ -1275,7 +1317,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let _guard = init_tracing("pull");
             pull::pull_and_update_continuous(state).await;
         }
-        Some("hourly") => pull::do_hourly_update_once(state).await,
+        Some("hourly") => {
+            tracing_subscriber::fmt()
+                .with_max_level(tracing::Level::INFO)
+                .init();
+            pull::do_hourly_update_once(state).await
+        }
         _ => {
             // No args, run the web server
             let _guard = init_tracing("web");
@@ -1298,6 +1345,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/ratings/:player_id/:char_id", get(ratings))
                 .route("/api/stats", get(stats))
                 .route("/api/popularity", get(popularity))
+                .route("/api/matchups", get(matchups))
                 .with_state(state);
 
             if cfg!(debug_assertions) {

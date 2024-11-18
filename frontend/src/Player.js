@@ -214,7 +214,7 @@ function Row(props) {
             <TableCell align="right">{item.wins} - {item.losses}</TableCell>
             <TableCell align="right">{(item.odds === 1.0 || item.odds === 0.0) ? '' : (item.odds * 100).toFixed(1) + '%'}</TableCell>
             <TableCell align="right">
-              {Utils.colorChange(item.ratingChange.toFixed(1))}
+              {Utils.colorChangeForRating(item.ratingChange.toFixed(1))}
             </TableCell>
           </React.Fragment>
         )}
