@@ -9,15 +9,8 @@ const Matchup = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
   const [matchup, setMatchup] = React.useState(null);
-  const [characters, setCharacters] = React.useState(null);
 
   useEffect(() => {
-
-    fetch(`${API_ENDPOINT}/characters`)
-      .then((response) => response.json())
-      .then((data) => {
-        setCharacters(data);
-      });
 
     fetch(`${API_ENDPOINT}/matchups`)
       .then((response) => response.json())
@@ -38,8 +31,8 @@ const Matchup = () => {
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>Character</TableCell>
-                  {matchup ? (matchup.length > 0 && matchup[0].matchups.map((_, index) => (
-                    <TableCell key={index}>{characters[index][0]}</TableCell>
+                  {matchup ? (matchup.length > 0 && matchup[0].matchups.map((matchup, index) => (
+                    <TableCell key={index}>{matchup.char_short}</TableCell>
                   ))) : null}
                 </TableRow>
               </TableHead>
@@ -50,8 +43,8 @@ const Matchup = () => {
                       {row.char_name} ({row.char_short})
                     </TableCell>
                     {row.matchups.map((matchup, colIndex) => (
-                      <TableCell key={colIndex} title={`Wins: ${matchup[0]}, Total Games: ${matchup[1]}`}>
-                        {Utils.colorChangeForPercent(((matchup[0] / matchup[1]) * 100).toFixed(2))}
+                      <TableCell key={colIndex} title={`Wins: ${matchup.wins}, Total Games: ${matchup.total_games}`}>
+                        {Utils.colorChangeForPercent(((matchup.wins / matchup.total_games) * 100).toFixed(2))}
                       </TableCell>
                     ))}
                   </TableRow>

@@ -285,6 +285,8 @@ const Player = () => {
   const [lineChartOptions, setLineChartOptions] = useState({});
   const [lineChartData, setLineChartData] = useState(null);
 
+  const [matchups, setMatchups] = useState(null);
+
   let player_id_checked = player_id;
   if (player_id_checked.match(/[a-zA-Z]/)) {
     player_id_checked = BigInt('0x' + player_id_checked);
@@ -434,6 +436,25 @@ const Player = () => {
           }
 
           setLineChartData(lineChartData);
+
+          const matchups = await fetch(API_ENDPOINT + '/matchups/' + player_id_checked + '/' + char_short);
+          if (matchups.status === 200) {
+            const matchups_result = await matchups.json();
+            if (matchups_result !== null) {
+
+              let total_wins = 0;
+              let total_games = 0;
+              for (var mkey in matchups_result.matchups) {
+                total_wins += matchups_result.matchups[mkey].wins;
+                total_games += matchups_result.matchups[mkey].total_games;
+              }
+
+              matchups_result.total_wins = total_wins;
+              matchups_result.total_games = total_games;
+
+              setMatchups(matchups_result);
+            }
+          }
         }
         setLoading(false);
 
@@ -581,6 +602,56 @@ const Player = () => {
           {lineChartData ? (
             <Line options={lineChartOptions} data={lineChartData} />
           ) : null}
+
+          <Typography sx={{ marginTop: 10 }} variant="h6" gutterBottom>
+            Matchup Table (past 3 months)
+          </Typography>
+          <Typography>
+            <Typography p={2} variant="body1">
+              Win Rate
+            </Typography>
+
+            {matchups ? (
+              <Box component={Paper} sx={{ maxWidth: 350 }}>
+                <Typography p={2} variant='body1'>
+                  {Utils.colorChangeForPercent(((matchups.total_wins / matchups.total_games) * 100).toFixed(2))} ( {matchups.total_wins} / {matchups.total_games - matchups.total_wins} )
+                </Typography>
+              </Box>
+            ) : null}
+
+          </Typography>
+
+          <TableContainer component={Paper} sx={{ maxWidth: 350 }}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Character</TableCell>
+                  <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>WR</TableCell>
+                  <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>Wins</TableCell>
+                  <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>Total</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {matchups ? (matchups.matchups.map((matchup, rowIndex) => (
+                  <TableRow key={rowIndex}>
+                    <TableCell component="th" scope="row" sx={{ position: 'sticky', left: 0, background: 'black', zIndex: 1 }}>
+                      {matchup.char_name} ({matchup.char_short})
+                    </TableCell>
+                    <TableCell>
+                      {Utils.colorChangeForPercent(((matchup.wins / matchup.total_games) * 100).toFixed(2))}
+                    </TableCell>
+                    <TableCell>
+                      {matchup.wins}
+                    </TableCell>
+                    <TableCell>
+                      {matchup.total_games}
+                    </TableCell>
+                  </TableRow>
+                ))) : null}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
         </Box>
         <Box marginLeft={10} marginTop={13} sx={{ width: .18, maxWidth: '235px' }}>
           {player && player.id !== 0 ? (

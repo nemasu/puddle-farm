@@ -2,6 +2,7 @@ use axum::extract::{Path, Query};
 use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, ORIGIN};
 use axum::http::Method;
 use axum::{extract::State, http::StatusCode, response::Json, routing::get, Router};
+use diesel::sql_types::{BigInt, Float, Integer, Nullable, Timestamp};
 use diesel::{prelude::*, update};
 use diesel_async::{
     pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection, RunQueryDsl,
@@ -994,7 +995,6 @@ struct RatingsResponse {
     timestamp: String,
     rating: f32,
 }
-use diesel::sql_types::{Float, Nullable, Timestamp};
 
 #[derive(QueryableByName, Queryable)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -1054,6 +1054,75 @@ async fn ratings(
         .collect();
 
     Ok(Json(ratings))
+}
+
+async fn player_matchups(
+    State(pools): State<AppState>,
+    Path((player_id, char_id)): Path<(i64, String)>,
+) -> Result<Json<MatchupResponse>, (StatusCode, String)> {
+    let mut db = pools.db_pool.get().await.unwrap();
+
+    let char_id = match CHAR_NAMES.iter().position(|(c, _)| *c == char_id) {
+        Some(id) => id as i16,
+        None => {
+            return Err((StatusCode::NOT_FOUND, "Character not found".to_string()));
+        }
+    };
+
+    let results = diesel::sql_query(
+        "
+        SELECT 
+            opponent_char,
+            SUM(CASE 
+                WHEN (position = 'a' AND winner = 1) OR (position = 'b' AND winner = 2)
+                THEN 1 
+                ELSE 0 
+            END) as wins,
+            COUNT(*) as total_games
+        FROM (
+            SELECT 
+                char_b as opponent_char, 
+                winner,
+                'a' as position
+            FROM games
+            WHERE char_a = $1
+            AND id_a = $2
+            --AND timestamp > now() - interval '3 month'
+            UNION ALL
+            SELECT 
+                char_a as opponent_char, 
+                winner,
+                'b' as position
+            FROM games
+            WHERE char_b = $1
+            AND id_b = $2
+            --AND timestamp > now() - interval '3 month'
+        ) as combined_results
+        GROUP BY opponent_char
+        ORDER BY opponent_char;
+        ",
+    );
+    let char_matchup = results
+        .bind::<Integer, _>(i32::try_from(char_id).unwrap())
+        .bind::<BigInt, _>(i64::try_from(player_id).unwrap())
+        .get_results::<crate::pull::Matchup>(&mut db)
+        .await
+        .unwrap();
+
+    Ok(Json(MatchupResponse {
+        char_short: CHAR_NAMES[char_id as usize].1.to_string(),
+    char_name: CHAR_NAMES[char_id as usize].0.to_string(),
+        matchups: char_matchup
+            .iter()
+            .enumerate()
+            .map(|(i, m)| MatchupEntry {
+                char_name: CHAR_NAMES[i].1.to_string(),
+                char_short: CHAR_NAMES[i].0.to_string(),
+                wins: m.wins,
+                total_games: m.total_games,
+            })
+            .collect(),
+    }))
 }
 
 fn init_tracing(prefix: &str) -> WorkerGuard {
@@ -1117,12 +1186,13 @@ async fn stats(State(pools): State<AppState>) -> Result<Json<StatsResponse>, (St
     let timestamp = match redis::cmd("GET")
         .arg("last_update_hourly")
         .query_async::<String>(&mut *redis)
-        .await {
-            Ok(ts) => ts,
-            Err(_) => {
-                return Err((StatusCode::NOT_FOUND, "Stats not found".to_string()));
-            }
-        };
+        .await
+    {
+        Ok(ts) => ts,
+        Err(_) => {
+            return Err((StatusCode::NOT_FOUND, "Stats not found".to_string()));
+        }
+    };
 
     let total_games = redis::cmd("GET")
         .arg("total_games")
@@ -1221,11 +1291,8 @@ async fn popularity(
 
     for e in CHAR_NAMES.iter() {
         let key = format!("popularity_per_player_{}", e.0);
-        
-        let value: i64 = match redis::cmd("GET")
-            .arg(key)
-            .query_async(&mut *redis)
-            .await {
+
+        let value: i64 = match redis::cmd("GET").arg(key).query_async(&mut *redis).await {
             Ok(v) => v,
             Err(_) => {
                 return Err((StatusCode::NOT_FOUND, "Popularity not found".to_string()));
@@ -1290,7 +1357,15 @@ async fn popularity(
 struct MatchupResponse {
     char_name: String,
     char_short: String,
-    matchups: Vec<(i64, i64)>, //Wins, Total Games
+    matchups: Vec<MatchupEntry>, //Wins, Total Games
+}
+
+#[derive(Serialize)]
+struct MatchupEntry {
+    char_name: String,
+    char_short: String,
+    wins: i64,
+    total_games: i64,
 }
 
 async fn matchups(
@@ -1319,7 +1394,13 @@ async fn matchups(
             char_short,
             matchups: matchups_data
                 .iter()
-                .map(|m| (m.wins, m.total_games))
+                .enumerate()
+                .map(|(i, m)| MatchupEntry {
+                    char_name: CHAR_NAMES[i].1.to_string(),
+                    char_short: CHAR_NAMES[i].0.to_string(),
+                    wins: m.wins,
+                    total_games: m.total_games,
+                })
                 .collect(),
         };
 
@@ -1400,6 +1481,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/stats", get(stats))
                 .route("/api/popularity", get(popularity))
                 .route("/api/matchups", get(matchups))
+                .route("/api/matchups/:player_id/:char_id", get(player_matchups))
                 .with_state(state);
 
             if cfg!(debug_assertions) {
