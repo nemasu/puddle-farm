@@ -100,7 +100,7 @@ const Popularity = () => {
                       {group.map((e) => (
                         <TableRow key={e.name}>
                           <TableCell>{e.name}</TableCell>
-                          <TableCell>{(((e.value / popularity['per_character_total']) * 100)/2).toFixed(2)}%</TableCell>
+                          <TableCell>{(((e.value / popularity['per_character_total']) * 100) / 2).toFixed(2)}%</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -109,12 +109,12 @@ const Popularity = () => {
               </Box>
             ))}
           </Box>
-          <Box>Total games per character: {popularity && (popularity['per_character_total']*2).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</Box>
+          <Box>Total games per character: {popularity && (popularity['per_character_total'] * 2).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</Box>
         </Box>
         <Box>
-        <Typography>Statistics are updated once an hour.</Typography>
+          <Typography>Statistics are updated once an hour.</Typography>
           {popularity && (
-          <Typography variant="body1">
+            <Typography variant="body1">
               Last updated: {Utils.formatUTCToLocal(popularity['last_update'])}
             </Typography>
           )}

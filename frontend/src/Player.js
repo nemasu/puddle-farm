@@ -179,88 +179,165 @@ function Row(props) {
     }
   }
 
-  return (
-    <React.Fragment>
-      <TableRow sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-        <TableCell>
-          <IconButton
-            aria-label="expand row"
-            size="small"
-            onClick={() => setOpen(!open)}
-          >
-            {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-          </IconButton>
-        </TableCell>
-        {item.opponent_id === 0 ? (
-          <React.Fragment>
-            <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
-            <TableCell align="right">{item.floor === '99' ? 'C' : item.floor}</TableCell>
-            <TableCell align="right"></TableCell>
-            <TableCell><Button component={Link} variant="link" >{item.opponent_name}</Button></TableCell>
-            <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
-            <TableCell align="right"></TableCell>
-            <TableCell align="right">{item.wins} - {item.losses}</TableCell>
-            <TableCell align="right"></TableCell>
-            <TableCell align="right"></TableCell>
-          </React.Fragment>
-        ) : (
-          <React.Fragment>
-            <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
-            <TableCell align="right">{item.floor === '99' ? 'C' : item.floor}</TableCell>
-            <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].own_rating_value}>{item.matches[item.matches.length - 1].own_rating_value.toFixed(0)}</Box> <Box component={'span'} title={item.matches[item.matches.length - 1].own_rating_deviation}>±{item.matches[item.matches.length - 1].own_rating_deviation.toFixed(0)}</Box></TableCell>
-            <TableCell><Button onMouseDown={(event) => { onProfileClick(event) }} component={Link} variant="link" >{item.opponent_name}</Button></TableCell>
-            <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
-            <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_value}>{item.matches[item.matches.length - 1].opponent_rating_value.toFixed(0)}</Box> <Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_deviation}>±{item.matches[item.matches.length - 1].opponent_rating_deviation.toFixed(0)}</Box></TableCell>
-            <TableCell align="right">{item.wins} - {item.losses}</TableCell>
-            <TableCell align="right">{(item.odds === 1.0 || item.odds === 0.0) ? '' : (item.odds * 100).toFixed(1) + '%'}</TableCell>
-            <TableCell align="right">
-              {Utils.colorChangeForRating(item.ratingChange.toFixed(1))}
-            </TableCell>
-          </React.Fragment>
-        )}
-      </TableRow>
-      <TableRow id={item.timestamp}>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
-          <Collapse in={open} timeout="auto" unmountOnExit>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Timestamp</TableCell>
-                  <TableCell align="right">Rating</TableCell>
-                  <TableCell align="right">Opponent Rating</TableCell>
-                  <TableCell align="right">Winner?</TableCell>
-                  <TableCell align="right">Rating Change</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {item.matches.map((item, i) => (
-                  <TableRow key={item.timestamp}>
-                    {item.opponent_id === 0 ? (
-                      <React.Fragment>
-                        <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
-                        <TableCell align="right"></TableCell>
-                        <TableCell align="right"></TableCell>
-                        <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
-                        <TableCell align='right'>{item.ratingChange > 0 ? '+' : ''}{item.ratingChange}</TableCell>
-                      </React.Fragment>
-                    ) : (
-                      <React.Fragment>
-                        <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
-                        <TableCell align="right">{item.own_rating_value.toFixed(2)} ±{item.own_rating_deviation.toFixed(2)}</TableCell>
-                        <TableCell align="right">{item.opponent_rating_value.toFixed(2)} ±{item.opponent_rating_deviation.toFixed(2)}</TableCell>
-                        <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
-                        <TableCell align='right'>{item.ratingChange > 0 ? '+' : ''}{item.ratingChange}</TableCell>
-                      </React.Fragment>
-                    )}
+  if (props.isMobile) {
+    return (
+      <TableContainer component={Paper}>
+        <Table size="small">
+          <TableBody>
+            <TableRow>
+              <TableCell>
+                <IconButton
+                  aria-label="expand row"
+                  size="small"
+                  onClick={() => setOpen(!open)}
+                >
+                  {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                </IconButton>
+              </TableCell>
+              <TableCell width={170}>{item.timestamp}</TableCell>
+              <TableCell width={90}> {item.matches[item.matches.length - 1].own_rating_value.toFixed(0)} ±{item.matches[item.matches.length - 1].own_rating_deviation.toFixed(0)} </TableCell>
+              <TableCell>{(item.odds === 1.0 || item.odds === 0.0) ? '' : (item.odds * 100).toFixed(1) + '%'}</TableCell>
+              <TableCell>{item.wins} - {item.losses}</TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell colSpan={2}><Button sx={{ marginLeft: '5px' }} onMouseDown={(event) => { onProfileClick(event) }} component={Link} variant="link" >{item.opponent_name}</Button></TableCell>
+              <TableCell>
+                {item.matches[item.matches.length - 1].opponent_rating_value.toFixed(0)} ±{item.matches[item.matches.length - 1].opponent_rating_deviation.toFixed(0)}
+              </TableCell>
+              <TableCell>{item.matches[0].opponent_character}</TableCell>
+              <TableCell>
+                {Utils.colorChangeForRating(item.ratingChange.toFixed(1))}
+              </TableCell>
+            </TableRow>
+            <TableRow id={item.timestamp}>
+              <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
+                <Collapse in={open} timeout="auto" unmountOnExit>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Timestamp</TableCell>
+                        <TableCell align="right">Rating</TableCell>
+                        <TableCell align="right">Opponent Rating</TableCell>
+                        <TableCell align="right">Winner?</TableCell>
+                        <TableCell align="right">Rating Change</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {item.matches.map((item, i) => (
+                        <TableRow key={item.timestamp}>
+                          {item.opponent_id === 0 ? (
+                            <React.Fragment>
+                              <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
+                              <TableCell align="right"></TableCell>
+                              <TableCell align="right"></TableCell>
+                              <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
+                              <TableCell align='right'>{item.ratingChange > 0 ? '+' : ''}{item.ratingChange}</TableCell>
+                            </React.Fragment>
+                          ) : (
+                            <React.Fragment>
+                              <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
+                              <TableCell align="right">{item.own_rating_value.toFixed(2)} ±{item.own_rating_deviation.toFixed(2)}</TableCell>
+                              <TableCell align="right">{item.opponent_rating_value.toFixed(2)} ±{item.opponent_rating_deviation.toFixed(2)}</TableCell>
+                              <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
+                              <TableCell align='right'>{item.ratingChange > 0 ? '+' : ''}{item.ratingChange}</TableCell>
+                            </React.Fragment>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Collapse>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </TableContainer>
+    );
+
+  } else {
+    return (
+      <React.Fragment>
+        <TableRow sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+          <TableCell>
+            <IconButton
+              aria-label="expand row"
+              size="small"
+              onClick={() => setOpen(!open)}
+            >
+              {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+            </IconButton>
+          </TableCell>
+          {item.opponent_id === 0 ? (
+            <React.Fragment>
+              <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
+              <TableCell align="right">{item.floor === '99' ? 'C' : item.floor}</TableCell>
+              <TableCell align="right"></TableCell>
+              <TableCell><Button component={Link} variant="link" >{item.opponent_name}</Button></TableCell>
+              <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
+              <TableCell align="right"></TableCell>
+              <TableCell align="right">{item.wins} - {item.losses}</TableCell>
+              <TableCell align="right"></TableCell>
+              <TableCell align="right"></TableCell>
+            </React.Fragment>
+          ) : (
+            <React.Fragment>
+              <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
+              <TableCell align="right">{item.floor === '99' ? 'C' : item.floor}</TableCell>
+              <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].own_rating_value}>{item.matches[item.matches.length - 1].own_rating_value.toFixed(0)}</Box> <Box component={'span'} title={item.matches[item.matches.length - 1].own_rating_deviation}>±{item.matches[item.matches.length - 1].own_rating_deviation.toFixed(0)}</Box></TableCell>
+              <TableCell><Button onMouseDown={(event) => { onProfileClick(event) }} component={Link} variant="link" >{item.opponent_name}</Button></TableCell>
+              <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
+              <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_value}>{item.matches[item.matches.length - 1].opponent_rating_value.toFixed(0)}</Box> <Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_deviation}>±{item.matches[item.matches.length - 1].opponent_rating_deviation.toFixed(0)}</Box></TableCell>
+              <TableCell align="right">{item.wins} - {item.losses}</TableCell>
+              <TableCell align="right">{(item.odds === 1.0 || item.odds === 0.0) ? '' : (item.odds * 100).toFixed(1) + '%'}</TableCell>
+              <TableCell align="right">
+                {Utils.colorChangeForRating(item.ratingChange.toFixed(1))}
+              </TableCell>
+            </React.Fragment>
+          )}
+        </TableRow>
+        <TableRow id={item.timestamp}>
+          <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
+            <Collapse in={open} timeout="auto" unmountOnExit>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Timestamp</TableCell>
+                    <TableCell align="right">Rating</TableCell>
+                    <TableCell align="right">Opponent Rating</TableCell>
+                    <TableCell align="right">Winner?</TableCell>
+                    <TableCell align="right">Rating Change</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Collapse>
-        </TableCell>
-      </TableRow>
-    </React.Fragment >
-  );
+                </TableHead>
+                <TableBody>
+                  {item.matches.map((item, i) => (
+                    <TableRow key={item.timestamp}>
+                      {item.opponent_id === 0 ? (
+                        <React.Fragment>
+                          <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
+                          <TableCell align="right"></TableCell>
+                          <TableCell align="right"></TableCell>
+                          <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
+                          <TableCell align='right'>{item.ratingChange > 0 ? '+' : ''}{item.ratingChange}</TableCell>
+                        </React.Fragment>
+                      ) : (
+                        <React.Fragment>
+                          <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
+                          <TableCell align="right">{item.own_rating_value.toFixed(2)} ±{item.own_rating_deviation.toFixed(2)}</TableCell>
+                          <TableCell align="right">{item.opponent_rating_value.toFixed(2)} ±{item.opponent_rating_deviation.toFixed(2)}</TableCell>
+                          <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
+                          <TableCell align='right'>{item.ratingChange > 0 ? '+' : ''}{item.ratingChange}</TableCell>
+                        </React.Fragment>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Collapse>
+          </TableCell>
+        </TableRow>
+      </React.Fragment >
+    );
+  }
 }
 
 const Player = () => {
@@ -485,12 +562,51 @@ const Player = () => {
 
   return (
     <React.Fragment>
+      {loading ?
+        <CircularProgress
+          size={60}
+          variant="indeterminate"
+          disableShrink={true}
+          sx={{ position: 'absolute', top: '-1px', color: 'white' }}
+        />
+        : null
+      }
+
       <AppBar position="static"
         style={{ backgroundImage: "none" }}
         sx={{ backgroundColor: "secondary.main" }}
       >
+        <Box sx={{ maxWidth: 600, minHeight: 50, display: { xs: 'block', md: 'none' } }}> {/* Mobile View */}
+          {player ? (
+            <Typography textAlign={'center'} variant="pageHeader" fontSize={30}>
+              {player.name}
+              <Typography variant="platform">
+                {player.platform}
+              </Typography>
+              {player.top_global !== 0 ? (
+                <Typography variant="global_rank">
+                  #{player.top_global} Overall
+                </Typography>
+              ) : null}
+            </Typography>
+          ) : null}
 
-        <Box sx={{ minHeight: 100, paddingTop: '30px' }}>
+          {alias && alias.length > 0 ? (
+            <Box fontSize={17}>
+              <Typography variant='platform' sx={{ position: 'relative', top: '0px', borderRadius: '5px', py: '5px' }} display={'inline-block'}>
+                AKA
+              </Typography>
+              <Box m={1} sx={{ display: 'inline-block' }}>
+                {alias.map((item, i) => (
+                  <Box px={0.8} py={0.2} mx={0.3} my={0.2} sx={{ backgroundColor: 'primary.main', borderRadius: '3px' }} display={'inline-block'} key={i}>
+                    {item}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          ) : null}
+        </Box>
+        <Box sx={{ minHeight: 100, paddingTop: '30px', display: { xs: 'none', md: 'block' } }}> {/* Desktop View */}
           {player ? (
             <Typography align='center' variant="pageHeader" fontSize={30}>
               {player.name}
@@ -519,19 +635,137 @@ const Player = () => {
               </Box>
             </Box>
           ) : null}
+        </Box>
+      </AppBar>
+
+      <Box sx={{ maxWidth: 600, display: { xs: 'block', md: 'none' } }}> {/* Mobile View */}
+        <Box m={4}>
+          <Box>
+            {currentCharData ? (
+              <React.Fragment>
+                <Typography variant='h5' my={2}>
+                  {currentCharData.character} Rating: <Box title={currentCharData.rating} component={"span"}>{Math.round(currentCharData.rating)}</Box> ±<Box title={currentCharData.deviation} component={"span"}>{Math.round(currentCharData.deviation)}</Box> ({currentCharData.match_count} games)
+                  {currentCharData.top_char !== 0 ? (
+                    <Typography variant="char_rank">
+                      #{currentCharData.top_char} {currentCharData.character}
+                    </Typography>
+                  ) : null}
+                </Typography>
+
+                {currentCharData.top_rating.value !== 0 ? (
+                  <React.Fragment>
+                    <Typography variant='h7'>
+                      Top Rating: <Box title={currentCharData.top_rating.value} component={"span"}>{Math.round(currentCharData.top_rating.value)}</Box> ±<Box title={currentCharData.top_rating.deviation} component={"span"}>{Math.round(currentCharData.top_rating.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_rating.timestamp)})
+                    </Typography>
+                    <br />
+                  </React.Fragment>
+                ) : null}
+
+                {currentCharData.top_defeated.value !== 0.0 ? (
+                  <Typography variant='h7'>
+                    Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} variant="link" onMouseDown={(event) => onProfileClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
+                  </Typography>
+                ) : null}
+
+              </React.Fragment>
+            ) : null}
+
+            {history ? (
+              <React.Fragment>
+                <Box mx={3}>
+                  <Button onClick={(event) => onPrev(event)}>Prev</Button>
+                  <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
+                </Box>
+
+                {history.map((item, i) => (
+                  <Box py={0.3} key={i}>
+                    <Row key={i} item={item} isMobile={true} />
+                  </Box>
+                ))}
+
+                <Box mx={3}>
+                  <Button onClick={(event) => onPrev(event)}>Prev</Button>
+                  <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
+                </Box>
+              </React.Fragment>
+            ) : null}
+          </Box>
+
+          {lineChartData ? (
+            <Line options={lineChartOptions} data={lineChartData} />
+          ) : null}
+
+          <Typography sx={{ marginTop: 10 }} variant="h6" gutterBottom>
+            Matchup Table (past 3 months)
+          </Typography>
+          <Typography p={2} variant="body1">
+            Win Rate
+          </Typography>
+          {matchups ? (
+            <Box component={Paper} sx={{ maxWidth: 350 }}>
+              <Typography p={2} variant='body1'>
+                {Utils.colorChangeForPercent(((matchups.total_wins / matchups.total_games) * 100).toFixed(2))} ( {matchups.total_wins} / {matchups.total_games - matchups.total_wins} )
+              </Typography>
+            </Box>
+          ) : null}
+          <TableContainer component={Paper} sx={{ maxWidth: 350 }}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Character</TableCell>
+                  <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>WR</TableCell>
+                  <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>Wins</TableCell>
+                  <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>Total</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {matchups ? (matchups.matchups.map((matchup, rowIndex) => (
+                  <TableRow key={rowIndex}>
+                    <TableCell component="th" scope="row" sx={{ position: 'sticky', left: 0, background: 'black', zIndex: 1 }}>
+                      {matchup.char_name} ({matchup.char_short})
+                    </TableCell>
+                    <TableCell>
+                      {Utils.colorChangeForPercent(((matchup.wins / matchup.total_games) * 100).toFixed(2))}
+                    </TableCell>
+                    <TableCell>
+                      {matchup.wins}
+                    </TableCell>
+                    <TableCell>
+                      {matchup.total_games}
+                    </TableCell>
+                  </TableRow>
+                ))) : null}
+              </TableBody>
+            </Table>
+          </TableContainer>
 
         </Box>
-        {loading ?
-          <CircularProgress
-            size={60}
-            variant="indeterminate"
-            disableShrink={true}
-            sx={{ position: 'absolute', top: '-1px', color: 'white' }}
-          />
-          : null
-        }
-      </AppBar>
-      <Box sx={{ display: 'flex', flexWrap: 'nowrap' }}>
+        <Box marginLeft={10} marginTop={13} sx={{ width: .18, maxWidth: '235px' }}>
+          {player && player.id !== 0 ? (
+            <React.Fragment>
+              <hr />
+              <Typography fontSize={14}>
+                Characters:
+              </Typography>
+              {player.ratings && player.ratings.map((item, i) => (
+                <Box key={i}>
+                  <Button variant="text" onClick={() => { navigate(`/player/${player.id}/${item.char_short}`) }} sx={{ textAlign: 'left', color: 'white' }}>
+                    <Typography fontSize={12.5} my={0.3}>
+                      {item.character} {item.rating} ±{item.deviation}<br />({item.match_count} games)
+                    </Typography>
+                  </Button>
+                  <br />
+                </Box>
+              ))}
+              <hr style={{ marginTop: 10 }} />
+            </React.Fragment>
+          ) : null}
+
+          {hideClaim ? null : (<ClaimDialog playerId={player_id_checked} setLoading={setLoading} API_ENDPOINT={API_ENDPOINT} />)}
+        </Box>
+
+      </Box>
+      <Box sx={{ display: { xs: 'none', md: 'flex' }, flexWrap: 'nowrap' }}> {/* Desktop View */}
         <Box m={4} sx={{ width: .7 }}>
           <Box sx={{ minWidth: 1000, maxWidth: 1100 }}>
             {currentCharData ? (
@@ -540,7 +774,7 @@ const Player = () => {
                   {currentCharData.character} Rating: <Box title={currentCharData.rating} component={"span"}>{Math.round(currentCharData.rating)}</Box> ±<Box title={currentCharData.deviation} component={"span"}>{Math.round(currentCharData.deviation)}</Box> ({currentCharData.match_count} games)
                   {currentCharData.top_char !== 0 ? (
                     <Typography variant="char_rank">
-                      #{currentCharData.top_char}
+                      #{currentCharData.top_char} {currentCharData.character}
                     </Typography>
                   ) : null}
                 </Typography>
@@ -606,21 +840,16 @@ const Player = () => {
           <Typography sx={{ marginTop: 10 }} variant="h6" gutterBottom>
             Matchup Table (past 3 months)
           </Typography>
-          <Typography>
-            <Typography p={2} variant="body1">
-              Win Rate
-            </Typography>
-
-            {matchups ? (
-              <Box component={Paper} sx={{ maxWidth: 350 }}>
-                <Typography p={2} variant='body1'>
-                  {Utils.colorChangeForPercent(((matchups.total_wins / matchups.total_games) * 100).toFixed(2))} ( {matchups.total_wins} / {matchups.total_games - matchups.total_wins} )
-                </Typography>
-              </Box>
-            ) : null}
-
+          <Typography p={2} variant="body1">
+            Win Rate
           </Typography>
-
+          {matchups ? (
+            <Box component={Paper} sx={{ maxWidth: 350 }}>
+              <Typography p={2} variant='body1'>
+                {Utils.colorChangeForPercent(((matchups.total_wins / matchups.total_games) * 100).toFixed(2))} ( {matchups.total_wins} / {matchups.total_games - matchups.total_wins} )
+              </Typography>
+            </Box>
+          ) : null}
           <TableContainer component={Paper} sx={{ maxWidth: 350 }}>
             <Table stickyHeader>
               <TableHead>
