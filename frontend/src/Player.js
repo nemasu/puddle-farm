@@ -125,7 +125,6 @@ function groupMatches(data, player, char_short, has_offset) {
 
         const lastChange = match.own_rating_value - lastValidMatch.own_rating_value;
         lastValidGroup.ratingChange += lastChange;
-        //lastValidGroup.matches.reverse();
         lastValidGroup.matches[0].ratingChange = lastChange.toFixed(2);
       }
 
@@ -184,31 +183,59 @@ function Row(props) {
       <TableContainer component={Paper}>
         <Table size="small">
           <TableBody>
-            <TableRow>
-              <TableCell>
-                <IconButton
-                  aria-label="expand row"
-                  size="small"
-                  onClick={() => setOpen(!open)}
-                >
-                  {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-                </IconButton>
-              </TableCell>
-              <TableCell width={170}>{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
-              <TableCell width={90}> {item.matches[item.matches.length - 1].own_rating_value.toFixed(0)} ±{item.matches[item.matches.length - 1].own_rating_deviation.toFixed(0)} </TableCell>
-              <TableCell>{(item.odds === 1.0 || item.odds === 0.0) ? '' : (item.odds * 100).toFixed(1) + '%'}</TableCell>
-              <TableCell>{item.wins} - {item.losses}</TableCell>
-            </TableRow>
-            <TableRow>
-              <TableCell colSpan={2}><Button sx={{ marginLeft: '5px' }} onMouseDown={(event) => { onProfileClick(event) }} component={Link} variant="link" >{item.opponent_name}</Button></TableCell>
-              <TableCell>
-                {item.matches[item.matches.length - 1].opponent_rating_value.toFixed(0)} ±{item.matches[item.matches.length - 1].opponent_rating_deviation.toFixed(0)}
-              </TableCell>
-              <TableCell>{item.matches[0].opponent_character}</TableCell>
-              <TableCell>
-                {Utils.colorChangeForRating(item.ratingChange.toFixed(1))}
-              </TableCell>
-            </TableRow>
+            {item.opponent_id === "0" ? (
+              <React.Fragment>
+                <TableRow>
+                  <TableCell>
+                    <IconButton
+                      aria-label="expand row"
+                      size="small"
+                      onClick={() => setOpen(!open)}
+                    >
+                      {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                    </IconButton>
+                  </TableCell>
+                  <TableCell width={170}>{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
+                  <TableCell width={90}></TableCell>
+                  <TableCell></TableCell>
+                  <TableCell>{item.wins} - {item.losses}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={2}><Button sx={{ marginLeft: '5px' }} component={Link} variant="link" >{item.opponent_name}</Button></TableCell>
+                  <TableCell></TableCell>
+                  <TableCell>{item.matches[0].opponent_character}</TableCell>
+                  <TableCell></TableCell>
+                </TableRow>
+              </React.Fragment>
+            ) : (
+              <React.Fragment>
+                <TableRow>
+                  <TableCell>
+                    <IconButton
+                      aria-label="expand row"
+                      size="small"
+                      onClick={() => setOpen(!open)}
+                    >
+                      {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                    </IconButton>
+                  </TableCell>
+                  <TableCell width={170}>{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
+                  <TableCell width={90}> {item.matches[item.matches.length - 1].own_rating_value.toFixed(0)} ±{item.matches[item.matches.length - 1].own_rating_deviation.toFixed(0)} </TableCell>
+                  <TableCell>{(item.odds === 1.0 || item.odds === 0.0) ? '' : (item.odds * 100).toFixed(1) + '%'}</TableCell>
+                  <TableCell>{item.wins} - {item.losses}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell colSpan={2}><Button sx={{ marginLeft: '5px' }} onMouseDown={(event) => { onProfileClick(event) }} component={Link} variant="link" >{item.opponent_name}</Button></TableCell>
+                  <TableCell>
+                    {item.matches[item.matches.length - 1].opponent_rating_value.toFixed(0)} ±{item.matches[item.matches.length - 1].opponent_rating_deviation.toFixed(0)}
+                  </TableCell>
+                  <TableCell>{item.matches[0].opponent_character}</TableCell>
+                  <TableCell>
+                    {Utils.colorChangeForRating(item.ratingChange.toFixed(1))}
+                  </TableCell>
+                </TableRow>
+              </React.Fragment>
+            )}
             <TableRow id={item.timestamp}>
               <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
                 <Collapse in={open} timeout="auto" unmountOnExit>
@@ -225,7 +252,7 @@ function Row(props) {
                     <TableBody>
                       {item.matches.map((item, i) => (
                         <TableRow key={item.timestamp}>
-                          {item.opponent_id === 0 ? (
+                          {item.opponent_id === "0" ? (
                             <React.Fragment>
                               <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
                               <TableCell align="right"></TableCell>
@@ -253,7 +280,6 @@ function Row(props) {
         </Table>
       </TableContainer>
     );
-
   } else {
     return (
       <React.Fragment>
@@ -267,7 +293,7 @@ function Row(props) {
               {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
             </IconButton>
           </TableCell>
-          {item.opponent_id === 0 ? (
+          {item.opponent_id === "0" ? (
             <React.Fragment>
               <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
               <TableCell align="right">{item.floor === '99' ? 'C' : item.floor}</TableCell>
@@ -380,7 +406,6 @@ const Player = () => {
   useEffect(() => {
 
     window.scrollTo(0, 0);
-
     const fetchPlayerAndHistory = async () => {
       setLoading(true);
       try {
