@@ -27,12 +27,12 @@ const TopPlayer = () => {
   const [ranking, setRanking] = useState([]);
 
   const [showNext, setShowNext] = useState(true);
-  
+
   let { char_short, count, offset } = useParams();
 
   const [charLong, setCharLong] = useState();
 
-  const [loading, setLoading ] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -46,13 +46,13 @@ const TopPlayer = () => {
           + '?count=' + (count ? count : defaultCount)
           + '&offset=' + (offset ? offset : 0);
         const response = await fetch(url);
-        
+
         // eslint-disable-next-line
         const result = await response.text().then(body => {
-          
+
           var parsed = JSONParse(body);
 
-          if(parsed.ranks.length === 0) {
+          if (parsed.ranks.length === 0) {
             //navigate(`/`);
             setCharLong("???");
             setRanking([]);
@@ -61,17 +61,17 @@ const TopPlayer = () => {
 
           setCharLong(parsed.ranks[0].char_long);
 
-          for( var key in parsed.ranks ) {
+          for (var key in parsed.ranks) {
             parsed.ranks[key].rating = parsed.ranks[key].rating.toFixed(2);
             parsed.ranks[key].deviation = parsed.ranks[key].deviation.toFixed(2);
           }
 
-          if(parsed.ranks.length < (count ? count : defaultCount) || parsed.ranks.length === 1000) {
+          if (parsed.ranks.length < (count ? count : defaultCount) || parsed.ranks.length === 1000) {
             setShowNext(false);
           } else {
             setShowNext(true);
           }
-          
+
           setRanking(parsed.ranks);
 
           return parsed;
@@ -89,10 +89,10 @@ const TopPlayer = () => {
   function onPrev(event) {
     let nav_count = count ? parseInt(count) : defaultCount;
     let nav_offset = offset ? parseInt(offset) - parseInt(nav_count) : 0;
-    if(nav_count < 0) {
+    if (nav_count < 0) {
       nav_count = defaultCount;
     }
-    if(nav_offset < 0) {
+    if (nav_offset < 0) {
       nav_offset = 0;
     }
     navigate(`/top/${char_short}/${nav_count}/${nav_offset}`);
@@ -107,26 +107,26 @@ const TopPlayer = () => {
   return (
     <React.Fragment>
       <AppBar position="static"
-        style={{backgroundImage: "none"}}
-        sx={{backgroundColor:"secondary.main"}}
+        style={{ backgroundImage: "none" }}
+        sx={{ backgroundColor: "secondary.main" }}
       >
-        { loading ?
+        {loading ?
           <CircularProgress
             size={60}
             variant="indeterminate"
             disableShrink={true}
-            sx={{ position: 'absolute', top:'-1px', color:'white' }}
+            sx={{ position: 'absolute', top: '-1px', color: 'white' }}
           />
           : null
         }
-        <Box sx={{minHeight:100, paddingTop:'30px'}}>
-        <Typography align='center' variant="pageHeader">
-          {charLong} Leaderboard
-        </Typography>
+        <Box sx={{ minHeight: 100, paddingTop: '30px' }}>
+          <Typography align='center' variant="pageHeader">
+            {charLong} Leaderboard
+          </Typography>
         </Box>
       </AppBar>
       <Box m={4} maxWidth="700px">
-        <Box mx={3} maxWidth="500px" minWidth="500px" sx={{display: 'inline-block'}}>
+        <Box mx={3} maxWidth="500px" minWidth="400px" sx={{ display: 'inline-block' }}>
           <Button onClick={(event) => onPrev(event)}>Prev</Button>
           <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
         </Box>
@@ -135,16 +135,16 @@ const TopPlayer = () => {
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Rank</TableCell>
+                <TableCell sx={{px: 0, mx: 0}}></TableCell>
                 <TableCell>Player</TableCell>
-                <TableCell>Character</TableCell>
+                <TableCell>Char</TableCell>
                 <TableCell>Rating</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {ranking.map((player, index) => (
                 <TableRow key={index}>
-                  <TableCell>{player.rank}</TableCell>
+                  <TableCell sx={{px: 0, mx: 0, textAlign: 'center'}}>{player.rank}</TableCell>
                   <TableCell><Button component={Link} variant="link" to={`/player/${player.id}/${player.char_short}`}>{player.name}</Button></TableCell>
                   <TableCell>{player.char_short}</TableCell>
                   <TableCell><Box component={'span'} title={player.rating}>{Number(player.rating).toFixed(0)}</Box> <Box component={'span'} title={player.deviation}>±{Number(player.deviation).toFixed(0)}</Box></TableCell>
@@ -153,7 +153,7 @@ const TopPlayer = () => {
             </TableBody>
           </Table>
         </TableContainer>
-        <Box mx={3} maxWidth="500px" minWidth="500px" sx={{display: 'inline-block'}}>
+        <Box mx={3} maxWidth="500px" minWidth="400px" sx={{ display: 'inline-block' }}>
           <Button onClick={(event) => onPrev(event)}>Prev</Button>
           <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
         </Box>

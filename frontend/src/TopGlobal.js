@@ -27,10 +27,10 @@ const TopGlobal = () => {
   const [ranking, setRanking] = useState([]);
 
   const [showNext, setShowNext] = useState(true);
-  
+
   let { count, offset } = useParams();
 
-  const [loading, setLoading ] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -46,20 +46,20 @@ const TopGlobal = () => {
 
         // eslint-disable-next-line
         const result = await response.text().then(body => {
-          
+
           var parsed = JSONParse(body);
- 
-          for( var key in parsed.ranks ) {
+
+          for (var key in parsed.ranks) {
             parsed.ranks[key].rating = parsed.ranks[key].rating.toFixed(2);
             parsed.ranks[key].deviation = parsed.ranks[key].deviation.toFixed(2);
           }
 
-          if(parsed.ranks.length < (count ? count : defaultCount) || parsed.ranks.length === 1000) {
+          if (parsed.ranks.length < (count ? count : defaultCount) || parsed.ranks.length === 1000) {
             setShowNext(false);
           } else {
             setShowNext(true);
           }
-          
+
           setRanking(parsed.ranks);
 
           return parsed;
@@ -77,10 +77,10 @@ const TopGlobal = () => {
   function onPrev(event) {
     let nav_count = count ? parseInt(count) : defaultCount;
     let nav_offset = offset ? parseInt(offset) - parseInt(nav_count) : 0;
-    if(nav_count < 0) {
+    if (nav_count < 0) {
       nav_count = defaultCount;
     }
-    if(nav_offset < 0) {
+    if (nav_offset < 0) {
       nav_offset = 0;
     }
     navigate(`/top_global/${nav_count}/${nav_offset}`);
@@ -95,44 +95,44 @@ const TopGlobal = () => {
   return (
     <React.Fragment>
       <AppBar position="static"
-        style={{backgroundImage: "none"}}
-        sx={{backgroundColor:"secondary.main"}}
+        style={{ backgroundImage: "none" }}
+        sx={{ backgroundColor: "secondary.main" }}
       >
-        { loading ?
+        {loading ?
           <CircularProgress
             size={60}
             variant="indeterminate"
             disableShrink={true}
-            sx={{ position: 'absolute', top:'-1px', color:'white' }}
+            sx={{ position: 'absolute', top: '-1px', color: 'white' }}
           />
           : null
         }
-        <Box sx={{minHeight:100, paddingTop:'30px'}}>
-        <Typography align='center' variant="pageHeader">
-          Top Players
-        </Typography>
+        <Box sx={{ minHeight: 100, paddingTop: '30px' }}>
+          <Typography align='center' variant="pageHeader">
+            Top Players
+          </Typography>
         </Box>
       </AppBar>
       <Box m={4} maxWidth="700px">
-      <Box mx={3} maxWidth="500px" minWidth="500px" sx={{display: 'inline-block'}}>
-        <Button onClick={(event) => onPrev(event)}>Prev</Button>
-        <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
-      </Box>
-      <Button align="right" onClick={() => navigate(`/top_global/1000/0`)}>View All</Button>
+        <Box mx={3} maxWidth="500px" minWidth="400px" sx={{ display: 'inline-block' }}>
+          <Button onClick={(event) => onPrev(event)}>Prev</Button>
+          <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
+        </Box>
+        <Button align="right" onClick={() => navigate(`/top_global/1000/0`)}>View All</Button>
         <TableContainer component={Paper}>
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Rank</TableCell>
+                <TableCell sx={{px: 0, mx: 0}}></TableCell>
                 <TableCell>Player</TableCell>
-                <TableCell>Character</TableCell>
+                <TableCell>Char</TableCell>
                 <TableCell>Rating</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {ranking.map((player, index) => (
                 <TableRow key={index}>
-                  <TableCell>{player.rank}</TableCell>
+                  <TableCell sx={{px: 0, mx: 0, textAlign: 'center'}}>{player.rank}</TableCell>
                   <TableCell><TextButton component={Link} variant="link" to={`/player/${player.id}/${player.char_short}`}>{player.name}</TextButton></TableCell>
                   <TableCell>{player.char_short}</TableCell>
                   <TableCell><Box component={'span'} title={player.rating}>{Number(player.rating).toFixed(0)}</Box> <Box component={'span'} title={player.deviation}>±{Number(player.deviation).toFixed(0)}</Box></TableCell>
@@ -141,13 +141,12 @@ const TopGlobal = () => {
             </TableBody>
           </Table>
         </TableContainer>
-        <Box mx={3} maxWidth="500px" minWidth="500px" sx={{display: 'inline-block'}}>
+        <Box mx={3} maxWidth="500px" minWidth="400px" sx={{ display: 'inline-block' }}>
           <Button onClick={(event) => onPrev(event)}>Prev</Button>
           <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
         </Box>
         <Button align="right" onClick={() => navigate(`/top_global/1000/0`)}>View All</Button>
       </Box>
-      
     </React.Fragment>
   );
 };
