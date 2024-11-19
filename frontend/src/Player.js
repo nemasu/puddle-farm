@@ -194,7 +194,7 @@ function Row(props) {
                   {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
                 </IconButton>
               </TableCell>
-              <TableCell width={170}>{item.timestamp}</TableCell>
+              <TableCell width={170}>{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
               <TableCell width={90}> {item.matches[item.matches.length - 1].own_rating_value.toFixed(0)} ±{item.matches[item.matches.length - 1].own_rating_deviation.toFixed(0)} </TableCell>
               <TableCell>{(item.odds === 1.0 || item.odds === 0.0) ? '' : (item.odds * 100).toFixed(1) + '%'}</TableCell>
               <TableCell>{item.wins} - {item.losses}</TableCell>

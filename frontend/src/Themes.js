@@ -79,6 +79,7 @@ Themes.set('Sol', createTheme({
         styleOverrides: {
           root: {
             color: '#C00000',
+            borderWidth: '4px',
             variants: [
               {
                 props: { variant: 'link' },
@@ -188,6 +189,7 @@ Themes.set('Ky', createTheme({
       styleOverrides: {
         root: {
           color: '#DDDBD5',
+          borderWidth: '4px',
           variants: [
             {
               props: { variant: 'link'},
@@ -297,6 +299,7 @@ Themes.set('Ramlethal', createTheme({
       styleOverrides: {
         root: {
           color: '#DDDBD5',
+          borderWidth: '4px', //Only applies to 'outlined' variant
           variants: [
             {
               props: { variant: 'link'},
@@ -307,7 +310,7 @@ Themes.set('Ramlethal', createTheme({
                 justifyContent: 'left',
                 verticalAlign: 'baseline',
               }
-            }
+            },
           ],
         },
       },
@@ -406,6 +409,7 @@ Themes.set('Nagoriyuki', createTheme({
       styleOverrides: {
         root: {
           color: '#DDDBD5',
+          borderWidth: '4px',
           variants: [
             {
               props: { variant: 'link'},
@@ -515,6 +519,7 @@ Themes.set('Bedman?', createTheme({
       styleOverrides: {
         root: {
           color: '#A83B5E',
+          borderWidth: '4px',
           variants: [
             {
               props: { variant: 'link'},

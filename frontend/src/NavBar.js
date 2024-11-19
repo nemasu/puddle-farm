@@ -14,8 +14,6 @@ import TextField from '@mui/material/TextField';
 import SearchIcon from '@mui/icons-material/Search';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import { useNavigate } from 'react-router-dom';
-import Themes from './Themes';
-import { StorageUtils } from './Storage';
 
 var pages = [
   { name: 'Top', link: './top_global' },
@@ -31,8 +29,6 @@ function resetCharacters() {
   pages[1].list = [];
 }
 
-const themes = Array.from(Themes.keys());
-
 function NavBar() {
 
   const navigate = useNavigate();
@@ -40,8 +36,6 @@ function NavBar() {
   const [anchorElNav, setAnchorElNav] = React.useState(null);
 
   const [characterElNav, setCharacterElNav] = React.useState(null);
-
-  const [themeElNav, setThemeElNav] = React.useState(null);
 
   const [searchString, setSearchString] = useState('');
 
@@ -112,18 +106,6 @@ function NavBar() {
     setCharacterElNav(null);
   };
 
-  const handleOpenThemeNavMenu = (event) => {
-    setThemeElNav(event.currentTarget);
-  };
-  const handleCloseThemeNavMenu = (char) => {
-    setThemeElNav(null);
-
-    if (Array.from(themes.values()).includes(char)) {
-      StorageUtils.setTheme(char);
-      window.location.reload();
-    }
-  };
-
   return (
     <AppBar position="static" style={{ backgroundImage: "none" }}>
       <Container maxWidth="md">
@@ -189,37 +171,6 @@ function NavBar() {
               <SearchIcon style={{ marginTop: 5, fontSize: 25, display: 'block', cursor: 'pointer' }} onClick={handleSearchClick} />
               <ZoomInIcon style={{ fontSize: 25, cursor: 'pointer' }} onClick={handleExactSearchClick} />
             </Box>
-            <Button m={0}
-              component={Link}
-              onClick={handleOpenThemeNavMenu}
-              sx={{ my: 1.5, color: 'white', display: 'block' }
-              }> {/* Mobile view - theme button */}
-              Theme
-            </Button>
-            <Menu
-              id="menu-charbar"
-              anchorEl={themeElNav}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'left',
-              }}
-              keepMounted
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'left',
-              }}
-              open={Boolean(themeElNav)}
-              onClose={handleCloseThemeNavMenu}
-              sx={{ display: { xs: 'flex', md: 'none' } }}
-            >
-              <Box style={{ display: 'flex', flexWrap: 'wrap', maxWidth: '500px' }}>
-                {themes.map((char) => (
-                  <MenuItem component={Link} key={char} onClick={() => handleCloseThemeNavMenu(char)}>
-                    {char}
-                  </MenuItem>
-                ))}
-              </Box>
-            </Menu>
           </Box>
           <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>{/* Desktop view */}
             {pages.map((page) => (
@@ -279,37 +230,6 @@ function NavBar() {
               <SearchIcon style={{ marginTop: 5, fontSize: 25, display: 'block', cursor: 'pointer' }} onClick={handleSearchClick} />
               <ZoomInIcon style={{ fontSize: 25, cursor: 'pointer' }} onClick={handleExactSearchClick} />
             </Box>
-            <Button m={0}
-              component={Link}
-              onClick={handleOpenThemeNavMenu}
-              sx={{ my: 1.5, color: 'white', display: 'block' }}
-            >
-              Theme
-            </Button> {/* Desktop view - theme button */}
-            <Menu
-              id="menu-charbar"
-              anchorEl={themeElNav}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'left',
-              }}
-              keepMounted
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'left',
-              }}
-              open={Boolean(themeElNav)}
-              onClose={handleCloseThemeNavMenu}
-              sx={{ display: { xs: 'none', md: 'flex' } }}
-            >
-              <Box style={{ display: 'flex', flexWrap: 'wrap', maxWidth: '500px' }}>
-                {themes.map((char) => (
-                  <MenuItem component={Link} key={char} onClick={() => handleCloseThemeNavMenu(char)}>
-                    {char}
-                  </MenuItem>
-                ))}
-              </Box>
-            </Menu>
           </Box>
         </Toolbar>
       </Container>
