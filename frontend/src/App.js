@@ -32,7 +32,7 @@ const App = () => {
       <CssBaseline enableColorScheme />
       <NavBar />
       {isMobile ? (
-        <Box sx={{ minWidth: 300, display: 'block' }}> {/* Mobile View */}
+        <Box sx={{ display: 'block' }}> {/* Mobile View */}
           <Routes>
             <Route exact path="/" element={<TopGlobal />} />
             <Route path="/about" element={<About />} />
@@ -47,7 +47,7 @@ const App = () => {
           </Routes>
         </Box>
       ) : (
-        <Box sx={{ minWidth: 1300, display: 'block' }}> {/* Desktop View */}
+        <Box sx={{ display: 'block' }}> {/* Desktop View */}
           <Routes>
             <Route exact path="/" element={<TopGlobal />} />
             <Route path="/about" element={<About />} />

@@ -624,7 +624,7 @@ const Player = () => {
         sx={{ backgroundColor: "secondary.main" }}
       >
         {isMobile ? (
-          <Box sx={{ minWidth: 400, minHeight: 50, display: { xs: 'block', md: 'none' } }}> {/* Mobile View */}
+          <Box sx={{ minHeight: 50, display: { xs: 'block', md: 'none' } }}> {/* Mobile View */}
             {player ? (
               <Typography textAlign={'center'} variant="pageHeader" fontSize={30}>
                 {player.name}
@@ -689,7 +689,7 @@ const Player = () => {
       </AppBar>
 
       {isMobile ? (
-        <Box sx={{ minWidth: 400, display: { xs: 'block', md: 'none' } }}> {/* Mobile View */}
+        <Box sx={{ display: { xs: 'block', md: 'none' } }}> {/* Mobile View */}
           <Box m={4}>
             <Box>
               {currentCharData ? (
@@ -817,7 +817,7 @@ const Player = () => {
 
         </Box>
       ) : (
-        <Box sx={{ display: { xs: 'none', md: 'flex' }, flexWrap: 'nowrap' }}> {/* Desktop View */}
+        <Box sx={{ display: { xs: 'none', md: 'flex', minWidth: 1300}, flexWrap: 'nowrap' }}> {/* Desktop View */}
           <Box m={4} sx={{ width: .7 }}>
             <Box sx={{ minWidth: 1000, maxWidth: 1100 }}>
               {currentCharData ? (

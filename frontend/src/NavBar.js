@@ -107,7 +107,7 @@ function NavBar() {
   };
 
   return (
-    <AppBar position="static" style={{ backgroundImage: "none", minWidth: '300px' }}>
+    <AppBar position="static" style={{ backgroundImage: "none"}}>
       <Container>
         <Toolbar variant='dense' disableGutters>
           <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>{/* Mobile view */}
