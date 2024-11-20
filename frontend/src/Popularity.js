@@ -35,7 +35,7 @@ const Popularity = () => {
               It adds up to over 100% because players can use multiple characters.
             </Typography>
           </Box>
-          <Box display={'flex'}>
+          <Box display={'flex'} flexWrap={'wrap'}>
             {popularity && popularity.per_player.reduce((acc, e, index) => {
               const groupIndex = Math.floor(index / 10);
               if (!acc[groupIndex]) {
@@ -78,7 +78,7 @@ const Popularity = () => {
               For example: If a character has a popularity of 10%, it means that 10% of the games are with that character.<br />
             </Typography>
           </Box>
-          <Box display={'flex'}>
+          <Box display={'flex'} flexWrap={'wrap'}>
             {popularity && popularity.per_character.reduce((acc, e, index) => {
               const groupIndex = Math.floor(index / 10);
               if (!acc[groupIndex]) {

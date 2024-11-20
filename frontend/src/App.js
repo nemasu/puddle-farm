@@ -32,7 +32,7 @@ const App = () => {
       <CssBaseline enableColorScheme />
       <NavBar />
       {isMobile ? (
-        <Box sx={{ minWidth: 400, display: 'block' }}> {/* Mobile View */}
+        <Box sx={{ minWidth: 300, display: 'block' }}> {/* Mobile View */}
           <Routes>
             <Route exact path="/" element={<TopGlobal />} />
             <Route path="/about" element={<About />} />
@@ -66,15 +66,11 @@ const App = () => {
         <Typography variant="h7" align="center" display={'block'}>
           Puddle Farm is an open source project. Feel free to contribute!
         </Typography>
-
-        <Typography fontSize={13} align="center" display={'block'}>
-          Don't worry, features are still being added!
-        </Typography>
       </Box>
       <Box sx={{ minHeight: 100, textAlign: 'center' }}>
-        <Button component={Link} variant="link" target="_blank" to="https://github.com/nemasu/puddle-farm"><GitHubIcon style={{ transform: 'scale(0.65)' }} /></Button>
-        <Button component={Link} variant="link" target="_blank" to="https://discord.gg/vY4mE8exXB"><DiscordIcon style={{ transform: 'scale(0.65)' }} /></Button>
-        <Button component={Link} variant="link" target="_blank" to="https://patreon.com/nemasu"><PatreonIcon style={{ transform: 'scale(0.55)', position: 'relative', top: '7px' }} /></Button>
+        <Button component={Link} variant="link" target="_blank" href="https://github.com/nemasu/puddle-farm" to="https://github.com/nemasu/puddle-farm"><GitHubIcon style={{ transform: 'scale(0.65)' }} /></Button>
+        <Button component={Link} variant="link" target="_blank" href="https://discord.gg/vY4mE8exXB" to="https://discord.gg/vY4mE8exXB"><DiscordIcon style={{ transform: 'scale(0.65)' }} /></Button>
+        <Button component={Link} variant="link" target="_blank" href="https://patreon.com/nemasu" to="https://patreon.com/nemasu"><PatreonIcon style={{ transform: 'scale(0.55)', position: 'relative', top: '7px' }} /></Button>
       </Box>
     </ThemeManager>
   );

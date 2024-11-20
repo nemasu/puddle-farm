@@ -26,7 +26,7 @@ const Matchup = () => {
           <Typography variant="h6" gutterBottom>
             Matchup Table (past 3 months)
           </Typography>
-          <TableContainer component={Paper} sx={{ maxHeight: 1000 }}>
+          <TableContainer component={Paper} sx={{ maxHeight: '70vh'}}>
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
