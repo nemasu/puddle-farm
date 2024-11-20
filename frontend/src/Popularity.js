@@ -112,7 +112,7 @@ const Popularity = () => {
           <Box>Total games per character: {popularity && (popularity['per_character_total'] * 2).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</Box>
         </Box>
         <Box>
-          <Typography>Statistics are updated once an hour.</Typography>
+          <Typography>Statistics are updated once a day.</Typography>
           {popularity && (
             <Typography variant="body1">
               Last updated: {Utils.formatUTCToLocal(popularity['last_update'])}

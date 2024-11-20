@@ -1059,7 +1059,7 @@ async fn ratings(
 async fn player_matchups(
     State(pools): State<AppState>,
     Path((player_id, char_id)): Path<(i64, String)>,
-) -> Result<Json<MatchupResponse>, (StatusCode, String)> {
+) -> Result<Json<MatchupCharResponse>, (StatusCode, String)> {
     let mut db = pools.db_pool.get().await.unwrap();
 
     let char_id = match CHAR_NAMES.iter().position(|(c, _)| *c == char_id) {
@@ -1109,9 +1109,9 @@ async fn player_matchups(
         .await
         .unwrap();
 
-    Ok(Json(MatchupResponse {
+    Ok(Json(MatchupCharResponse {
         char_short: CHAR_NAMES[char_id as usize].1.to_string(),
-    char_name: CHAR_NAMES[char_id as usize].0.to_string(),
+        char_name: CHAR_NAMES[char_id as usize].0.to_string(),
         matchups: char_matchup
             .iter()
             .enumerate()
@@ -1327,10 +1327,10 @@ async fn popularity(
         .expect("Error getting popularity_total");
 
     let last_update = redis::cmd("GET")
-        .arg("last_update_hourly")
+        .arg("last_update_daily")
         .query_async::<String>(&mut *redis)
         .await
-        .expect("Error getting last_update_hourly");
+        .expect("Error getting last_update_daily");
 
     Ok(Json(PopularityResult {
         per_player: per_player
@@ -1355,6 +1355,11 @@ async fn popularity(
 
 #[derive(Serialize)]
 struct MatchupResponse {
+    last_update: String,
+    data: Vec<MatchupCharResponse>,
+}
+#[derive(Serialize)]
+struct MatchupCharResponse {
     char_name: String,
     char_short: String,
     matchups: Vec<MatchupEntry>, //Wins, Total Games
@@ -1370,7 +1375,7 @@ struct MatchupEntry {
 
 async fn matchups(
     State(pools): State<AppState>,
-) -> Result<Json<Vec<MatchupResponse>>, (StatusCode, String)> {
+) -> Result<Json<MatchupResponse>, (StatusCode, String)> {
     let mut redis = pools.redis_pool.get().await.unwrap();
 
     let mut matchups = vec![];
@@ -1389,7 +1394,7 @@ async fn matchups(
         let char_name = CHAR_NAMES[c].1.to_string();
         let char_short = CHAR_NAMES[c].0.to_string();
 
-        let matchup = MatchupResponse {
+        let matchup = MatchupCharResponse {
             char_name,
             char_short,
             matchups: matchups_data
@@ -1407,7 +1412,16 @@ async fn matchups(
         matchups.push(matchup);
     }
 
-    Ok(Json(matchups))
+    let last_update = redis::cmd("GET")
+        .arg("last_update_daily")
+        .query_async::<String>(&mut *redis)
+        .await
+        .expect("Error getting last_update_daily");
+
+    Ok(Json(MatchupResponse {
+        last_update,
+        data: matchups,
+    }))
 }
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 5)]
@@ -1457,6 +1471,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .with_max_level(tracing::Level::INFO)
                 .init();
             pull::do_hourly_update_once(state).await
+        }
+        Some("daily") => {
+            tracing_subscriber::fmt()
+                .with_max_level(tracing::Level::INFO)
+                .init();
+            pull::do_daily_update_once(state).await
         }
         _ => {
             // No args, run the web server

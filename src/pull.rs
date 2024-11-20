@@ -99,6 +99,51 @@ pub async fn pull_and_update_continuous(state: crate::AppState) {
                     info!("Hourly update - Done");
                 }
             }
+
+            let mut redis_connection = processing_state.redis_pool.get().await.unwrap();
+            
+            //Get last_update_daily from redis
+            let last_update_daily: Result<String, redis::RedisError> = redis::cmd("GET")
+                .arg("last_update_daily")
+                .query_async(&mut *redis_connection)
+                .await;
+
+            let last_update_daily = match last_update_daily {
+                Ok(s) => s,
+                Err(_) => {
+                    //If last_update_daily doesn't exist, initialize to now minus 2 days
+                    chrono::DateTime::from_timestamp(
+                        chrono::Utc::now().naive_utc().and_utc().timestamp() - 172800,
+                        0,
+                    )
+                    .unwrap()
+                    .naive_utc()
+                    .to_string()
+                }
+            };
+
+            //Parse last_update_daily
+            let last_update_daily =
+                NaiveDateTime::parse_from_str(&last_update_daily, "%Y-%m-%d %H:%M:%S").unwrap();
+
+            if last_update_daily < Utc::now().naive_utc() - chrono::Duration::days(1) {
+                info!("Daily update");
+                if let Err(e) = connection
+                    .transaction::<_, diesel::result::Error, _>(|conn| {
+                        async move {
+                            do_daily_update(conn, &mut redis_connection).await.unwrap();
+                            Ok(())
+                        }
+                        .scope_boxed()
+                    })
+                    .await
+                {
+                    error!("Daily update failed: {e}");
+                } else {
+                    info!("Daily update - Done");
+                }
+            };
+
             info!("Processing - done");
         }
     });
@@ -161,6 +206,22 @@ pub async fn do_hourly_update_once(state: crate::AppState) {
         .unwrap();
 }
 
+pub async fn do_daily_update_once(state: crate::AppState) {
+    let mut connection = state.db_pool.get().await.unwrap();
+    let mut redis_connection = state.redis_pool.get().await.unwrap();
+
+    connection
+        .transaction::<_, diesel::result::Error, _>(|conn| {
+            async move {
+                do_daily_update(conn, &mut redis_connection).await.unwrap();
+                Ok(())
+            }
+            .scope_boxed()
+        })
+        .await
+        .unwrap();
+}
+
 async fn do_hourly_update(
     conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
     redis_connection: &mut PooledConnection<'_, RedisConnectionManager>,
@@ -201,6 +262,34 @@ async fn do_hourly_update(
     Ok(())
 }
 
+async fn do_daily_update(
+    conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
+    redis_connection: &mut PooledConnection<'_, RedisConnectionManager>,
+) -> Result<(), String> {
+    if let Err(e) = update_popularity(conn, redis_connection).await {
+        error!("update_popularity failed: {e}");
+    }
+
+    if let Err(e) = update_matchups(conn, redis_connection).await {
+        error!("update_matchups failed: {e}");
+    }
+
+    //Now
+    let last_update =
+        chrono::DateTime::from_timestamp(chrono::Utc::now().naive_utc().and_utc().timestamp(), 0)
+            .unwrap()
+            .naive_utc()
+            .to_string();
+
+    redis::cmd("SET")
+        .arg("last_update_daily")
+        .arg(last_update)
+        .query_async::<String>(&mut **redis_connection)
+        .await
+        .expect("Error setting last_update_daily");
+    Ok(())
+}
+
 #[derive(QueryableByName, serde::Serialize, serde::Deserialize)]
 pub struct Matchup {
     #[diesel(sql_type = diesel::sql_types::SmallInt)]
@@ -238,6 +327,8 @@ async fn update_matchups(
                 FROM games
                 WHERE char_a = $1
                 AND timestamp > now() - interval '3 month'
+                AND deviation_a < 30.0
+                AND deviation_b < 30.0
                 UNION ALL
                 SELECT 
                     char_a as opponent_char, 
@@ -246,6 +337,8 @@ async fn update_matchups(
                 FROM games
                 WHERE char_b = $1
                 AND timestamp > now() - interval '3 month'
+                AND deviation_a < 30.0
+                AND deviation_b < 30.0
             ) as combined_results
             GROUP BY opponent_char
             ORDER BY opponent_char;
@@ -543,7 +636,6 @@ async fn update_stats(
         .unwrap();
     let one_hour_players = one_hour_players[0].count;
 
-       
     redis::cmd("SET")
         .arg("total_games")
         .arg(total_games)

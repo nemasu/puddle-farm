@@ -749,6 +749,9 @@ const Player = () => {
             <Typography sx={{ marginTop: 10 }} variant="h6" gutterBottom>
               Matchup Table (past 3 months)
             </Typography>
+            <Typography variant='body1'>
+              This includes all games played in the past 3 months.
+            </Typography>
             <Typography p={2} variant="body1">
               Win Rate
             </Typography>
@@ -891,6 +894,9 @@ const Player = () => {
 
             <Typography sx={{ marginTop: 10 }} variant="h6" gutterBottom>
               Matchup Table (past 3 months)
+            </Typography>
+            <Typography variant='body1'>
+              This includes all games played in the past 3 months.
             </Typography>
             <Typography p={2} variant="body1">
               Win Rate

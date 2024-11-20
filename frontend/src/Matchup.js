@@ -26,18 +26,22 @@ const Matchup = () => {
           <Typography variant="h6" gutterBottom>
             Matchup Table (past 3 months)
           </Typography>
-          <TableContainer component={Paper} sx={{ maxHeight: '70vh'}}>
+          <Typography variant="body1">
+            Win rates are calculated by the number of wins divided by the total number of games played.<br />
+            Both characters need to have a deviation of under 30 for the matchup to be included.
+          </Typography>
+          <TableContainer component={Paper} sx={{ marginTop: '20px', maxHeight: '70vh' }}>
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>Character</TableCell>
-                  {matchup ? (matchup.length > 0 && matchup[0].matchups.map((matchup, index) => (
+                  {matchup ? (matchup.data.length > 0 && matchup.data[0].matchups.map((matchup, index) => (
                     <TableCell key={index}>{matchup.char_short}</TableCell>
                   ))) : null}
                 </TableRow>
               </TableHead>
               <TableBody>
-                {matchup ? (matchup.map((row, rowIndex) => (
+                {matchup ? (matchup.data.map((row, rowIndex) => (
                   <TableRow key={rowIndex}>
                     <TableCell component="th" scope="row" sx={{ position: 'sticky', left: 0, background: 'black', zIndex: 1 }}>
                       {row.char_name} ({row.char_short})
@@ -52,7 +56,12 @@ const Matchup = () => {
               </TableBody>
             </Table>
           </TableContainer>
-          <Typography marginTop={5}>Statistics are updated once an hour.</Typography>
+          <Typography marginTop={5}>Statistics are updated once a day.</Typography>
+          {matchup ? (
+            <Typography variant="body1">
+              Last updated: {Utils.formatUTCToLocal(matchup['last_update'])}
+            </Typography>
+          ) : null}
         </Paper>
       </Box>
     </React.Fragment>
