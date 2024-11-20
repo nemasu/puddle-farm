@@ -690,7 +690,7 @@ const Player = () => {
 
       {isMobile ? (
         <Box sx={{ display: { xs: 'block', md: 'none' } }}> {/* Mobile View */}
-          <Box m={4}>
+          <Box m={1}>
             <Box>
               {currentCharData ? (
                 <React.Fragment>
