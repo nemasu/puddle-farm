@@ -1,6 +1,6 @@
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import { CircularProgress, useTheme, useMediaQuery } from '@mui/material';
+import { CircularProgress, useTheme, useMediaQuery, styled } from '@mui/material';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -37,6 +37,19 @@ import { Line } from 'react-chartjs-2';
 import { StorageUtils } from './Storage';
 import { Utils } from './Utils';
 /* global BigInt */
+
+//This is to apply the custom tag CSS class to the Box component
+//These are common styles to all tags
+const CustomBox = styled(Box)(({ theme }) => ({
+  borderRadius: '8px',
+  padding: '6px 8px',
+  display: 'inline-block',
+  marginLeft: '5px',
+  marginRight: '5px',
+  top: '-4px',
+  position: 'relative',
+  fontSize: '1rem',
+}));
 
 ChartJS.register(
   CategoryScale,
@@ -407,6 +420,8 @@ const Player = () => {
 
   const [matchups, setMatchups] = useState(null);
 
+  const [tags, setTags] = useState(null);
+
   let player_id_checked = player_id;
   if (player_id_checked.match(/[a-zA-Z]/)) {
     player_id_checked = BigInt('0x' + player_id_checked);
@@ -582,6 +597,19 @@ const Player = () => {
             }
           }
         }
+
+
+        const tags = await fetch(API_ENDPOINT + '/tags/' + player_id_checked);
+        if (tags.status === 200) {
+          const tags_result = await tags.json();
+          if (tags_result !== null) {
+            for (var tkey in tags_result.tags) {
+              tags_result.tags[tkey].style = JSON.parse(tags_result.tags[tkey].style);
+            }
+            setTags(tags_result);
+          }
+        }
+
         setLoading(false);
 
       } catch (error) {
@@ -620,7 +648,6 @@ const Player = () => {
         />
         : null
       }
-
       <AppBar position="static"
         style={{ backgroundImage: "none" }}
         sx={{ backgroundColor: "secondary.main" }}
@@ -628,19 +655,25 @@ const Player = () => {
         {isMobile ? (
           <Box sx={{ minHeight: 50, display: { xs: 'block', md: 'none' } }}> {/* Mobile View */}
             {player ? (
-              <Typography textAlign={'center'} variant="pageHeader" fontSize={30}>
-                {player.name}
-                <Typography variant="platform">
-                  {player.platform}
-                </Typography>
-                {player.top_global !== 0 ? (
-                  <Typography variant="global_rank">
-                    #{player.top_global} Overall
+              <React.Fragment>
+                <Typography textAlign={'center'} variant="pageHeader" fontSize={30}>
+                  {tags ? tags.tags.map((e, i) => (
+                    <CustomBox key={i} className={e.style}>
+                      {e.tag}
+                    </CustomBox>
+                  )) : null}
+                  {player.name}
+                  <Typography variant="platform">
+                    {player.platform}
                   </Typography>
-                ) : null}
-              </Typography>
+                  {player.top_global !== 0 ? (
+                    <Typography variant="global_rank">
+                      #{player.top_global} Overall
+                    </Typography>
+                  ) : null}
+                </Typography>
+              </React.Fragment>
             ) : null}
-
             {alias && alias.length > 0 ? (
               <Box fontSize={17}>
                 <Typography variant='platform' sx={{ position: 'relative', top: '0px', borderRadius: '5px', py: '5px' }} display={'inline-block'}>
@@ -659,19 +692,26 @@ const Player = () => {
         ) : (
           <Box sx={{ minHeight: 100, paddingTop: '30px', display: { xs: 'none', md: 'block' } }}> {/* Desktop View */}
             {player ? (
-              <Typography align='center' variant="pageHeader" fontSize={30}>
-                {player.name}
-                <Typography variant="platform">
-                  {player.platform}
-                </Typography>
-                {player.top_global !== 0 ? (
-                  <Typography variant="global_rank">
-                    #{player.top_global} Overall
-                  </Typography>
-                ) : null}
-              </Typography>
-            ) : null}
+              <React.Fragment>
+                <Typography align='center' variant="pageHeader" fontSize={30}>
+                  {tags ? tags.tags.map((e, i) => (
+                    <CustomBox key={i} style={e.style}>
+                      {e.tag}
+                    </CustomBox>
+                  )) : null}
+                  {player.name}
 
+                  <Typography variant="platform">
+                    {player.platform}
+                  </Typography>
+                  {player.top_global !== 0 ? (
+                    <Typography variant="global_rank">
+                      #{player.top_global} Overall
+                    </Typography>
+                  ) : null}
+                </Typography>
+              </React.Fragment>
+            ) : null}
             {alias && alias.length > 0 ? (
               <Box align='center' fontSize={17}>
                 <Typography variant='platform' sx={{ position: 'relative', top: '0px', borderRadius: '5px', py: '5px' }} display={'inline-block'}>
@@ -689,7 +729,6 @@ const Player = () => {
           </Box>
         )}
       </AppBar>
-
       {isMobile ? (
         <Box sx={{ display: { xs: 'block', md: 'none' } }}> {/* Mobile View */}
           <Box m={1}>
@@ -704,7 +743,6 @@ const Player = () => {
                       </Typography>
                     ) : null}
                   </Typography>
-
                   {currentCharData.top_rating.value !== 0 ? (
                     <React.Fragment>
                       <Typography variant='h7'>
@@ -713,7 +751,6 @@ const Player = () => {
                       <br />
                     </React.Fragment>
                   ) : null}
-
                   {currentCharData.top_defeated.value !== 0.0 ? (
                     <Typography variant='h7'>
                       Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} variant="link" onMouseDown={(event) => onProfileClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
@@ -722,20 +759,17 @@ const Player = () => {
 
                 </React.Fragment>
               ) : null}
-
               {history ? (
                 <React.Fragment>
                   <Box mx={3}>
                     <Button onClick={(event) => onPrev(event)}>Prev</Button>
                     <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
                   </Box>
-
                   {history.map((item, i) => (
                     <Box py={0.3} key={i}>
                       <Row key={i} item={item} isMobile={true} />
                     </Box>
                   ))}
-
                   <Box mx={3}>
                     <Button onClick={(event) => onPrev(event)}>Prev</Button>
                     <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
@@ -743,11 +777,9 @@ const Player = () => {
                 </React.Fragment>
               ) : null}
             </Box>
-
             {lineChartData ? (
               <Line options={lineChartOptions} data={lineChartData} />
             ) : null}
-
             {matchups ? (
               <React.Fragment>
                 <Typography sx={{ marginTop: 10 }} variant="h6" gutterBottom>
@@ -759,14 +791,11 @@ const Player = () => {
                 <Typography p={2} variant="body1">
                   Win Rate
                 </Typography>
-
                 <Box component={Paper} sx={{ maxWidth: 350 }}>
                   <Typography p={2} variant='body1'>
                     {Utils.colorChangeForPercent(((matchups.total_wins / matchups.total_games) * 100).toFixed(2))} ( {matchups.total_wins} / {matchups.total_games - matchups.total_wins} )
                   </Typography>
                 </Box>
-
-
                 <TableContainer component={Paper} sx={{ maxWidth: 350 }}>
                   <Table stickyHeader>
                     <TableHead>
@@ -799,7 +828,6 @@ const Player = () => {
                 </TableContainer>
               </React.Fragment>
             ) : null}
-
           </Box>
           <Box marginLeft={10} marginTop={13} sx={{ width: .18, maxWidth: '235px' }}>
             {player && player.id !== 0 ? (
@@ -821,10 +849,8 @@ const Player = () => {
                 <hr style={{ marginTop: 10 }} />
               </React.Fragment>
             ) : null}
-
             {hideClaim ? null : (<ClaimDialog playerId={player_id_checked} setLoading={setLoading} API_ENDPOINT={API_ENDPOINT} />)}
           </Box>
-
         </Box>
       ) : (
         <Box sx={{ display: { xs: 'none', md: 'flex', minWidth: 1300 }, flexWrap: 'nowrap' }}> {/* Desktop View */}
@@ -858,7 +884,6 @@ const Player = () => {
 
                 </React.Fragment>
               ) : null}
-
               {history ? (
                 <React.Fragment>
                   <Box mx={3}>
@@ -898,7 +923,6 @@ const Player = () => {
             {lineChartData ? (
               <Line options={lineChartOptions} data={lineChartData} />
             ) : null}
-
             {matchups ? (
               <React.Fragment>
                 <Typography sx={{ marginTop: 10 }} variant="h6" gutterBottom>
@@ -910,13 +934,11 @@ const Player = () => {
                 <Typography p={2} variant="body1">
                   Win Rate
                 </Typography>
-
                 <Box component={Paper} sx={{ maxWidth: 350 }}>
                   <Typography p={2} variant='body1'>
                     {Utils.colorChangeForPercent(((matchups.total_wins / matchups.total_games) * 100).toFixed(2))} ( {matchups.total_wins} / {matchups.total_games - matchups.total_wins} )
                   </Typography>
                 </Box>
-
                 <TableContainer component={Paper} sx={{ maxWidth: 350 }}>
                   <Table stickyHeader>
                     <TableHead>
@@ -949,7 +971,6 @@ const Player = () => {
                 </TableContainer>
               </React.Fragment>
             ) : null}
-
           </Box>
           <Box marginLeft={10} marginTop={13} sx={{ width: .18, maxWidth: '235px' }}>
             {player && player.id !== 0 ? (
@@ -971,10 +992,8 @@ const Player = () => {
                 <hr style={{ marginTop: 10 }} />
               </React.Fragment>
             ) : null}
-
             {hideClaim ? null : (<ClaimDialog playerId={player_id_checked} setLoading={setLoading} API_ENDPOINT={API_ENDPOINT} />)}
           </Box>
-
         </Box>
       )}
     </React.Fragment>

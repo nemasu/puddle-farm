@@ -1424,6 +1424,40 @@ async fn matchups(
     }))
 }
 
+#[derive(Serialize)]
+struct TagsResponse {
+    tags: Vec<TagDef>,
+}
+#[derive(Serialize)]
+struct TagDef {
+    tag: String,
+    style: String,
+}
+
+async fn tags(
+    State(pools): State<AppState>,
+    Path(player_id): Path<i64>,
+) -> Result<Json<TagsResponse>, (StatusCode, String)> {
+    let mut db = pools.db_pool.get().await.unwrap();
+
+    let tags: Vec<models::Tag> = schema::tags::table
+        .select(schema::tags::all_columns)
+        .filter(schema::tags::player_id.eq(player_id))
+        .load(&mut db)
+        .await
+        .expect("Error loading tags");
+
+    let tags: Vec<TagDef> = tags
+        .iter()
+        .map(|t| TagDef {
+            tag: t.tag.clone(),
+            style: t.style.clone(),
+        })
+        .collect();
+
+    Ok(Json(TagsResponse { tags }))
+}
+
 #[tokio::main(flavor = "multi_thread", worker_threads = 5)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().expect("Failed to read .env file");
@@ -1502,6 +1536,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/popularity", get(popularity))
                 .route("/api/matchups", get(matchups))
                 .route("/api/matchups/:player_id/:char_id", get(player_matchups))
+                .route("/api/tags/:player_id", get(tags))
                 .with_state(state);
 
             if cfg!(debug_assertions) {

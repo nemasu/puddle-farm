@@ -13,7 +13,7 @@ use diesel::{
     prelude::*,
 };
 use crate::schema::{
-    self, character_ranks, games, global_ranks, player_names, player_ratings, players,
+    self, character_ranks, games, global_ranks, player_names, player_ratings, players, tags
 };
 
 use chrono::NaiveDateTime;
@@ -122,4 +122,12 @@ pub struct Player {
     pub status: Option<Status>,
     pub api_key: Option<String>,
     pub rcode_check_code: Option<String>,
+}
+
+#[derive(Selectable, Insertable, Queryable)]
+pub struct Tag {
+    pub id: i32,
+    pub player_id: i64,
+    pub tag: String,
+    pub style: String,
 }

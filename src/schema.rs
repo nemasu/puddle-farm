@@ -84,6 +84,15 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    tags (id) {
+        id -> Int4,
+        player_id -> Int8,
+        tag -> Text,
+        style -> Text,
+    }
+}
+
 diesel::joinable!(character_ranks -> players (id));
 diesel::joinable!(global_ranks -> players (id));
 diesel::joinable!(player_names -> players (id));
@@ -97,4 +106,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     player_names,
     player_ratings,
     players,
+    tags,
 );

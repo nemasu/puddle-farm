@@ -41,15 +41,15 @@ const Utils = {
     },
     colorChangeForPercent: (percent) => {
         if (percent > 55) { // Greater than 55%
-            return <Typography sx={{ paddingRight: '3px', display: 'inline', fontSize: '0.875rem', color: '#087F23' }}>{percent}%</Typography>;
+            return <Typography variant={'span'} sx={{ paddingRight: '3px', display: 'inline', fontSize: '0.875rem', color: '#087F23' }}>{percent}%</Typography>;
         } else if (percent > 51) { // Between 51 and 55 (not inclusive)
-            return <Typography sx={{ paddingRight: '3px', display: 'inline', fontSize: '0.875rem', color: '#A8E6A3' }}>{percent}%</Typography>;
+            return <Typography variant={'span'} sx={{ paddingRight: '3px', display: 'inline', fontSize: '0.875rem', color: '#A8E6A3' }}>{percent}%</Typography>;
         } else if (percent >= 49 && percent <= 51) { // Between 49 and 51 (inclusive)
-            return <Typography sx={{ paddingRight: '3px', display: 'inline', fontSize: '0.875rem', color: '#A0BFF0' }}>{percent}%</Typography>; // Gold color for 49-51%
+            return <Typography variant={'span'} sx={{ paddingRight: '3px', display: 'inline', fontSize: '0.875rem', color: '#A0BFF0' }}>{percent}%</Typography>; // Gold color for 49-51%
         } else if (percent > 45) { // Between 45 and 49 (not inclusive)
-            return <Typography sx={{ paddingRight: '3px', display: 'inline', fontSize: '0.875rem', color: '#FF8A80' }}>{percent}%</Typography>;
+            return <Typography variant={'span'} sx={{ paddingRight: '3px', display: 'inline', fontSize: '0.875rem', color: '#FF8A80' }}>{percent}%</Typography>;
         } else { // Less than or equal to 45%
-            return <Typography sx={{ paddingRight: '3px', display: 'inline', fontSize: '0.875rem', color: '#D32F2F' }}>{percent}%</Typography>;
+            return <Typography variant={'span'} sx={{ paddingRight: '3px', display: 'inline', fontSize: '0.875rem', color: '#D32F2F' }}>{percent}%</Typography>;
         }
     },
 }
