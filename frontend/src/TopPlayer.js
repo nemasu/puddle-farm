@@ -13,6 +13,7 @@ import Typography from '@mui/material/Typography';
 import { JSONParse } from 'json-with-bigint';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Tag } from './Tag';
 
 // eslint-disable-next-line
 /* global BigInt */
@@ -64,7 +65,15 @@ const TopPlayer = () => {
           for (var key in parsed.ranks) {
             parsed.ranks[key].rating = parsed.ranks[key].rating.toFixed(2);
             parsed.ranks[key].deviation = parsed.ranks[key].deviation.toFixed(2);
+
+            if (parsed.ranks[key].tags) {
+              for (var s in parsed.ranks[key].tags) {
+                parsed.ranks[key].tags[s].style = JSON.parse(parsed.ranks[key].tags[s].style);
+              }
+            }
           }
+
+          
 
           if (parsed.ranks.length < (count ? count : defaultCount) || parsed.ranks.length === 1000) {
             setShowNext(false);
@@ -135,7 +144,7 @@ const TopPlayer = () => {
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell sx={{px: 0, mx: 0}}></TableCell>
+                <TableCell sx={{ px: 0, mx: 0 }}></TableCell>
                 <TableCell>Player</TableCell>
                 <TableCell>Char</TableCell>
                 <TableCell>Rating</TableCell>
@@ -144,8 +153,15 @@ const TopPlayer = () => {
             <TableBody>
               {ranking.map((player, index) => (
                 <TableRow key={index}>
-                  <TableCell sx={{px: 0, mx: 0, textAlign: 'center'}}>{player.rank}</TableCell>
-                  <TableCell><Button component={Link} variant="link" to={`/player/${player.id}/${player.char_short}`}>{player.name}</Button></TableCell>
+                  <TableCell sx={{ px: 0, mx: 0, textAlign: 'center' }}>{player.rank}</TableCell>
+                  <TableCell>
+                    <Button component={Link} variant="link" to={`/player/${player.id}/${player.char_short}`}>{player.name}</Button>
+                    {player.tags && player.tags.map((e, i) => (
+                      <Tag key={i} style={e.style} sx={{ fontSize: '0.9rem', position: 'unset' }}>
+                        {e.tag}
+                      </Tag>
+                    ))}
+                  </TableCell>
                   <TableCell>{player.char_short}</TableCell>
                   <TableCell><Box component={'span'} title={player.rating}>{Number(player.rating).toFixed(0)}</Box> <Box component={'span'} title={player.deviation}>±{Number(player.deviation).toFixed(0)}</Box></TableCell>
                 </TableRow>

@@ -238,14 +238,6 @@ async fn do_hourly_update(
         error!("update_stats failed: {e}");
     }
 
-    if let Err(e) = update_popularity(conn, redis_connection).await {
-        error!("update_popularity failed: {e}");
-    }
-
-    if let Err(e) = update_matchups(conn, redis_connection).await {
-        error!("update_matchups failed: {e}");
-    }
-
     //Now
     let last_update =
         chrono::DateTime::from_timestamp(chrono::Utc::now().naive_utc().and_utc().timestamp(), 0)

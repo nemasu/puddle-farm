@@ -1,6 +1,6 @@
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import { CircularProgress, useTheme, useMediaQuery, styled } from '@mui/material';
+import { CircularProgress, useTheme, useMediaQuery } from '@mui/material';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -36,20 +36,9 @@ import DialogTitle from '@mui/material/DialogTitle';
 import { Line } from 'react-chartjs-2';
 import { StorageUtils } from './Storage';
 import { Utils } from './Utils';
+import { Tag } from './Tag';
 /* global BigInt */
 
-//This is to apply the custom tag CSS class to the Box component
-//These are common styles to all tags
-const CustomBox = styled(Box)(({ theme }) => ({
-  borderRadius: '8px',
-  padding: '6px 8px',
-  display: 'inline-block',
-  marginLeft: '5px',
-  marginRight: '5px',
-  top: '-4px',
-  position: 'relative',
-  fontSize: '1rem',
-}));
 
 ChartJS.register(
   CategoryScale,
@@ -181,7 +170,7 @@ function Row(props) {
   const [open, setOpen] = React.useState(false);
   const navigate = useNavigate();
 
-  const { item } = props;
+  const { item, tags } = props;
 
   function onProfileClick(event) {
     if (event.button === 1) { //Middle mouse click
@@ -204,6 +193,7 @@ function Row(props) {
       </React.Fragment>
     );
   };
+  console.log(tags);
 
   if (props.isMobile) {
     return (
@@ -252,7 +242,18 @@ function Row(props) {
                   <TableCell sx={{ px: 0, mx: 0 }}>{item.wins} - {item.losses}</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell sx={{ px: 0, mx: 0, maxWidth: '120px' }} colSpan={2}><Button sx={{ marginLeft: '5px' }} onMouseDown={(event) => { onProfileClick(event) }} component={Link} variant="link" >{item.opponent_name}</Button></TableCell>
+                  <TableCell sx={{ px: 0, mx: 0, maxWidth: '120px' }} colSpan={2}>
+                    <Button sx={{ marginLeft: '5px' }} onMouseDown={(event) => { onProfileClick(event) }} component={Link} variant="link" >{item.opponent_name}</Button>
+                    <React.Fragment>
+                      <Box>
+                        {tags && tags.map((e, i) => (
+                          <Tag key={i} style={e.style} sx={{ fontSize: '0.9rem' }}>
+                            {e.tag}
+                          </Tag>
+                        ))}
+                      </Box>
+                    </React.Fragment>
+                  </TableCell>
                   <TableCell sx={{ px: 0, mx: 0 }}>
                     {item.matches[item.matches.length - 1].opponent_rating_value.toFixed(0)} ±{item.matches[item.matches.length - 1].opponent_rating_deviation.toFixed(0)}
                   </TableCell>
@@ -337,7 +338,18 @@ function Row(props) {
               <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
               <TableCell align="right">{item.floor === '99' ? 'C' : item.floor}</TableCell>
               <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].own_rating_value}>{item.matches[item.matches.length - 1].own_rating_value.toFixed(0)}</Box> <Box component={'span'} title={item.matches[item.matches.length - 1].own_rating_deviation}>±{item.matches[item.matches.length - 1].own_rating_deviation.toFixed(0)}</Box></TableCell>
-              <TableCell><Button onMouseDown={(event) => { onProfileClick(event) }} component={Link} variant="link" >{item.opponent_name}</Button></TableCell>
+              <TableCell >
+                <Button onMouseDown={(event) => { onProfileClick(event) }} component={Link} variant="link" >{item.opponent_name}</Button>
+                <React.Fragment>
+                  <Box>
+                    {tags && tags.map((e, i) => (
+                      <Tag key={i} style={e.style} sx={{ fontSize: '0.9rem', position: 'unset' }}>
+                        {e.tag}
+                      </Tag>
+                    ))}
+                  </Box>
+                </React.Fragment>
+              </TableCell>
               <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
               <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_value}>{item.matches[item.matches.length - 1].opponent_rating_value.toFixed(0)}</Box> <Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_deviation}>±{item.matches[item.matches.length - 1].opponent_rating_deviation.toFixed(0)}</Box></TableCell>
               <TableCell align="right">{item.wins} - {item.losses}</TableCell>
@@ -452,6 +464,10 @@ const Player = () => {
           player_result.ratings[key].deviation = player_result.ratings[key].deviation.toFixed(2);
         }
 
+        for (var tkey in player_result.tags) {
+          player_result.tags[tkey].style = JSON.parse(player_result.tags[tkey].style);
+        }
+
         setPlayer(player_result);
 
         if (player_result.name === 'Player not found' && player_result.id === 0) {
@@ -470,8 +486,8 @@ const Player = () => {
           let highest_rating = 0;
           let highest_char = 'SO';
           for (var pkey in player_result.ratings) {
-            if (player_result.ratings[pkey].rating > highest_rating) {
-              highest_rating = player_result.ratings[pkey].rating;
+            if (Number(player_result.ratings[pkey].rating) > Number(highest_rating)) {
+              highest_rating = Number(player_result.ratings[pkey].rating);
               highest_char = player_result.ratings[pkey].char_short;
             }
           }
@@ -508,6 +524,15 @@ const Player = () => {
 
           if (history_result.history.length !== 0) {
             const groupedData = groupMatches(history_result.history, player_result, char_short, has_offset);
+
+            let tags = {};
+            Object.entries(history_result.tags).forEach(([playerId, tagArray]) => {
+              tags[playerId] = tagArray.map(tagObj => ({
+                tag: tagObj.tag,
+                style: JSON.parse(tagObj.style)
+              }));
+            });
+            setTags(tags);
             setHistory(groupedData);
           }
         }
@@ -598,18 +623,6 @@ const Player = () => {
           }
         }
 
-
-        const tags = await fetch(API_ENDPOINT + '/tags/' + player_id_checked);
-        if (tags.status === 200) {
-          const tags_result = await tags.json();
-          if (tags_result !== null) {
-            for (var tkey in tags_result.tags) {
-              tags_result.tags[tkey].style = JSON.parse(tags_result.tags[tkey].style);
-            }
-            setTags(tags_result);
-          }
-        }
-
         setLoading(false);
 
       } catch (error) {
@@ -657,10 +670,10 @@ const Player = () => {
             {player ? (
               <React.Fragment>
                 <Typography textAlign={'center'} variant="pageHeader" fontSize={30}>
-                  {tags ? tags.tags.map((e, i) => (
-                    <CustomBox key={i} className={e.style}>
+                  {player.tags ? player.tags.map((e, i) => (
+                    <Tag key={i} style={e.style}>
                       {e.tag}
-                    </CustomBox>
+                    </Tag>
                   )) : null}
                   {player.name}
                   <Typography variant="platform">
@@ -694,10 +707,10 @@ const Player = () => {
             {player ? (
               <React.Fragment>
                 <Typography align='center' variant="pageHeader" fontSize={30}>
-                  {tags ? tags.tags.map((e, i) => (
-                    <CustomBox key={i} style={e.style}>
+                  {player.tags ? player.tags.map((e, i) => (
+                    <Tag key={i} style={e.style}>
                       {e.tag}
-                    </CustomBox>
+                    </Tag>
                   )) : null}
                   {player.name}
 
@@ -767,7 +780,7 @@ const Player = () => {
                   </Box>
                   {history.map((item, i) => (
                     <Box py={0.3} key={i}>
-                      <Row key={i} item={item} isMobile={true} />
+                      <Row key={i} item={item} isMobile={true} tags={tags[item.opponent_id] ? tags[item.opponent_id] : null} />
                     </Box>
                   ))}
                   <Box mx={3}>
@@ -908,7 +921,7 @@ const Player = () => {
                       </TableHead>
                       <TableBody>
                         {history.map((item, i) => (
-                          <Row key={i} item={item} i={i} />
+                          <Row key={i} item={item} i={i} tags={tags[item.opponent_id] ? tags[item.opponent_id] : null} />
                         ))}
                       </TableBody>
                     </Table>

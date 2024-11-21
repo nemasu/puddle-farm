@@ -76,6 +76,7 @@ struct PlayerResponse {
     platform: String,
     status: String,
     top_global: i32,
+    tags: Vec<TagResponse>,
 }
 impl PlayerResponse {
     fn private() -> PlayerResponse {
@@ -86,6 +87,7 @@ impl PlayerResponse {
             status: "Unknown".to_string(),
             platform: "???".to_string(),
             top_global: 0,
+            tags: vec![],
         }
     }
 
@@ -97,6 +99,7 @@ impl PlayerResponse {
             status: "Unknown".to_string(),
             platform: "???".to_string(),
             top_global: 0,
+            tags: vec![],
         }
     }
 }
@@ -381,6 +384,13 @@ async fn player(
         })
         .collect();
 
+    let tags = schema::tags::table
+        .select((schema::tags::tag, schema::tags::style))
+        .filter(schema::tags::player_id.eq(id))
+        .load::<(String, String)>(&mut db)
+        .await
+        .expect("Error loading tags");
+
     Ok(Json(PlayerResponse {
         id: player_char[0].0.id,
         name: player_char[0].0.name.clone(),
@@ -393,12 +403,25 @@ async fn player(
             _ => "???".to_string(),
         },
         top_global,
+        tags: tags
+            .iter()
+            .map(|(tag, style)| TagResponse {
+                tag: tag.clone(),
+                style: style.clone(),
+            })
+            .collect(),
     }))
 }
 
 #[derive(Serialize)]
 pub struct PlayerGamesResponse {
     history: Vec<PlayerSet>,
+    tags: HashMap<String, Vec<TagResponse>>, //player_id to tags
+}
+#[derive(Serialize, Clone)]
+pub struct TagResponse {
+    tag: String,
+    style: String,
 }
 #[derive(Serialize)]
 struct PlayerSet {
@@ -474,9 +497,23 @@ async fn player_history(
         .await
         .expect("Error loading games");
 
-    let mut response: PlayerGamesResponse = PlayerGamesResponse { history: vec![] };
+    let mut response: PlayerGamesResponse = PlayerGamesResponse {
+        history: vec![],
+        tags: HashMap::new(),
+    };
 
     for game in games {
+        let tags: Vec<(String, String)> = schema::tags::table
+            .select((schema::tags::tag, schema::tags::style))
+            .filter(schema::tags::player_id.eq(if game.id_a == player_id {
+                game.id_b
+            } else {
+                game.id_a
+            }))
+            .load(&mut db)
+            .await
+            .expect("Error loading tags");
+
         let is_hidden = game.value_a == Some(0.0);
 
         let own_rating_value = if game.id_a == player_id {
@@ -580,6 +617,26 @@ async fn player_history(
             result_win,
             odds,
         });
+
+        if opponent_id != 0 {
+            let tags: Vec<TagResponse> = tags
+                .iter()
+                .filter_map(|(tag, style)| {
+                    if !style.is_empty() {
+                        Some(TagResponse {
+                            tag: tag.clone(),
+                            style: style.clone(),
+                        })
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            if tags.len() > 0 {
+                response.tags.insert(opponent_id.to_string(), tags);
+            }
+        }
     }
     Ok(Json(response))
 }
@@ -598,6 +655,7 @@ struct PlayerRankResponse {
     deviation: f32,
     char_short: String,
     char_long: String,
+    tags: Vec<TagResponse>,
 }
 async fn top(
     State(pools): State<AppState>,
@@ -627,6 +685,35 @@ async fn top(
         .await
         .expect("Error loading games");
 
+    //Get tags
+    let mut all_tags: HashMap<String, Vec<TagResponse>> = HashMap::new();
+    for game in games.iter() {
+        let tags: Vec<(String, String)> = schema::tags::table
+            .select((schema::tags::tag, schema::tags::style))
+            .filter(schema::tags::player_id.eq(game.1.id))
+            .load(&mut db)
+            .await
+            .expect("Error loading tags");
+
+        let tags: Vec<TagResponse> = tags
+            .iter()
+            .filter_map(|(tag, style)| {
+                if !style.is_empty() {
+                    Some(TagResponse {
+                        tag: tag.clone(),
+                        style: style.clone(),
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        if tags.len() > 0 {
+            all_tags.insert(game.1.id.to_string(), tags);
+        }
+    }
+
     //Create response from games
     let ranks: Vec<PlayerRankResponse> = games
         .iter()
@@ -638,6 +725,7 @@ async fn top(
             deviation: p.2.deviation,
             char_short: CHAR_NAMES[p.0.char_id as usize].0.to_string(),
             char_long: CHAR_NAMES[p.0.char_id as usize].1.to_string(),
+            tags: all_tags.get(&p.1.id.to_string()).unwrap_or(&vec![]).clone(),
         })
         .collect();
 
@@ -680,6 +768,35 @@ async fn top_char(
         .await
         .expect("Error loading games");
 
+    //Get tags
+    let mut all_tags: HashMap<String, Vec<TagResponse>> = HashMap::new();
+    for game in games.iter() {
+        let tags: Vec<(String, String)> = schema::tags::table
+            .select((schema::tags::tag, schema::tags::style))
+            .filter(schema::tags::player_id.eq(game.1.id))
+            .load(&mut db)
+            .await
+            .expect("Error loading tags");
+
+        let tags: Vec<TagResponse> = tags
+            .iter()
+            .filter_map(|(tag, style)| {
+                if !style.is_empty() {
+                    Some(TagResponse {
+                        tag: tag.clone(),
+                        style: style.clone(),
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        if tags.len() > 0 {
+            all_tags.insert(game.1.id.to_string(), tags);
+        }
+    }
+
     let mut rank: i32 = offset as i32 + 1;
     let ranks: Vec<PlayerRankResponse> = games
         .iter()
@@ -692,6 +809,7 @@ async fn top_char(
                 deviation: p.2.deviation,
                 char_short: CHAR_NAMES[p.0.char_id as usize].0.to_string(),
                 char_long: CHAR_NAMES[p.0.char_id as usize].1.to_string(),
+                tags: all_tags.get(&p.1.id.to_string()).unwrap_or(&vec![]).clone(),
             };
             rank += 1;
             rank_response
@@ -1424,40 +1542,6 @@ async fn matchups(
     }))
 }
 
-#[derive(Serialize)]
-struct TagsResponse {
-    tags: Vec<TagDef>,
-}
-#[derive(Serialize)]
-struct TagDef {
-    tag: String,
-    style: String,
-}
-
-async fn tags(
-    State(pools): State<AppState>,
-    Path(player_id): Path<i64>,
-) -> Result<Json<TagsResponse>, (StatusCode, String)> {
-    let mut db = pools.db_pool.get().await.unwrap();
-
-    let tags: Vec<models::Tag> = schema::tags::table
-        .select(schema::tags::all_columns)
-        .filter(schema::tags::player_id.eq(player_id))
-        .load(&mut db)
-        .await
-        .expect("Error loading tags");
-
-    let tags: Vec<TagDef> = tags
-        .iter()
-        .map(|t| TagDef {
-            tag: t.tag.clone(),
-            style: t.style.clone(),
-        })
-        .collect();
-
-    Ok(Json(TagsResponse { tags }))
-}
-
 #[tokio::main(flavor = "multi_thread", worker_threads = 5)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().expect("Failed to read .env file");
@@ -1536,7 +1620,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/popularity", get(popularity))
                 .route("/api/matchups", get(matchups))
                 .route("/api/matchups/:player_id/:char_id", get(player_matchups))
-                .route("/api/tags/:player_id", get(tags))
                 .with_state(state);
 
             if cfg!(debug_assertions) {
