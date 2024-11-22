@@ -193,7 +193,6 @@ function Row(props) {
       </React.Fragment>
     );
   };
-  console.log(tags);
 
   if (props.isMobile) {
     return (

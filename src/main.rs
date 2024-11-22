@@ -1542,6 +1542,54 @@ async fn matchups(
     }))
 }
 
+#[derive(Serialize)]
+struct Supporter {
+    id: i64,
+    name: String,
+    tags: Vec<TagResponse>,
+}
+async fn supporters(
+    State(pools): State<AppState>,
+) -> Result<Json<Vec<Supporter>>, (StatusCode, String)> {
+    let mut db = pools.db_pool.get().await.unwrap();
+
+    let supporters: Vec<(i64, String)> = schema::tags::table
+        .inner_join(schema::players::table.on(schema::tags::player_id.eq(schema::players::id)))
+        .select((schema::tags::player_id, schema::players::name))
+        .filter(schema::tags::tag.eq("VIP"))
+        .load::<(i64, String)>(&mut db)
+        .await
+        .expect("Error loading supporters");
+
+    let tags = schema::tags::table
+        .select((
+            schema::tags::player_id,
+            schema::tags::tag,
+            schema::tags::style,
+        ))
+        .load::<(i64, String, String)>(&mut db)
+        .await
+        .expect("Error loading tags");
+
+    Ok(Json(
+        supporters
+            .iter()
+            .map(|(id, name)| Supporter {
+                id: *id,
+                name: name.clone(),
+                tags: tags
+                    .iter()
+                    .filter(|(tag_id, _, _)| tag_id == id)
+                    .map(|(_, tag, style)| TagResponse {
+                        tag: tag.clone(),
+                        style: style.clone(),
+                    })
+                    .collect(),
+            })
+            .collect(),
+    ))
+}
+
 #[tokio::main(flavor = "multi_thread", worker_threads = 5)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().expect("Failed to read .env file");
@@ -1620,6 +1668,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/popularity", get(popularity))
                 .route("/api/matchups", get(matchups))
                 .route("/api/matchups/:player_id/:char_id", get(player_matchups))
+                .route("/api/supporters", get(supporters))
                 .with_state(state);
 
             if cfg!(debug_assertions) {
