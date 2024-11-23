@@ -1567,6 +1567,7 @@ async fn supporters(
             schema::tags::tag,
             schema::tags::style,
         ))
+        .order(schema::tags::tag.desc())
         .load::<(i64, String, String)>(&mut db)
         .await
         .expect("Error loading tags");

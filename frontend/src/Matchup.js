@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
@@ -9,6 +9,8 @@ const Matchup = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
   const [matchup, setMatchup] = React.useState(null);
+  const [hoveredRow, setHoveredRow] = useState(null);
+  const [hoveredCol, setHoveredCol] = useState(null);
 
   useEffect(() => {
 
@@ -36,18 +38,51 @@ const Matchup = () => {
                 <TableRow>
                   <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>Character</TableCell>
                   {matchup ? (matchup.data.length > 0 && matchup.data[0].matchups.map((matchup, index) => (
-                    <TableCell key={index}>{matchup.char_short}</TableCell>
+                    <TableCell 
+                      key={index}
+                      sx={{
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 1,
+                        backgroundColor: hoveredCol === index ? 'grey' : 'black'
+                      }}
+                    >
+                      {matchup.char_short}
+                    </TableCell>
                   ))) : null}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {matchup ? (matchup.data.map((row, rowIndex) => (
                   <TableRow key={rowIndex}>
-                    <TableCell component="th" scope="row" sx={{ position: 'sticky', left: 0, background: 'black', zIndex: 1 }}>
+                    <TableCell 
+                      component="th" 
+                      scope="row" 
+                      sx={{ 
+                        position: 'sticky', 
+                        left: 0, 
+                        background: hoveredRow === rowIndex ? 'grey' : 'black',
+                        zIndex: 1 
+                      }}
+                    >
                       {row.char_name} ({row.char_short})
                     </TableCell>
                     {row.matchups.map((matchup, colIndex) => (
-                      <TableCell key={colIndex} title={`Wins: ${matchup.wins}, Total Games: ${matchup.total_games}`}>
+                      <TableCell 
+                        key={colIndex} 
+                        title={`Wins: ${matchup.wins}, Total Games: ${matchup.total_games}`}
+                        onMouseEnter={() => {
+                          setHoveredRow(rowIndex);
+                          setHoveredCol(colIndex);
+                        }}
+                        onMouseLeave={() => {
+                          setHoveredRow(null);
+                          setHoveredCol(null);
+                        }}
+                        sx={{
+                          backgroundColor: (hoveredRow === rowIndex && hoveredCol === colIndex) ? 'action.hover' : 'inherit'
+                        }}
+                      >
                         {Utils.colorChangeForPercent(((matchup.wins / matchup.total_games) * 100).toFixed(2))}
                       </TableCell>
                     ))}
