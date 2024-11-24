@@ -475,6 +475,8 @@ const Player = () => {
           setHistory(null);
           setCurrentCharData(null);
           setAlias(null);
+          setLineChartData(null);
+          setMatchups(null);
           setLoading(false);
           return;
         }
@@ -805,7 +807,7 @@ const Player = () => {
                 </Typography>
                 <Box component={Paper} sx={{ maxWidth: 350 }}>
                   <Typography p={2} variant='body1'>
-                    {Utils.colorChangeForPercent(((matchups.total_wins / matchups.total_games) * 100).toFixed(2))} ( {matchups.total_wins} / {matchups.total_games - matchups.total_wins} )
+                    {Utils.colorChangeForPercent(((matchups.total_wins / matchups.total_games) * 100).toFixed(2))} ( {matchups.total_wins} / {matchups.total_games} )
                   </Typography>
                 </Box>
                 <TableContainer component={Paper} sx={{ maxWidth: 350 }}>
@@ -948,7 +950,7 @@ const Player = () => {
                 </Typography>
                 <Box component={Paper} sx={{ maxWidth: 350 }}>
                   <Typography p={2} variant='body1'>
-                    {Utils.colorChangeForPercent(((matchups.total_wins / matchups.total_games) * 100).toFixed(2))} ( {matchups.total_wins} / {matchups.total_games - matchups.total_wins} )
+                    {Utils.colorChangeForPercent(((matchups.total_wins / matchups.total_games) * 100).toFixed(2))} ( {matchups.total_wins} / {matchups.total_games} )
                   </Typography>
                 </Box>
                 <TableContainer component={Paper} sx={{ maxWidth: 350 }}>
