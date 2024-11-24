@@ -934,9 +934,16 @@ async fn claim_poll(
         .first::<Option<String>>(&mut db)
         .await
     {
-        Ok(code) => code.unwrap(),
+        Ok(code) => {
+            match code {
+                Some(code) => code,
+                None => {
+                    return Err((StatusCode::NOT_FOUND, "Code not found".to_string()));
+                }
+            }
+        },
         Err(_) => {
-            return Err((StatusCode::NOT_FOUND, "Player not found".to_string()));
+            return Err((StatusCode::NOT_FOUND, "Error looking up code".to_string()));
         }
     };
 

@@ -1,7 +1,7 @@
 import { CircularProgress } from '@mui/material';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
-import { default as Button, default as TextButton } from '@mui/material/Button';
+import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -140,7 +140,7 @@ const TopGlobal = () => {
                 <TableRow key={index}>
                   <TableCell sx={{ px: 0, mx: 0, textAlign: 'center' }}>{player.rank}</TableCell>
                   <TableCell>
-                    <TextButton component={Link} variant="link" to={`/player/${player.id}/${player.char_short}`}>{player.name}</TextButton>
+                    <Button component={Link} variant="link" to={`/player/${player.id}/${player.char_short}`}>{player.name}</Button>
                     {player.tags && player.tags.map((e, i) => (
                       <Tag key={i} style={e.style} sx={{ fontSize: '0.9rem', position: 'unset' }}>
                         {e.tag}

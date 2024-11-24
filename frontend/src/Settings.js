@@ -3,6 +3,7 @@ import { Box, Button, Typography, FormGroup, FormControlLabel, Switch, Paper } f
 import { useNavigate } from 'react-router-dom';
 import { JSONParse } from 'json-with-bigint';
 import { StorageUtils } from './Storage';
+import { Link } from 'react-router-dom';
 import Themes from './Themes';
 
 const themes = Array.from(Themes.keys());
@@ -170,22 +171,24 @@ const Settings = () => {
                 {theme}
               </Button>
             ))}
-          </Box>   
+          </Box>
         </Paper>
       </Box>
       <Box m={2}>
         <Paper elevation={2} sx={{ p: 3 }}>
           {key !== null ? ( //If we have a key set
             <Box>
-              <Typography
-                variant="h6"
-                gutterBottom
-                sx={{ cursor: 'pointer' }}
-                onClick={() => navigate(`/player/${settings.id}`)}
-              >
-                {settings.name}'s Settings
-              </Typography>
-
+              <Box sx={{ marginBottom: 2 }}>
+                <Button
+                  variant='link'
+                  gutterBottom
+                  sx={{ fontSize: '1rem' }}
+                  onClick={() => navigate(`/player/${settings.id}`)}
+                >
+                  {settings.name}
+                </Button>
+                's Settings
+              </Box>
               <FormControlLabel
                 control={
                   <Switch
@@ -203,8 +206,6 @@ const Settings = () => {
                   </Box>
                 }
               />
-
-
               <Box sx={{ borderColor: '#F8B552', borderWidth: '2px', borderStyle: 'dashed', p: '20px', m: '50px' }}>
                 <Typography variant='body1'>Note: If you use the same browser, you can revisit this page without reauthenticating to change settings.</Typography>
                 <Typography variant='body1'>If you don't want that, click <Button onClick={() => { StorageUtils.removeApiKey(); window.location.reload(); }}>here</Button> to clear browser data.</Typography>

@@ -491,7 +491,7 @@ const Player = () => {
             }
           }
 
-          navigate(`/player/${player_id_checked}/${highest_char}`);
+          navigate(`/player/${player_id_checked}/${highest_char}`, { replace: true });
           return;
         }
 
@@ -865,9 +865,9 @@ const Player = () => {
           </Box>
         </Box>
       ) : (
-        <Box sx={{ display: { xs: 'none', md: 'flex', minWidth: 1300 }, flexWrap: 'nowrap' }}> {/* Desktop View */}
-          <Box m={4} sx={{ width: .7 }}>
-            <Box sx={{ minWidth: 1000, maxWidth: 1100 }}>
+        <Box sx={{ display: { xs: 'none', md: 'flex', overflow: 'hidden' }}}> {/* Desktop View */}
+          <Box m={4} sx={{ flex: 1, overflowY: 'auto', minWidth: '840px' }}>
+            <Box>
               {currentCharData ? (
                 <React.Fragment>
                   <Typography variant='h5' my={2}>
@@ -984,7 +984,7 @@ const Player = () => {
               </React.Fragment>
             ) : null}
           </Box>
-          <Box marginLeft={10} marginTop={13} sx={{ width: .18, maxWidth: '235px' }}>
+          <Box marginTop={25} sx={{ width: 300, overflowY: 'auto', minWidth: '200px' }}>
             {player && player.id !== 0 ? (
               <React.Fragment>
                 <hr />
