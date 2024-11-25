@@ -1239,10 +1239,9 @@ async fn player_matchups(
         char_name: CHAR_NAMES[char_id as usize].0.to_string(),
         matchups: char_matchup
             .iter()
-            .enumerate()
-            .map(|(i, m)| MatchupEntry {
-                char_name: CHAR_NAMES[i].1.to_string(),
-                char_short: CHAR_NAMES[i].0.to_string(),
+            .map(|m| MatchupEntry {
+                char_name: CHAR_NAMES[m.opponent_char as usize].1.to_string(),
+                char_short: CHAR_NAMES[m.opponent_char as usize].0.to_string(),
                 wins: m.wins,
                 total_games: m.total_games,
             })

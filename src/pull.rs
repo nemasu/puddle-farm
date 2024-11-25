@@ -285,7 +285,7 @@ async fn do_daily_update(
 #[derive(QueryableByName, serde::Serialize, serde::Deserialize)]
 pub struct Matchup {
     #[diesel(sql_type = diesel::sql_types::SmallInt)]
-    opponent_char: i16,
+    pub opponent_char: i16,
     #[diesel(sql_type = diesel::sql_types::BigInt)]
     pub wins: i64,
     #[diesel(sql_type = diesel::sql_types::BigInt)]
