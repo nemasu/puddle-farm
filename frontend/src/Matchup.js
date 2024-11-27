@@ -34,17 +34,18 @@ const MatchupTable = ({ data, title }) => {
   };
 
   const sortData = (data) => {
-    if (!orderBy) return data;
+    if (!orderBy && orderBy !== 0) return data;
 
     return [...data].sort((a, b) => {
+      // Handle character column sorting
       if (orderBy === 'character') {
-        return order === 'asc'
-          ? a.char_name.localeCompare(b.char_name)
-          : b.char_name.localeCompare(a.char_name);
+        const compareResult = a.char_name.localeCompare(b.char_name);
+        return order === 'asc' ? compareResult : -compareResult;
       }
-      // Sort by specific matchup column
-      const indexA = a.matchups[orderBy]?.wins / a.matchups[orderBy]?.total_games || 0;
-      const indexB = b.matchups[orderBy]?.wins / b.matchups[orderBy]?.total_games || 0;
+      
+      // Handle matchup column sorting
+      const indexA = (a.matchups[orderBy]?.wins / a.matchups[orderBy]?.total_games) || 0;
+      const indexB = (b.matchups[orderBy]?.wins / b.matchups[orderBy]?.total_games) || 0;
       return order === 'asc' ? indexA - indexB : indexB - indexA;
     });
   };
