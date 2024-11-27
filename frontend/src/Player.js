@@ -1,6 +1,6 @@
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import { CircularProgress, useTheme, useMediaQuery } from '@mui/material';
+import { CircularProgress, useTheme, useMediaQuery, TableSortLabel } from '@mui/material';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -429,9 +429,59 @@ const Player = () => {
   const [lineChartOptions, setLineChartOptions] = useState({});
   const [lineChartData, setLineChartData] = useState(null);
 
+  const [tags, setTags] = useState(null);
+
+  //This is for matchup table
+  //TODO - Move this to a separate component
   const [matchups, setMatchups] = useState(null);
 
-  const [tags, setTags] = useState(null);
+  const [orderBy, setOrderBy] = useState(null);
+  const [order, setOrder] = useState(null);
+
+
+  const handleRequestSort = (property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  const sortedMatchups = React.useMemo(() => {
+    if (!matchups?.matchups) return [];
+
+    if(order === null || orderBy === null) {
+      return [...matchups.matchups];
+    }
+
+    return [...matchups.matchups].sort((a, b) => {
+      const aValue = (() => {
+        switch (orderBy) {
+          case 'character': return a.char_name;
+          case 'winrate': return (a.wins / a.total_games) * 100;
+          case 'wins': return a.wins;
+          case 'total': return a.total_games;
+          default: return 0;
+        }
+      })();
+
+      const bValue = (() => {
+        switch (orderBy) {
+          case 'character': return b.char_name;
+          case 'winrate': return (b.wins / b.total_games) * 100;
+          case 'wins': return b.wins;
+          case 'total': return b.total_games;
+          default: return 0;
+        }
+      })();
+
+      if (order === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return bValue > aValue ? 1 : -1;
+      }
+    });
+  }, [matchups, orderBy, order]);
+
+  //MU table end
 
   let player_id_checked = player_id;
   if (player_id_checked.match(/[a-zA-Z]/)) {
@@ -810,18 +860,50 @@ const Player = () => {
                     {Utils.colorChangeForPercent(((matchups.total_wins / matchups.total_games) * 100).toFixed(2))} ( {matchups.total_wins} / {matchups.total_games} )
                   </Typography>
                 </Box>
-                <TableContainer component={Paper} sx={{ maxWidth: 350 }}>
+                <TableContainer component={Paper} sx={{ maxWidth: 400 }}>
                   <Table stickyHeader>
                     <TableHead>
                       <TableRow>
-                        <TableCell>Character</TableCell>
-                        <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>WR</TableCell>
-                        <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>Wins</TableCell>
-                        <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>Total</TableCell>
+                        <TableCell>
+                          <TableSortLabel
+                            active={orderBy === 'character'}
+                            direction={orderBy === 'character' ? order : 'asc'}
+                            onClick={() => handleRequestSort('character')}
+                          >
+                            Character
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                          <TableSortLabel
+                            active={orderBy === 'winrate'}
+                            direction={orderBy === 'winrate' ? order : 'asc'}
+                            onClick={() => handleRequestSort('winrate')}
+                          >
+                            WR
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                          <TableSortLabel
+                            active={orderBy === 'wins'}
+                            direction={orderBy === 'wins' ? order : 'asc'}
+                            onClick={() => handleRequestSort('wins')}
+                          >
+                            Wins
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                          <TableSortLabel
+                            active={orderBy === 'total'}
+                            direction={orderBy === 'total' ? order : 'asc'}
+                            onClick={() => handleRequestSort('total')}
+                          >
+                            Total
+                          </TableSortLabel>
+                        </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {matchups.matchups.map((matchup, rowIndex) => (
+                      {sortedMatchups.map((matchup, rowIndex) => (
                         <TableRow key={rowIndex}>
                           <TableCell component="th" scope="row" sx={{ position: 'sticky', left: 0, background: 'black', zIndex: 1 }}>
                             {matchup.char_name} ({matchup.char_short})
@@ -867,7 +949,7 @@ const Player = () => {
           </Box>
         </Box>
       ) : (
-        <Box sx={{ display: { xs: 'none', md: 'flex', overflow: 'hidden' }}}> {/* Desktop View */}
+        <Box sx={{ display: { xs: 'none', md: 'flex', overflow: 'hidden' } }}> {/* Desktop View */}
           <Box m={4} sx={{ flex: 1, overflowY: 'auto', minWidth: '840px' }}>
             <Box>
               {currentCharData ? (
@@ -953,18 +1035,50 @@ const Player = () => {
                     {Utils.colorChangeForPercent(((matchups.total_wins / matchups.total_games) * 100).toFixed(2))} ( {matchups.total_wins} / {matchups.total_games} )
                   </Typography>
                 </Box>
-                <TableContainer component={Paper} sx={{ maxWidth: 350 }}>
+                <TableContainer component={Paper} sx={{ maxWidth: 400 }}>
                   <Table stickyHeader>
                     <TableHead>
                       <TableRow>
-                        <TableCell>Character</TableCell>
-                        <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>WR</TableCell>
-                        <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>Wins</TableCell>
-                        <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>Total</TableCell>
+                        <TableCell>
+                          <TableSortLabel
+                            active={orderBy === 'character'}
+                            direction={orderBy === 'character' ? order : 'asc'}
+                            onClick={() => handleRequestSort('character')}
+                          >
+                            Character
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                          <TableSortLabel
+                            active={orderBy === 'winrate'}
+                            direction={orderBy === 'winrate' ? order : 'asc'}
+                            onClick={() => handleRequestSort('winrate')}
+                          >
+                            WR
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                          <TableSortLabel
+                            active={orderBy === 'wins'}
+                            direction={orderBy === 'wins' ? order : 'asc'}
+                            onClick={() => handleRequestSort('wins')}
+                          >
+                            Wins
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                          <TableSortLabel
+                            active={orderBy === 'total'}
+                            direction={orderBy === 'total' ? order : 'asc'}
+                            onClick={() => handleRequestSort('total')}
+                          >
+                            Total
+                          </TableSortLabel>
+                        </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {matchups.matchups.map((matchup, rowIndex) => (
+                      {sortedMatchups.map((matchup, rowIndex) => (
                         <TableRow key={rowIndex}>
                           <TableCell component="th" scope="row" sx={{ position: 'sticky', left: 0, background: 'black', zIndex: 1 }}>
                             {matchup.char_name} ({matchup.char_short})
