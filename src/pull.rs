@@ -101,7 +101,7 @@ pub async fn pull_and_update_continuous(state: crate::AppState) {
             }
 
             let mut redis_connection = processing_state.redis_pool.get().await.unwrap();
-            
+
             //Get last_update_daily from redis
             let last_update_daily: Result<String, redis::RedisError> = redis::cmd("GET")
                 .arg("last_update_daily")
@@ -297,12 +297,74 @@ async fn update_matchups(
 ) -> Result<(), String> {
     info!("Updating matchups");
 
-    let mut all_characters: std::collections::HashMap<i16, Vec<Matchup>> =
-        std::collections::HashMap::new();
+    {
+        let mut all_characters: std::collections::HashMap<i16, Vec<Matchup>> =
+            std::collections::HashMap::new();
 
-    for c in 0..CHAR_NAMES.len() {
-        let results = diesel::sql_query(
-            "
+        for c in 0..CHAR_NAMES.len() {
+            let results = diesel::sql_query(
+                "
+              SELECT 
+                  opponent_char,
+                  SUM(CASE 
+                      WHEN (position = 'a' AND winner = 1) OR (position = 'b' AND winner = 2)
+                      THEN 1 
+                      ELSE 0 
+                  END) as wins,
+                  COUNT(*) as total_games
+              FROM (
+                  SELECT 
+                      char_b as opponent_char, 
+                      winner,
+                      'a' as position
+                  FROM games
+                  WHERE char_a = $1
+                  AND timestamp > now() - interval '1 month'
+                  AND deviation_a < 30.0
+                  AND deviation_b < 30.0
+                  UNION ALL
+                  SELECT 
+                      char_a as opponent_char, 
+                      winner,
+                      'b' as position
+                  FROM games
+                  WHERE char_b = $1
+                  AND timestamp > now() - interval '1 month'
+                  AND deviation_a < 30.0
+                  AND deviation_b < 30.0
+              ) as combined_results
+              GROUP BY opponent_char
+              ORDER BY opponent_char;
+              ",
+            );
+            let results: Vec<Matchup> = results
+                .bind::<Integer, _>(i32::try_from(c).unwrap())
+                .get_results(conn)
+                .await
+                .unwrap();
+
+            all_characters.insert(i16::try_from(c).unwrap(), results);
+        }
+
+        for (char_id, matchups) in all_characters {
+            let char_id = char_id as usize;
+
+            redis::cmd("SET")
+                .arg(format!("matchup_{}", char_id))
+                .arg(serde_json::to_string(&matchups).unwrap())
+                .query_async::<String>(&mut **redis_connection)
+                .await
+                .expect("Error setting matchup");
+        }
+    }
+
+    {
+        let mut all_characters: std::collections::HashMap<i16, Vec<Matchup>> =
+            std::collections::HashMap::new();
+
+        for c in 0..CHAR_NAMES.len() {
+            let results = diesel::sql_query(
+                "
             SELECT 
                 opponent_char,
                 SUM(CASE 
@@ -318,9 +380,11 @@ async fn update_matchups(
                     'a' as position
                 FROM games
                 WHERE char_a = $1
-                AND timestamp > now() - interval '3 month'
+                AND timestamp > now() - interval '1 month'
                 AND deviation_a < 30.0
                 AND deviation_b < 30.0
+                AND value_a > 1700
+                AND value_b > 1700
                 UNION ALL
                 SELECT 
                     char_a as opponent_char, 
@@ -328,32 +392,35 @@ async fn update_matchups(
                     'b' as position
                 FROM games
                 WHERE char_b = $1
-                AND timestamp > now() - interval '3 month'
+                AND timestamp > now() - interval '1 month'
                 AND deviation_a < 30.0
                 AND deviation_b < 30.0
+                AND value_a > 1700
+                AND value_b > 1700
             ) as combined_results
             GROUP BY opponent_char
             ORDER BY opponent_char;
             ",
-        );
-        let results: Vec<Matchup> = results
-            .bind::<Integer, _>(i32::try_from(c).unwrap())
-            .get_results(conn)
-            .await
-            .unwrap();
+            );
+            let results: Vec<Matchup> = results
+                .bind::<Integer, _>(i32::try_from(c).unwrap())
+                .get_results(conn)
+                .await
+                .unwrap();
 
-        all_characters.insert(i16::try_from(c).unwrap(), results);
-    }
+            all_characters.insert(i16::try_from(c).unwrap(), results);
+        }
 
-    for (char_id, matchups) in all_characters {
-        let char_id = char_id as usize;
+        for (char_id, matchups) in all_characters {
+            let char_id = char_id as usize;
 
-        redis::cmd("SET")
-            .arg(format!("matchup_{}", char_id))
-            .arg(serde_json::to_string(&matchups).unwrap())
-            .query_async::<String>(&mut **redis_connection)
-            .await
-            .expect("Error setting matchup");
+            redis::cmd("SET")
+                .arg(format!("matchup_1700_{}", char_id))
+                .arg(serde_json::to_string(&matchups).unwrap())
+                .query_async::<String>(&mut **redis_connection)
+                .await
+                .expect("Error setting matchup");
+        }
     }
 
     Ok(())

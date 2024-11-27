@@ -1480,7 +1480,8 @@ async fn popularity(
 #[derive(Serialize)]
 struct MatchupResponse {
     last_update: String,
-    data: Vec<MatchupCharResponse>,
+    data_all: Vec<MatchupCharResponse>,
+    data_1700: Vec<MatchupCharResponse>,
 }
 #[derive(Serialize)]
 struct MatchupCharResponse {
@@ -1502,7 +1503,8 @@ async fn matchups(
 ) -> Result<Json<MatchupResponse>, (StatusCode, String)> {
     let mut redis = pools.redis_pool.get().await.unwrap();
 
-    let mut matchups = vec![];
+    let mut matchups_all = vec![];
+    let mut matchups_1700 = vec![];
 
     for c in 0..CHAR_NAMES.len() {
         let key = format!("matchup_{}", c);
@@ -1533,8 +1535,40 @@ async fn matchups(
                 .collect(),
         };
 
-        matchups.push(matchup);
+        matchups_all.push(matchup);
     }
+
+    for c in 0..CHAR_NAMES.len() {
+      let key = format!("matchup_1700_{}", c);
+
+      let value: String = match redis::cmd("GET").arg(key).query_async(&mut *redis).await {
+          Ok(v) => v,
+          Err(_) => {
+              return Err((StatusCode::NOT_FOUND, "Matchup not found".to_string()));
+          }
+      };
+
+      let matchups_data: Vec<crate::pull::Matchup> = serde_json::from_str(&value).unwrap();
+      let char_name = CHAR_NAMES[c].1.to_string();
+      let char_short = CHAR_NAMES[c].0.to_string();
+
+      let matchup = MatchupCharResponse {
+          char_name,
+          char_short,
+          matchups: matchups_data
+              .iter()
+              .enumerate()
+              .map(|(i, m)| MatchupEntry {
+                  char_name: CHAR_NAMES[i].1.to_string(),
+                  char_short: CHAR_NAMES[i].0.to_string(),
+                  wins: m.wins,
+                  total_games: m.total_games,
+              })
+              .collect(),
+      };
+
+      matchups_1700.push(matchup);
+  }
 
     let last_update = redis::cmd("GET")
         .arg("last_update_daily")
@@ -1544,7 +1578,8 @@ async fn matchups(
 
     Ok(Json(MatchupResponse {
         last_update,
-        data: matchups,
+        data_all: matchups_all,
+        data_1700: matchups_1700,
     }))
 }
 
