@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography } from '@mui/material';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TableSortLabel } from '@mui/material';
 import { Utils } from './Utils';
 
 const calculateAverageWinRate = (matchups) => {
@@ -24,6 +24,32 @@ const getCharacterWinRates = (matchupData) => {
 const MatchupTable = ({ data, title }) => {
   const [hoveredRow, setHoveredRow] = useState(null);
   const [hoveredCol, setHoveredCol] = useState(null);
+  const [orderBy, setOrderBy] = useState('');
+  const [order, setOrder] = useState('asc');
+
+  const handleRequestSort = (property) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
+
+  const sortData = (data) => {
+    if (!orderBy) return data;
+
+    return [...data].sort((a, b) => {
+      if (orderBy === 'character') {
+        return order === 'asc'
+          ? a.char_name.localeCompare(b.char_name)
+          : b.char_name.localeCompare(a.char_name);
+      }
+      // Sort by specific matchup column
+      const indexA = a.matchups[orderBy]?.wins / a.matchups[orderBy]?.total_games || 0;
+      const indexB = b.matchups[orderBy]?.wins / b.matchups[orderBy]?.total_games || 0;
+      return order === 'asc' ? indexA - indexB : indexB - indexA;
+    });
+  };
+
+  const sortedData = sortData(data);
 
   return (
     <React.Fragment>
@@ -34,7 +60,15 @@ const MatchupTable = ({ data, title }) => {
         <Table stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>Character</TableCell>
+              <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                <TableSortLabel
+                  active={orderBy === 'character'}
+                  direction={orderBy === 'character' ? order : 'asc'}
+                  onClick={() => handleRequestSort('character')}
+                >
+                  Character
+                </TableSortLabel>
+              </TableCell>
               {data.length > 0 && data[0].matchups.map((matchup, index) => (
                 <TableCell
                   key={index}
@@ -45,13 +79,19 @@ const MatchupTable = ({ data, title }) => {
                     backgroundColor: hoveredCol === index ? 'grey' : 'black'
                   }}
                 >
-                  {matchup.char_short}
+                  <TableSortLabel
+                    active={orderBy === index}
+                    direction={orderBy === index ? order : 'asc'}
+                    onClick={() => handleRequestSort(index)}
+                  >
+                    {matchup.char_short}
+                  </TableSortLabel>
                 </TableCell>
               ))}
             </TableRow>
           </TableHead>
           <TableBody>
-            {data.map((row, rowIndex) => (
+            {sortedData.map((row, rowIndex) => (
               <TableRow key={rowIndex}>
                 <TableCell
                   component="th"
