@@ -1,116 +1,132 @@
 import { createTheme } from "@mui/material";
 
+declare module '@mui/material/Typography' {
+  interface TypographyPropsVariantOverrides {
+    platform: true;
+    char_rank: true;
+    global_rank: true;
+    pageHeader: true;
+  }
+}
+
+declare module '@mui/material/Button' {
+  interface ButtonPropsVariantOverrides {
+    link: true;
+  }
+}
+
 let Themes = new Map();
 
 Themes.set('Sol', createTheme({
-    palette: {
-      mode: 'dark',
-      primary: {
-        main: '#811104',
-      },
-      secondary: {
-        main: '#C00000',
-      },
-      background: {
-        default: '#171717',
-      },
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#811104',
     },
-    typography: {
-        pageHeader: {
-            display: 'block',
-            fontSize: 34,
-            color: 'white',
-        },
+    secondary: {
+      main: '#C00000',
     },
-    components: {
-      MuiTypography: {
-        styleOverrides: {
-          root: {
-            variants: [
-              {
-                props: { variant: 'platform' },
-                style: {
-                  fontSize: '.8rem',
-                  backgroundColor: '#363636',
-                  color: 'white',
-                  borderRadius: '8px',
-                  padding: '8px 10px',
-                  display: 'inline-block',
-                  marginLeft: '8px',
-                  top: '-4px',
-                  position: 'relative',
-                }
-              },
-              {
-                props: { variant: 'char_rank' },
-                style: {
-                  fontSize: '.8rem',
-                  backgroundColor: '#811104',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  borderRadius: '8px',
-                  padding: '8px 10px',
-                  display: 'inline-block',
-                  marginLeft: '8px',
-                  top: '-4px',
-                  position: 'relative',
-                }
-              },
-              {
-                props: { variant: 'global_rank' },
-                style: {
-                  fontSize: '.8rem',
-                  backgroundColor: 'rgb(255, 224, 138)',
-                  color: 'rgba(0, 0, 0, 0.7)',
-                  fontWeight: 'bold',
-                  borderRadius: '8px',
-                  padding: '8px 10px',
-                  display: 'inline-block',
-                  marginLeft: '8px',
-                  top: '-4px',
-                  position: 'relative',
-                }
+    background: {
+      default: '#171717',
+    },
+  },
+  components: {
+    MuiTypography: {
+      styleOverrides: {
+        root: {
+          variants: [
+            {
+              props: { variant: 'pageHeader' },
+              style: {
+                display: 'block',
+                fontSize: 34,
+                color: 'white',
               }
-            ],
-          }
-        },
-      },
-      MuiButton: {
-        styleOverrides: {
-          root: {
-            color: '#C00000',
-            borderWidth: '4px',
-            variants: [
-              {
-                props: { variant: 'link' },
-                style: {
-                  textTransform: 'none',
-                  color: '#F8B552',
-                  padding: '5px 0px 5px 0px',
-                  justifyContent: 'left',
-                  verticalAlign: 'baseline',
-                }
+            },
+            {
+              props: { variant: 'platform' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: '#363636',
+                color: 'white',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
               }
-            ],
-          },
-        },
+            },
+            {
+              props: { variant: 'char_rank' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: '#811104',
+                color: 'white',
+                fontWeight: 'bold',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            },
+            {
+              props: { variant: 'global_rank' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: 'rgb(255, 224, 138)',
+                color: 'rgba(0, 0, 0, 0.7)',
+                fontWeight: 'bold',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            }
+          ],
+        }
       },
-      MuiAppBar: {
-        styleOverrides: {
-          root: {
-            backgroundColor: '#811104',
-          },
-        },
-      },
-      MuiDialog: {
-        styleOverrides: {
-          paper: {
-            background: '#171717',
-          },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          color: '#C00000',
+          borderWidth: '4px',
+          variants: [
+            {
+              props: { variant: 'link' },
+              style: {
+                textTransform: 'none',
+                color: '#F8B552',
+                padding: '5px 0px 5px 0px',
+                justifyContent: 'left',
+                verticalAlign: 'baseline',
+              }
+            }
+          ],
         },
       },
     },
-  }));
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#811104',
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          background: '#171717',
+        },
+      },
+    },
+  },
+}));
 
 Themes.set('Ky', createTheme({
   palette: {
@@ -125,18 +141,19 @@ Themes.set('Ky', createTheme({
       default: '#282E30',
     },
   },
-  typography: {
-    pageHeader: {
-      display: 'block',
-      fontSize: 34,
-      color: '#217DBB',
-    },
-  },
   components: {
     MuiTypography: {
       styleOverrides: {
         root: {
           variants: [
+            {
+              props: { variant: 'pageHeader' },
+              style: {
+                display: 'block',
+                fontSize: 34,
+                color: '#217DBB',
+              }
+            },
             {
               props: { variant: 'platform' },
               style: {
@@ -192,7 +209,7 @@ Themes.set('Ky', createTheme({
           borderWidth: '4px',
           variants: [
             {
-              props: { variant: 'link'},
+              props: { variant: 'link' },
               style: {
                 textTransform: 'none',
                 color: '#F8B552',
@@ -235,18 +252,19 @@ Themes.set('Ramlethal', createTheme({
       default: '#383733',//Main page background
     },
   },
-  typography: {
-    pageHeader: {
-      display: 'block',
-      fontSize: 34,
-      color: '#383733',//Page header text color
-    },
-  },
   components: {
     MuiTypography: {
       styleOverrides: {
         root: {
           variants: [
+            {
+              props: { variant: 'pageHeader' },
+              style: {
+                display: 'block',
+                fontSize: 34,
+                color: '#383733',//Page header text color
+              }
+            },
             {
               props: { variant: 'platform' },
               style: {
@@ -302,7 +320,7 @@ Themes.set('Ramlethal', createTheme({
           borderWidth: '4px', //Only applies to 'outlined' variant
           variants: [
             {
-              props: { variant: 'link'},
+              props: { variant: 'link' },
               style: {
                 textTransform: 'none',
                 color: '#A4FD33',
@@ -345,18 +363,19 @@ Themes.set('Nagoriyuki', createTheme({
       default: '#282E30',
     },
   },
-  typography: {
-    pageHeader: {
-      display: 'block',
-      fontSize: 34,
-      color: '#DA2A46',
-    },
-  },
   components: {
     MuiTypography: {
       styleOverrides: {
         root: {
           variants: [
+            {
+              props: { variant: 'pageHeader' },
+              style: {
+                display: 'block',
+                fontSize: 34,
+                color: '#DA2A46',
+              }
+            },
             {
               props: { variant: 'platform' },
               style: {
@@ -412,7 +431,7 @@ Themes.set('Nagoriyuki', createTheme({
           borderWidth: '4px',
           variants: [
             {
-              props: { variant: 'link'},
+              props: { variant: 'link' },
               style: {
                 textTransform: 'none',
                 color: '#DA2A46',
@@ -455,18 +474,19 @@ Themes.set('Bedman?', createTheme({
       default: '#171717',
     },
   },
-  typography: {
-    pageHeader: {
-      display: 'block',
-      fontSize: 34,
-      color: 'white',
-    },
-  },
   components: {
     MuiTypography: {
       styleOverrides: {
         root: {
           variants: [
+            {
+              props: { variant: 'pageHeader' },
+              style: {
+                display: 'block',
+                fontSize: 34,
+                color: 'white',
+              }
+            },
             {
               props: { variant: 'platform' },
               style: {
@@ -522,7 +542,7 @@ Themes.set('Bedman?', createTheme({
           borderWidth: '4px',
           variants: [
             {
-              props: { variant: 'link'},
+              props: { variant: 'link' },
               style: {
                 textTransform: 'none',
                 color: '#F8B552',
@@ -552,4 +572,4 @@ Themes.set('Bedman?', createTheme({
   },
 }));
 
-  export default Themes;
+export default Themes;

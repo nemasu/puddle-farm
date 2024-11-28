@@ -10,10 +10,14 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
-import { JSONParse } from 'json-with-bigint';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Tag } from './Tag';
+import { Tag } from "./Tag";
+
+let JSONParse: (arg0: string) => any;
+import('json-with-bigint').then(module => {
+  JSONParse = module.JSONParse;
+});
 
 // eslint-disable-next-line
 /* global BigInt */
@@ -25,7 +29,17 @@ const TopGlobal = () => {
 
   const navigate = useNavigate();
 
-  const [ranking, setRanking] = useState([]);
+  interface Player {
+    rank: number;
+    id: string;
+    name: string;
+    char_short: string;
+    rating: number;
+    deviation: number;
+    tags?: { style: React.CSSProperties; tag: string }[];
+  }
+
+  const [ranking, setRanking] = useState<Player[]>([]);
 
   const [showNext, setShowNext] = useState(true);
 
@@ -80,9 +94,9 @@ const TopGlobal = () => {
     fetchRanking();
   }, [count, offset, API_ENDPOINT]);
 
-  function onPrev(event) {
+  function onPrev(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     let nav_count = count ? parseInt(count) : defaultCount;
-    let nav_offset = offset ? parseInt(offset) - parseInt(nav_count) : 0;
+    let nav_offset = offset ? parseInt(offset) - nav_count : 0;
     if (nav_count < 0) {
       nav_count = defaultCount;
     }
@@ -92,9 +106,9 @@ const TopGlobal = () => {
     navigate(`/top_global/${nav_count}/${nav_offset}`);
   }
 
-  function onNext(event) {
+  function onNext(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     let nav_count = count ? parseInt(count) : defaultCount;
-    let nav_offset = offset ? parseInt(offset) + parseInt(nav_count) : nav_count;
+    let nav_offset = offset ? parseInt(offset) + nav_count : nav_count;
     navigate(`/top_global/${nav_count}/${nav_offset}`);
   }
 
@@ -141,14 +155,14 @@ const TopGlobal = () => {
                   <TableCell sx={{ px: 0, mx: 0, textAlign: 'center' }}>{player.rank}</TableCell>
                   <TableCell>
                     <Button component={Link} variant="link" to={`/player/${player.id}/${player.char_short}`}>{player.name}</Button>
-                    {player.tags && player.tags.map((e, i) => (
+                    {player.tags && player.tags.map((e: { style: React.CSSProperties | undefined; tag: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | React.ReactPortal | null | undefined; }, i: React.Key | null | undefined) => (
                       <Tag key={i} style={e.style} sx={{ fontSize: '0.9rem', position: 'unset' }}>
                         {e.tag}
                       </Tag>
                     ))}
                   </TableCell>
                   <TableCell>{player.char_short}</TableCell>
-                  <TableCell><Box component={'span'} title={player.rating}>{Number(player.rating).toFixed(0)}</Box> <Box component={'span'} title={player.deviation}>±{Number(player.deviation).toFixed(0)}</Box></TableCell>
+                  <TableCell><Box component={'span'} title={String(player.rating)}>{Number(player.rating).toFixed(0)}</Box> <Box component={'span'} title={String(player.deviation)}>±{Number(player.deviation).toFixed(0)}</Box></TableCell>
                 </TableRow>
               ))}
             </TableBody>

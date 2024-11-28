@@ -1,14 +1,13 @@
 import React, { useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 import { Utils } from './Utils';
+import { PopularityResult } from './Interfaces';
 
 const Popularity = () => {
-  const navigate = useNavigate();
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
-  const [popularity, setPopularity] = React.useState(null);
+  const [popularity, setPopularity] = React.useState<PopularityResult>();
 
   useEffect(() => {
     fetch(`${API_ENDPOINT}/popularity`)
@@ -36,7 +35,7 @@ const Popularity = () => {
             </Typography>
           </Box>
           <Box display={'flex'} flexWrap={'wrap'}>
-            {popularity && popularity.per_player.reduce((acc, e, index) => {
+            {popularity && popularity.per_player.reduce<Array<typeof popularity.per_player>>((acc, e, index) => {
               const groupIndex = Math.floor(index / 10);
               if (!acc[groupIndex]) {
                 acc[groupIndex] = [];
@@ -79,7 +78,7 @@ const Popularity = () => {
             </Typography>
           </Box>
           <Box display={'flex'} flexWrap={'wrap'}>
-            {popularity && popularity.per_character.reduce((acc, e, index) => {
+            {popularity && popularity.per_character.reduce<Array<typeof popularity.per_character>>((acc, e, index) => {
               const groupIndex = Math.floor(index / 10);
               if (!acc[groupIndex]) {
                 acc[groupIndex] = [];

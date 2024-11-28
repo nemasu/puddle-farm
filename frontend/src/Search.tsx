@@ -10,11 +10,14 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
-import { JSONParse } from 'json-with-bigint';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { PlayerSearchResponse } from './Interfaces';
 
-// eslint-disable-next-line
+let JSONParse: (arg0: string) => any;
+import('json-with-bigint').then(module => {
+  JSONParse = module.JSONParse;
+});
 /* global BigInt */
 
 const Search = () => {
@@ -24,7 +27,7 @@ const Search = () => {
 
   let { search_string, exact } = useParams();
 
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState<PlayerSearchResponse[]>([]);
 
   const [loading, setLoading ] = useState(true);
 
@@ -95,7 +98,7 @@ const Search = () => {
                 <TableRow key={index}>
                   <TableCell><TextButton component={Link} variant="link" to={`/player/${player.id}/${player.char_short}`}>{player.name}</TextButton></TableCell>
                   <TableCell>{player.char_short}</TableCell>
-                  <TableCell><Box component={'span'} title={player.rating}>{Number(player.rating).toFixed(0)}</Box> <Box component={'span'} title={player.deviation}>±{Number(player.deviation).toFixed(0)}</Box></TableCell>
+                  <TableCell><Box component={'span'} title={player.rating.toString()}>{Number(player.rating).toFixed(0)}</Box> <Box component={'span'} title={player.deviation.toString()}>±{Number(player.deviation).toFixed(0)}</Box></TableCell>
                 </TableRow>
               ))}
             </TableBody>

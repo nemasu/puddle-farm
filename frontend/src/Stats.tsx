@@ -9,12 +9,15 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
-import { JSONParse } from 'json-with-bigint';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Utils } from './Utils';
+import { StatsResponse } from './Interfaces';
 
-// eslint-disable-next-line
+let JSONParse: (arg0: string) => any;
+import('json-with-bigint').then(module => {
+  JSONParse = module.JSONParse;
+});
 /* global BigInt */
 
 const Stats = () => {
@@ -23,7 +26,7 @@ const Stats = () => {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState<StatsResponse>();
 
   useEffect(() => {
     window.scrollTo(0, 0);

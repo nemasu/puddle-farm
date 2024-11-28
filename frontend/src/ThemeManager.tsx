@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import Themes from './Themes';
+import Themes from "./Themes";
 import { ThemeProvider } from '@mui/material/styles';
-import { StorageUtils } from './Storage';
+import { StorageUtils } from "./Storage";
 
-const ThemeManager = ({children}) => {
+import { ReactNode } from 'react';
+
+const ThemeManager = ({children}: {children: ReactNode}) => {
     const [theme, setTheme] = useState('Sol');
 
     useEffect(() => {

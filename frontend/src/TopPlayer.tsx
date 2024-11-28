@@ -10,12 +10,15 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
-import { JSONParse } from 'json-with-bigint';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Tag } from './Tag';
+import { PlayerRankResponse } from './Interfaces';
 
-// eslint-disable-next-line
+let JSONParse: (arg0: string) => any;
+import('json-with-bigint').then(module => {
+  JSONParse = module.JSONParse;
+});
 /* global BigInt */
 
 const TopPlayer = () => {
@@ -25,15 +28,15 @@ const TopPlayer = () => {
 
   const navigate = useNavigate();
 
-  const [ranking, setRanking] = useState([]);
+  const [ranking, setRanking] = useState<PlayerRankResponse[]>([]);
 
-  const [showNext, setShowNext] = useState(true);
+  const [showNext, setShowNext] = useState<boolean>(true);
 
   let { char_short, count, offset } = useParams();
 
-  const [charLong, setCharLong] = useState();
+  const [charLong, setCharLong] = useState<string>();
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -65,15 +68,7 @@ const TopPlayer = () => {
           for (var key in parsed.ranks) {
             parsed.ranks[key].rating = parsed.ranks[key].rating.toFixed(2);
             parsed.ranks[key].deviation = parsed.ranks[key].deviation.toFixed(2);
-
-            if (parsed.ranks[key].tags) {
-              for (var s in parsed.ranks[key].tags) {
-                parsed.ranks[key].tags[s].style = JSON.parse(parsed.ranks[key].tags[s].style);
-              }
-            }
           }
-
-          
 
           if (parsed.ranks.length < (count ? count : defaultCount) || parsed.ranks.length === 1000) {
             setShowNext(false);
@@ -95,9 +90,9 @@ const TopPlayer = () => {
     fetchRanking();
   }, [char_short, count, offset, API_ENDPOINT]);
 
-  function onPrev(event) {
+  function onPrev() {
     let nav_count = count ? parseInt(count) : defaultCount;
-    let nav_offset = offset ? parseInt(offset) - parseInt(nav_count) : 0;
+    let nav_offset = offset ? parseInt(offset) - nav_count : 0;
     if (nav_count < 0) {
       nav_count = defaultCount;
     }
@@ -107,9 +102,9 @@ const TopPlayer = () => {
     navigate(`/top/${char_short}/${nav_count}/${nav_offset}`);
   }
 
-  function onNext(event) {
+  function onNext() {
     let nav_count = count ? parseInt(count) : defaultCount;
-    let nav_offset = offset ? parseInt(offset) + parseInt(nav_count) : nav_count;
+    let nav_offset = offset ? parseInt(offset) + nav_count : nav_count;
     navigate(`/top/${char_short}/${nav_count}/${nav_offset}`);
   }
 
@@ -136,8 +131,8 @@ const TopPlayer = () => {
       </AppBar>
       <Box m={4}>
         <Box mx={3} sx={{ display: 'inline-block' }}>
-          <Button onClick={(event) => onPrev(event)}>Prev</Button>
-          <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
+          <Button onClick={() => onPrev()}>Prev</Button>
+          <Button style={showNext ? {} : { display: 'none' }} onClick={() => onNext()}>Next</Button>
           <Button onClick={() => navigate(`/top/${char_short}/1000/0`)}>View All</Button>
         </Box>
         <TableContainer component={Paper}>
@@ -157,21 +152,21 @@ const TopPlayer = () => {
                   <TableCell>
                     <Button component={Link} variant="link" to={`/player/${player.id}/${player.char_short}`}>{player.name}</Button>
                     {player.tags && player.tags.map((e, i) => (
-                      <Tag key={i} style={e.style} sx={{ fontSize: '0.9rem', position: 'unset' }}>
+                      <Tag key={i} style={JSON.parse(e.style)} sx={{ fontSize: '0.9rem', position: 'unset' }}>
                         {e.tag}
                       </Tag>
                     ))}
                   </TableCell>
                   <TableCell>{player.char_short}</TableCell>
-                  <TableCell><Box component={'span'} title={player.rating}>{Number(player.rating).toFixed(0)}</Box> <Box component={'span'} title={player.deviation}>±{Number(player.deviation).toFixed(0)}</Box></TableCell>
+                  <TableCell><Box component={'span'} title={player.rating.toString()}>{Number(player.rating).toFixed(0)}</Box> <Box component={'span'} title={player.deviation.toString()}>±{Number(player.deviation).toFixed(0)}</Box></TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </TableContainer>
         <Box mx={3} sx={{ display: 'inline-block' }}>
-          <Button onClick={(event) => onPrev(event)}>Prev</Button>
-          <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
+          <Button onClick={() => onPrev()}>Prev</Button>
+          <Button style={showNext ? {} : { display: 'none' }} onClick={() => onNext()}>Next</Button>
           <Button onClick={() => navigate(`/top/${char_short}/1000/0`)}>View All</Button>
         </Box>
       </Box>

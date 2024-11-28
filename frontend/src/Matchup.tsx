@@ -2,14 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TableSortLabel } from '@mui/material';
 import { Utils } from './Utils';
+import { MatchupResponse, MatchupCharResponse, MatchupEntry } from './Interfaces';
 
-const calculateAverageWinRate = (matchups) => {
+const calculateAverageWinRate = (matchups: MatchupEntry[]) => {
   const totalWins = matchups.reduce((sum, m) => sum + m.wins, 0);
   const totalGames = matchups.reduce((sum, m) => sum + m.total_games, 0);
   return totalGames > 0 ? (totalWins / totalGames) * 100 : 0;
 };
 
-const getCharacterWinRates = (matchupData) => {
+export interface CharWinRates {
+  charName: string;
+  charShort: string;
+  winRate: number;
+}
+
+const getCharacterWinRates = (matchupData: MatchupCharResponse[]): CharWinRates[] => {
   if (!matchupData) return [];
 
   return matchupData
@@ -21,20 +28,20 @@ const getCharacterWinRates = (matchupData) => {
     .sort((a, b) => b.winRate - a.winRate);
 };
 
-const MatchupTable = ({ data, title }) => {
-  const [hoveredRow, setHoveredRow] = useState(null);
-  const [hoveredCol, setHoveredCol] = useState(null);
-  const [orderBy, setOrderBy] = useState('');
-  const [order, setOrder] = useState('asc');
+const MatchupTable = ({ data, title }: { data: MatchupCharResponse[], title: string }) => {
+  const [hoveredRow, setHoveredRow] = useState<number>();
+  const [hoveredCol, setHoveredCol] = useState<number>();
+  const [orderBy, setOrderBy] = useState<string>('');
+  const [order, setOrder] = useState<'asc' | 'desc' | undefined>(undefined);
 
-  const handleRequestSort = (property) => {
+  const handleRequestSort = (property: string) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
   };
 
-  const sortData = (data) => {
-    if (!orderBy && orderBy !== 0) return data;
+  const sortData = (data: MatchupCharResponse[]) => {
+    if (!orderBy && orderBy !== "0") return data;
 
     return [...data].sort((a, b) => {
       // Handle character column sorting
@@ -44,8 +51,8 @@ const MatchupTable = ({ data, title }) => {
       }
       
       // Handle matchup column sorting
-      const indexA = (a.matchups[orderBy]?.wins / a.matchups[orderBy]?.total_games) || 0;
-      const indexB = (b.matchups[orderBy]?.wins / b.matchups[orderBy]?.total_games) || 0;
+      const indexA = (a.matchups[Number(orderBy)]?.wins / a.matchups[Number(orderBy)]?.total_games) || 0;
+      const indexB = (b.matchups[Number(orderBy)]?.wins / b.matchups[Number(orderBy)]?.total_games) || 0;
       return order === 'asc' ? indexA - indexB : indexB - indexA;
     });
   };
@@ -81,9 +88,9 @@ const MatchupTable = ({ data, title }) => {
                   }}
                 >
                   <TableSortLabel
-                    active={orderBy === index}
-                    direction={orderBy === index ? order : 'asc'}
-                    onClick={() => handleRequestSort(index)}
+                    active={orderBy === index.toString()}
+                    direction={orderBy === index.toString() ? order : 'asc'}
+                    onClick={() => handleRequestSort(index.toString())}
                   >
                     {matchup.char_short}
                   </TableSortLabel>
@@ -115,8 +122,8 @@ const MatchupTable = ({ data, title }) => {
                       setHoveredCol(colIndex);
                     }}
                     onMouseLeave={() => {
-                      setHoveredRow(null);
-                      setHoveredCol(null);
+                      setHoveredRow(undefined);
+                      setHoveredCol(undefined);
                     }}
                     sx={{
                       backgroundColor: hoveredRow === rowIndex && hoveredCol === colIndex ? 'grey' : 'inherit'
@@ -157,8 +164,7 @@ const MatchupTable = ({ data, title }) => {
 const Matchup = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
-  const [matchup, setMatchup] = React.useState(null);
-
+  const [matchup, setMatchup] = React.useState<MatchupResponse>();
 
   useEffect(() => {
     fetch(`${API_ENDPOINT}/matchups`)

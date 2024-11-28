@@ -142,6 +142,7 @@ async fn player(
         .inner_join(schema::player_ratings::table)
         .filter(schema::players::id.eq(id))
         .select((Player::as_select(), PlayerRating::as_select()))
+        .order(schema::player_ratings::char_id.asc())
         .load(&mut db)
         .await
         .expect("Error loading player");
@@ -431,7 +432,7 @@ struct PlayerSet {
     floor: String,
     opponent_name: String,
     opponent_platform: &'static str,
-    opponent_id: String,
+    opponent_id: i64,
     opponent_character: &'static str,
     opponent_character_short: &'static str,
     opponent_rating_value: f32,
@@ -609,7 +610,7 @@ async fn player_history(
                 3 => "PC",
                 _ => "??",
             },
-            opponent_id: opponent_id.to_string(),
+            opponent_id: opponent_id,
             opponent_character,
             opponent_character_short,
             opponent_rating_value: opponent_rating_value,

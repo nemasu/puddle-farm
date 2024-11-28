@@ -1,56 +1,65 @@
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import { CircularProgress, useTheme, useMediaQuery, TableSortLabel } from '@mui/material';
-import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import Collapse from '@mui/material/Collapse';
-import IconButton from '@mui/material/IconButton';
-import Link from '@mui/material/Link';
-import Paper from '@mui/material/Paper';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Typography from '@mui/material/Typography';
-import { JSONParse } from 'json-with-bigint';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
+import { AppBar, Typography, CircularProgress, useTheme, useMediaQuery, TableSortLabel, Box, Button, Collapse, IconButton, Link, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { To, useNavigate, useParams } from 'react-router-dom';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
-import { Line } from 'react-chartjs-2';
-import { StorageUtils } from './Storage';
 import { Utils } from './Utils';
 import { Tag } from './Tag';
+import { PlayerResponse, PlayerResponsePlayer, PlayerSet, TagResponse } from "./Interfaces";
+import { StorageUtils } from './Storage';
+
+let ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend;
+import('chart.js').then(module => {
+  ChartJS = module.Chart;
+  CategoryScale = module.CategoryScale;
+  LinearScale = module.LinearScale;
+  PointElement = module.PointElement;
+  LineElement = module.LineElement;
+  Title = module.Title;
+  Tooltip = module.Tooltip;
+  Legend = module.Legend;
+
+  ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend
+  );
+});
+
+let Line: React.ComponentType<any>;
+import('react-chartjs-2').then(module => {
+  Line = module.Line;
+});
+
+let JSONParse: (arg0: string) => any;
+import('json-with-bigint').then(module => {
+  JSONParse = module.JSONParse;
+});
 /* global BigInt */
 
+interface GroupedMatch {
+  floor: string; // Floor of the match (e.g., "Celestial", "99")
+  losses: number; // Number of losses in this set of matches
+  matches: any[]; // Array of individual match details (not provided in the inspection)
+  odds: number; // Player's odds of winning the set
+  opponent_character_short: string; // Opponent's character (short name)
+  opponent_id: BigInt; // Opponent's ID
+  opponent_name: string; // Opponent's name
+  ratingChange: number; // Change in rating after this set of matches
+  timestamp: string; // Timestamp of the match set
+  wins: number; // Number of wins in this set of matches
+}
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
-
-function getCurrentPlayerRating(player, char_short) {
+function getCurrentPlayerRating(player: PlayerResponse, char_short: string) {
   for (var key in player.ratings) {
     if (player.ratings[key].char_short === char_short) {
       return { rating: player.ratings[key].rating, deviation: player.ratings[key].deviation };
@@ -58,7 +67,7 @@ function getCurrentPlayerRating(player, char_short) {
   }
 }
 
-function groupMatches(data, player, char_short, has_offset) {
+function groupMatches(data: any[], player: PlayerResponse, char_short: string, has_offset: boolean) {
   const groupedData = [];
   let currentGroup = null;
   let lastValidGroup = null;
@@ -86,7 +95,7 @@ function groupMatches(data, player, char_short, has_offset) {
       currentGroup.losses += match.result_win ? 0 : 1;
       if (match.own_rating_value !== 0) {
         if (lastValidMatch) {
-          const ratingChange = parseFloat(match.own_rating_value - lastValidMatch.own_rating_value);
+          const ratingChange = parseFloat((match.own_rating_value - lastValidMatch.own_rating_value).toString());
           currentGroup.ratingChange += ratingChange;
           lastValidMatch.ratingChange = ratingChange.toFixed(2);
         }
@@ -146,17 +155,18 @@ function groupMatches(data, player, char_short, has_offset) {
   groupedData.reverse();
   groupedData[0].matches.reverse();
 
-  let player_rating = {};
+  let player_rating: { rating?: number } = {};
   if (has_offset) {
     player_rating.rating = data[data.length - 1].own_rating_value;
   } else {
-    player_rating = getCurrentPlayerRating(player, char_short);
+    const currentRating = getCurrentPlayerRating(player, char_short);
+    player_rating = currentRating ? { rating: currentRating.rating } : { rating: undefined };
   }
 
   // Calculate the final rating change with the first good match
   for (let i = 0; i < groupedData.length; i++) {
     if (groupedData[i].matches[0].own_rating_value !== 0) {
-      const lastChange = player_rating.rating - groupedData[i].matches[0].own_rating_value;
+      const lastChange = player_rating.rating !== undefined ? player_rating.rating - groupedData[i].matches[0].own_rating_value : 0;
       groupedData[i].ratingChange += lastChange;
       groupedData[i].matches[0].ratingChange = lastChange.toFixed(2);
       break;
@@ -166,13 +176,16 @@ function groupMatches(data, player, char_short, has_offset) {
   return groupedData;
 }
 
-function Row(props) {
+function Row(props: { isMobile?: boolean; item?: GroupedMatch; tags?: TagResponse[]; }) {
   const [open, setOpen] = React.useState(false);
   const navigate = useNavigate();
 
   const { item, tags } = props;
 
-  function onProfileClick(event) {
+  if (!item) return null;
+
+  function onProfileClick(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) {
+    if (!item) return;
     if (event.button === 1) { //Middle mouse click
       window.open(`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`, '_blank');
     } else if (event.button === 0) { //Left mouse click
@@ -180,7 +193,7 @@ function Row(props) {
     }
   }
 
-  const formatTimestamp = (timestamp) => {
+  const formatTimestamp = (timestamp: string) => {
     const [date, time] = Utils.formatUTCToLocal(timestamp).split(' ');
     return (
       <React.Fragment>
@@ -199,7 +212,7 @@ function Row(props) {
       <TableContainer component={Paper}>
         <Table size="small">
           <TableBody>
-            {item.opponent_id === "0" ? (
+            {item.opponent_id === BigInt(0) ? (
               <React.Fragment>
                 <TableRow>
                   <TableCell sx={{ pb: 0, mb: 0 }}>
@@ -245,8 +258,8 @@ function Row(props) {
                     <Button sx={{ marginLeft: '5px' }} onMouseDown={(event) => { onProfileClick(event) }} component={Link} variant="link" >{item.opponent_name}</Button>
                     <React.Fragment>
                       <Box>
-                        {tags && tags.map((e, i) => (
-                          <Tag key={i} style={e.style} sx={{ fontSize: '0.9rem' }}>
+                        {tags && tags.map((e: TagResponse, i: number) => (
+                          <Tag key={i} style={JSON.parse(e.style)} sx={{ fontSize: '0.9rem' }}>
                             {e.tag}
                           </Tag>
                         ))}
@@ -320,7 +333,7 @@ function Row(props) {
               {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
             </IconButton>
           </TableCell>
-          {item.opponent_id === "0" ? (
+          {item.opponent_id === BigInt("0") ? (
             <React.Fragment>
               <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
               <TableCell align="right">{item.floor === '99' ? 'C' : item.floor}</TableCell>
@@ -341,8 +354,8 @@ function Row(props) {
                 <Button onMouseDown={(event) => { onProfileClick(event) }} component={Link} variant="link" >{item.opponent_name}</Button>
                 <React.Fragment>
                   <Box>
-                    {tags && tags.map((e, i) => (
-                      <Tag key={i} style={e.style} sx={{ fontSize: '0.9rem', position: 'unset' }}>
+                    {tags && tags.map((e: TagResponse, i: number) => (
+                      <Tag key={i} style={JSON.parse(e.style)} sx={{ fontSize: '0.9rem', position: 'unset' }}>
                         {e.tag}
                       </Tag>
                     ))}
@@ -408,17 +421,20 @@ const Player = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
+  let API_ENDPOINT = '/api';
+  if (process.env.REACT_APP_API_ENDPOINT !== undefined) {
+    API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
+  }
 
   const defaultCount = 100;
 
   const navigate = useNavigate();
   let { player_id, char_short, count, offset } = useParams();
 
-  const [history, setHistory] = useState(null);
-  const [player, setPlayer] = useState(null);
-  const [currentCharData, setCurrentCharData] = useState(null);
-  const [alias, setAlias] = useState(null);
+  const [history, setHistory] = useState<GroupedMatch[]>([]);
+  const [player, setPlayer] = useState<PlayerResponse | null>(null);
+  const [currentCharData, setCurrentCharData] = useState<PlayerResponsePlayer | null>(null);
+  const [alias, setAlias] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(true);
 
@@ -427,19 +443,32 @@ const Player = () => {
   const [hideClaim, setHideClaim] = useState(false);
 
   const [lineChartOptions, setLineChartOptions] = useState({});
-  const [lineChartData, setLineChartData] = useState(null);
+  const [lineChartData, setLineChartData] = useState<{ labels: any; datasets: { label: string; data: any; borderColor: string; backgroundColor: string; }[] } | null>(null);
 
-  const [tags, setTags] = useState(null);
+  const [tags, setTags] = useState<{ [key: string]: TagResponse[] }>();
 
   //This is for matchup table
   //TODO - Move this to a separate component
-  const [matchups, setMatchups] = useState(null);
+  interface Matchup {
+    char_name: string;
+    char_short: string;
+    wins: number;
+    total_games: number;
+  }
 
-  const [orderBy, setOrderBy] = useState(null);
-  const [order, setOrder] = useState(null);
+  interface Matchups {
+    matchups: Matchup[];
+    total_wins: number;
+    total_games: number;
+  }
+
+  const [matchups, setMatchups] = useState<Matchups | null>(null);
+
+  const [orderBy, setOrderBy] = useState<string | null>(null);
+  const [order, setOrder] = useState<'asc' | 'desc' | undefined>(undefined);
 
 
-  const handleRequestSort = (property) => {
+  const handleRequestSort = (property: string) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
@@ -448,7 +477,7 @@ const Player = () => {
   const sortedMatchups = React.useMemo(() => {
     if (!matchups?.matchups) return [];
 
-    if(order === null || orderBy === null) {
+    if (order === null || orderBy === null) {
       return [...matchups.matchups];
     }
 
@@ -483,12 +512,16 @@ const Player = () => {
 
   //MU table end
 
-  let player_id_checked = player_id;
-  if (player_id_checked.match(/[a-zA-Z]/)) {
-    player_id_checked = BigInt('0x' + player_id_checked);
+  let player_id_checked: BigInt;
+  if (player_id && player_id.match(/[a-zA-Z]/)) {
+    player_id_checked = BigInt('0x' + player_id);
+  } else if (player_id) {
+    player_id_checked = BigInt(player_id);
+  } else {
+    player_id_checked = BigInt(0);
   }
 
-  function onProfileClick(event, url) {
+  function onProfileClick(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>, url: string) {
     if (event.button === 1) { //Middle mouse click
       window.open(url, '_blank');
     } else if (event.button === 0) { //Left mouse click
@@ -513,18 +546,14 @@ const Player = () => {
           player_result.ratings[key].deviation = player_result.ratings[key].deviation.toFixed(2);
         }
 
-        for (var tkey in player_result.tags) {
-          player_result.tags[tkey].style = JSON.parse(player_result.tags[tkey].style);
-        }
-
         setPlayer(player_result);
 
         if (player_result.name === 'Player not found' && player_result.id === 0) {
           setHideClaim(true);
         } else if (player_result.id === 0) {
-          setHistory(null);
+          setHistory([]);
           setCurrentCharData(null);
-          setAlias(null);
+          setAlias([]);
           setLineChartData(null);
           setMatchups(null);
           setLoading(false);
@@ -565,7 +594,11 @@ const Player = () => {
           + '&offset=' + (has_offset && offset !== '0' ? Number(offset) - 1 : '0');
         const history_response = await fetch(url);
         if (history_response.status === 200) {
-          const history_result = await history_response.json();
+
+          const history_result = await history_response.text().then(body => {
+            var parsed = JSONParse(body);
+            return parsed;
+          });
 
           if (history_result.history.length < (count ? count : defaultCount)) {
             setShowNext(false);
@@ -576,11 +609,11 @@ const Player = () => {
           if (history_result.history.length !== 0) {
             const groupedData = groupMatches(history_result.history, player_result, char_short, has_offset);
 
-            let tags = {};
+            let tags: { [key: string]: TagResponse[] } = {};
             Object.entries(history_result.tags).forEach(([playerId, tagArray]) => {
-              tags[playerId] = tagArray.map(tagObj => ({
+              tags[playerId] = (tagArray as TagResponse[]).map(tagObj => ({
                 tag: tagObj.tag,
-                style: JSON.parse(tagObj.style)
+                style: tagObj.style
               }));
             });
             setTags(tags);
@@ -608,7 +641,7 @@ const Player = () => {
         if (rating_history_response.status === 200) {
           const rating_history_result = await rating_history_response.json();
 
-          if (rating_history_result !== null && currentCharKey in player_result.ratings) {
+          if (rating_history_result !== null && currentCharKey !== null && currentCharKey in player_result.ratings) {
 
             rating_history_result.reverse();
 
@@ -639,12 +672,12 @@ const Player = () => {
             };
             setLineChartOptions(lineChartOptions);
 
-            var lineChartData = {
-              labels: rating_history_result.map(item => item.timestamp),
+            const lineChartData = {
+              labels: rating_history_result.map((item: { timestamp: string; }) => item.timestamp),
               datasets: [
                 {
                   label: 'Rating',
-                  data: rating_history_result.map(item => item.rating),
+                  data: rating_history_result.map((item: { rating: number; }) => item.rating),
                   borderColor: 'rgb(75, 192, 192)',
                   backgroundColor: 'rgba(75, 192, 192, 0.2)',
                 },
@@ -683,9 +716,9 @@ const Player = () => {
     fetchPlayerAndHistory();
   }, [player_id, char_short, count, API_ENDPOINT, player_id_checked, offset]);
 
-  function onPrev(event) {
+  function onPrev(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     let nav_count = count ? parseInt(count) : defaultCount;
-    let nav_offset = offset ? parseInt(offset) - parseInt(nav_count) : 0;
+    let nav_offset = offset ? parseInt(offset) - nav_count : 0;
     if (nav_count < 0) {
       nav_count = defaultCount;
     }
@@ -695,9 +728,9 @@ const Player = () => {
     navigate(`/player/${player_id_checked}/${char_short}/${nav_count}/${nav_offset}`);
   }
 
-  function onNext(event) {
+  function onNext(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     let nav_count = count ? parseInt(count) : defaultCount;
-    let nav_offset = offset ? parseInt(offset) + parseInt(nav_count) : nav_count;
+    let nav_offset = offset ? parseInt(offset) + nav_count : nav_count;
     navigate(`/player/${player_id_checked}/${char_short}/${nav_count}/${nav_offset}`);
   }
 
@@ -722,7 +755,7 @@ const Player = () => {
               <React.Fragment>
                 <Typography textAlign={'center'} variant="pageHeader" fontSize={30}>
                   {player.tags ? player.tags.map((e, i) => (
-                    <Tag key={i} style={e.style}>
+                    <Tag key={i} style={JSON.parse(e.style)}>
                       {e.tag}
                     </Tag>
                   )) : null}
@@ -759,7 +792,7 @@ const Player = () => {
               <React.Fragment>
                 <Typography align='center' variant="pageHeader" fontSize={30}>
                   {player.tags ? player.tags.map((e, i) => (
-                    <Tag key={i} style={e.style}>
+                    <Tag key={i} style={JSON.parse(e.style)}>
                       {e.tag}
                     </Tag>
                   )) : null}
@@ -777,7 +810,7 @@ const Player = () => {
               </React.Fragment>
             ) : null}
             {alias && alias.length > 0 ? (
-              <Box align='center' fontSize={17}>
+              <Box textAlign='center' fontSize={17}>
                 <Typography variant='platform' sx={{ position: 'relative', top: '0px', borderRadius: '5px', py: '5px' }} display={'inline-block'}>
                   AKA
                 </Typography>
@@ -800,7 +833,7 @@ const Player = () => {
               {currentCharData ? (
                 <React.Fragment>
                   <Typography variant='h5' my={2}>
-                    {currentCharData.character} Rating: <Box title={currentCharData.rating} component={"span"}>{Math.round(currentCharData.rating)}</Box> ±<Box title={currentCharData.deviation} component={"span"}>{Math.round(currentCharData.deviation)}</Box> ({currentCharData.match_count} games)
+                    {currentCharData.character} Rating: <Box title={currentCharData.rating.toString()} component={"span"}>{Math.round(currentCharData.rating)}</Box> ±<Box title={currentCharData.deviation.toString()} component={"span"}>{Math.round(currentCharData.deviation)}</Box> ({currentCharData.match_count} games)
                     {currentCharData.top_char !== 0 ? (
                       <Typography variant="char_rank">
                         #{currentCharData.top_char} {currentCharData.character}
@@ -809,15 +842,14 @@ const Player = () => {
                   </Typography>
                   {currentCharData.top_rating.value !== 0 ? (
                     <React.Fragment>
-                      <Typography variant='h7'>
-                        Top Rating: <Box title={currentCharData.top_rating.value} component={"span"}>{Math.round(currentCharData.top_rating.value)}</Box> ±<Box title={currentCharData.top_rating.deviation} component={"span"}>{Math.round(currentCharData.top_rating.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_rating.timestamp)})
+                      <Typography>
+                        Top Rating: <Box title={currentCharData.top_rating.value.toString()} component={"span"}>{Math.round(currentCharData.top_rating.value)}</Box> ±<Box title={currentCharData.top_rating.deviation.toString()} component={"span"}>{Math.round(currentCharData.top_rating.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_rating.timestamp)})
                       </Typography>
-                      <br />
                     </React.Fragment>
                   ) : null}
                   {currentCharData.top_defeated.value !== 0.0 ? (
-                    <Typography variant='h7'>
-                      Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} variant="link" onMouseDown={(event) => onProfileClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
+                    <Typography>
+                      Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} variant="link" onMouseDown={(event) => onProfileClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
                     </Typography>
                   ) : null}
 
@@ -829,9 +861,9 @@ const Player = () => {
                     <Button onClick={(event) => onPrev(event)}>Prev</Button>
                     <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
                   </Box>
-                  {history.map((item, i) => (
+                  {tags && history.map((item, i) => (
                     <Box py={0.3} key={i}>
-                      <Row key={i} item={item} isMobile={true} tags={tags[item.opponent_id] ? tags[item.opponent_id] : null} />
+                      <Row key={i} item={item} isMobile={true} tags={tags[item.opponent_id.toString()]} />
                     </Box>
                   ))}
                   <Box mx={3}>
@@ -926,7 +958,7 @@ const Player = () => {
             ) : null}
           </Box>
           <Box marginLeft={10} marginTop={13} sx={{ width: .18, maxWidth: '235px' }}>
-            {player && player.id !== 0 ? (
+            {player && player.id !== BigInt(0) ? (
               <React.Fragment>
                 <hr />
                 <Typography fontSize={14}>
@@ -955,7 +987,7 @@ const Player = () => {
               {currentCharData ? (
                 <React.Fragment>
                   <Typography variant='h5' my={2}>
-                    {currentCharData.character} Rating: <Box title={currentCharData.rating} component={"span"}>{Math.round(currentCharData.rating)}</Box> ±<Box title={currentCharData.deviation} component={"span"}>{Math.round(currentCharData.deviation)}</Box> ({currentCharData.match_count} games)
+                    {currentCharData.character} Rating: <Box title={currentCharData.rating.toString()} component={"span"}>{Math.round(currentCharData.rating)}</Box> ±<Box title={currentCharData.deviation.toString()} component={"span"}>{Math.round(currentCharData.deviation)}</Box> ({currentCharData.match_count} games)
                     {currentCharData.top_char !== 0 ? (
                       <Typography variant="char_rank">
                         #{currentCharData.top_char} {currentCharData.character}
@@ -965,16 +997,15 @@ const Player = () => {
 
                   {currentCharData.top_rating.value !== 0 ? (
                     <React.Fragment>
-                      <Typography variant='h7'>
-                        Top Rating: <Box title={currentCharData.top_rating.value} component={"span"}>{Math.round(currentCharData.top_rating.value)}</Box> ±<Box title={currentCharData.top_rating.deviation} component={"span"}>{Math.round(currentCharData.top_rating.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_rating.timestamp)})
+                      <Typography>
+                        Top Rating: <Box title={currentCharData.top_rating.value.toString()} component={"span"}>{Math.round(currentCharData.top_rating.value)}</Box> ±<Box title={currentCharData.top_rating.deviation.toString()} component={"span"}>{Math.round(currentCharData.top_rating.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_rating.timestamp)})
                       </Typography>
-                      <br />
                     </React.Fragment>
                   ) : null}
 
                   {currentCharData.top_defeated.value !== 0.0 ? (
-                    <Typography variant='h7'>
-                      Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} variant="link" onMouseDown={(event) => onProfileClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
+                    <Typography>
+                      Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} variant="link" onMouseDown={(event) => onProfileClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
                     </Typography>
                   ) : null}
 
@@ -1003,8 +1034,8 @@ const Player = () => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {history.map((item, i) => (
-                          <Row key={i} item={item} i={i} tags={tags[item.opponent_id] ? tags[item.opponent_id] : null} />
+                        {tags && history.map((item, i) => (
+                          <Row key={i} item={item} tags={tags[item.opponent_id.toString()]} />
                         ))}
                       </TableBody>
                     </Table>
@@ -1101,7 +1132,7 @@ const Player = () => {
             ) : null}
           </Box>
           <Box marginTop={25} sx={{ width: 300, overflowY: 'auto', minWidth: '200px' }}>
-            {player && player.id !== 0 ? (
+            {player && player.id !== BigInt(0) ? (
               <React.Fragment>
                 <hr />
                 <Typography fontSize={14}>
@@ -1128,11 +1159,17 @@ const Player = () => {
   );
 };
 
-const ClaimDialog = ({ playerId, setLoading, API_ENDPOINT }) => {
+interface ClaimDialogProps {
+  playerId: BigInt;
+  setLoading: React.Dispatch<React.SetStateAction<boolean>>;
+  API_ENDPOINT: string;
+}
+
+const ClaimDialog: React.FC<ClaimDialogProps> = ({ playerId, setLoading, API_ENDPOINT }) => {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState('');
   const [isPolling, setIsPolling] = useState(false);
-  const timerRef = useRef(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const counter = useRef(0);
 
   useEffect(() => {
@@ -1140,11 +1177,15 @@ const ClaimDialog = ({ playerId, setLoading, API_ENDPOINT }) => {
       timerRef.current = setInterval(() => {
         pollPlayer(playerId);
       }, 2000);
-    } else {
+    } else if (timerRef && timerRef.current) {
       clearInterval(timerRef.current);
     }
 
-    return () => clearInterval(timerRef.current);
+    return () => {
+      if (timerRef && timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    }
   }, [code, isPolling]);
 
   const handleClickOpen = async () => {
@@ -1177,9 +1218,12 @@ const ClaimDialog = ({ playerId, setLoading, API_ENDPOINT }) => {
     setIsPolling(true);
   }
 
-  function pollPlayer(playerId) {
+  function pollPlayer(playerId: BigInt) {
     if (counter.current >= 10) {
-      clearInterval(timerRef.current);
+      if (timerRef && timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+
       alert("Code is not matching, please try again.");
       document.location.reload();
     }
@@ -1194,7 +1238,9 @@ const ClaimDialog = ({ playerId, setLoading, API_ENDPOINT }) => {
         const resp = JSON.parse(req.response);
 
         if (resp !== 'false') {
-          clearInterval(timerRef.current);
+          if (timerRef && timerRef.current) {
+            clearInterval(timerRef.current);
+          }
 
           setTimeout(() => {
             StorageUtils.setApiKey(resp);

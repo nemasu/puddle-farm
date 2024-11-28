@@ -1,20 +1,28 @@
 import React, { useEffect } from 'react';
 import { Box, Button, Typography } from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, To, useNavigate } from 'react-router-dom';
 import { Tag } from './Tag';
-import { JSONParse } from 'json-with-bigint';
+import { Supporter, TagResponse } from './Interfaces';
+
+let JSONParse: (arg0: string) => any;
+import('json-with-bigint').then(module => {
+  JSONParse = module.JSONParse;
+});
 /* global BigInt */
 
 const About = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
   const navigate = useNavigate();
-  const [supporters, setSupporters] = React.useState([]);
+  
+  const [supporters, setSupporters] = React.useState<Supporter[]>([]);
 
-  function onProfileClick(event, url) {
+  function onProfileClick(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>, url: string) {
     if (event.button === 1) { //Middle mouse click
-      window.open(url, '_blank');
+      window.open(url?.toString(), '_blank');
     } else if (event.button === 0) { //Left mouse click
-      navigate(url);
+      if (url) {
+        navigate(url);
+      }
     }
   }
 
@@ -23,15 +31,6 @@ const About = () => {
       const supporters_response = await fetch(API_ENDPOINT + '/supporters');
       const supporters_result = await supporters_response.text().then(body => {
         var parsed = JSONParse(body);
-
-        for (var index in parsed) {
-          if (parsed[index].tags) {
-            for (var s in parsed[index].tags) {
-              parsed[index].tags[s].style = JSON.parse(parsed[index].tags[s].style);
-            }
-          }
-        }
-
         return parsed;
       });
       setSupporters(supporters_result);
@@ -111,8 +110,8 @@ const About = () => {
                   >
                     {supporter.name}
                   </Button>
-                  {supporter.tags && supporter.tags.map((e, i) => (
-                    <Tag key={i} style={e.style} sx={{ fontSize: '0.9rem', position: 'unset' }}>
+                  {supporter.tags && supporter.tags.map((e: TagResponse, i: number) => (
+                    <Tag key={i} style={JSON.parse(e.style)} sx={{ fontSize: '0.9rem', position: 'unset' }}>
                       {e.tag}
                     </Tag>
                   ))}

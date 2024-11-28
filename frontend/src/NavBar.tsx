@@ -1,21 +1,23 @@
 import MenuIcon from '@mui/icons-material/Menu';
-import { Button } from '@mui/material';
-import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
-import Container from '@mui/material/Container';
-import IconButton from '@mui/material/IconButton';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
-import Toolbar from '@mui/material/Toolbar';
-import { JSONParse } from 'json-with-bigint';
+import { Button, IconButton, AppBar, Box, Container, Menu, MenuItem, Toolbar, TextField } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import { Link } from "react-router-dom";
-import TextField from '@mui/material/TextField';
 import SearchIcon from '@mui/icons-material/Search';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import { useNavigate } from 'react-router-dom';
 
-var pages = [
+let JSONParse: (arg0: string) => any;
+import('json-with-bigint').then(module => {
+  JSONParse = module.JSONParse;
+});
+
+interface Page {
+  name: string;
+  link?: string;
+  list?: { key: string; name: string; link: string }[];
+}
+
+var pages: Page[] = [
   { name: 'Top', link: './top_global' },
   { name: 'Characters', list: [] },
   { name: 'Popularity', link: './popularity' },
@@ -33,9 +35,9 @@ function NavBar() {
 
   const navigate = useNavigate();
 
-  const [anchorElNav, setAnchorElNav] = React.useState(null);
+  const [anchorElNav, setAnchorElNav] = React.useState<HTMLElement | null>(null);
 
-  const [characterElNav, setCharacterElNav] = React.useState(null);
+  const [characterElNav, setCharacterElNav] = React.useState<HTMLElement | null>(null);
 
   const [searchString, setSearchString] = useState('');
 
@@ -44,11 +46,11 @@ function NavBar() {
   // eslint-disable-next-line
   const [characters, setCharacters] = useState([]);
 
-  const handleSearchChange = (event) => {
+  const handleSearchChange = (event: { target: { value: React.SetStateAction<string>; }; }) => {
     setSearchString(event.target.value);
   };
 
-  const handleSearchKeyDown = (event) => {
+  const handleSearchKeyDown = (event: { key: string; }) => {
     if (event.key === 'Enter') {
       navigate(`/search/${searchString}`);
     }
@@ -76,7 +78,9 @@ function NavBar() {
 
           resetCharacters();
           for (var key in parsed) {
-            pages[1].list.push({ key: key, name: parsed[key][1], link: '/top/' + parsed[key][0] });
+            if (pages[1].list) {
+              pages[1].list.push({ key: key, name: parsed[key][1], link: '/top/' + parsed[key][0] });
+            }
           }
 
           setCharacters(parsed);
@@ -92,14 +96,14 @@ function NavBar() {
     fetchCharacterList();
   }, [API_ENDPOINT]);
 
-  const handleOpenNavMenu = (event) => {
+  const handleOpenNavMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorElNav(event.currentTarget);
   };
   const handleCloseNavMenu = () => {
     setAnchorElNav(null);
   };
 
-  const handleOpenCharNavMenu = (event) => {
+  const handleOpenCharNavMenu = (event: React.MouseEvent<HTMLElement>) => {
     setCharacterElNav(event.currentTarget);
   };
   const handleCloseCharNavMenu = () => {
@@ -141,7 +145,7 @@ function NavBar() {
                 //If the page has a 'list' attribute that is an array, render a submenu
                 'list' in page ? (
                   <Box key={page.name} style={{ display: 'flex', flexWrap: 'wrap', maxWidth: '450px', borderBottom: '1px solid', borderTop: '1px solid' }}>
-                    {page['list'].map((char) => (
+                    {page['list']?.map((char) => (
                       <MenuItem
                         component={Link}
                         to={char.link}
@@ -156,7 +160,7 @@ function NavBar() {
                 ) : (
                   <MenuItem key={page.name}
                     component={Link}
-                    to={page.link}
+                    to={page.link ?? '/'}
                     sx={{ my: 1, color: 'white', display: 'block' }}
                     onClick={handleCloseNavMenu}
                   >
@@ -177,11 +181,11 @@ function NavBar() {
               //If the page has a 'list' attribute that is an array, render a submenu
               'list' in page ? (
                 <Box key={page.name}>
-                  <Button m={0} key={page.name}
+                  <Button key={page.name}
                     component={Link}
-                    to={page.link}
+                    to={page.link ?? '/'}
                     onClick={handleOpenCharNavMenu}
-                    sx={{ my: 1, color: 'white', display: 'block' }
+                    sx={{ margin: 0, my: 1, color: 'white', display: 'block' }
                     }>
                     {page.name}
                   </Button> {/* Desktop view - character menu*/}
@@ -202,7 +206,7 @@ function NavBar() {
                     sx={{ display: { xs: 'none', md: 'flex' } }}
                   >
                     <Box style={{ display: 'flex', flexWrap: 'wrap', maxWidth: '450px' }}>
-                      {page['list'].map((char) => (
+                      {page['list']?.map((char) => (
                         <MenuItem component={Link} to={char.link} key={char.name} onClick={handleCloseCharNavMenu}>
                           <Box sx={{ display: { width: 80 } }}>{char.name}</Box>
                         </MenuItem>
@@ -214,7 +218,7 @@ function NavBar() {
               ) : (
                 <MenuItem key={page.name}
                   component={Link}
-                  to={page.link}
+                  to={page.link ?? '/'}
                   onClick={handleCloseCharNavMenu}
                   sx={{ my: 1, color: 'white', display: 'block' }
                   }> {/* Desktop view  - button*/}

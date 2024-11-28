@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Button, Typography, FormGroup, FormControlLabel, Switch, Paper } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { JSONParse } from 'json-with-bigint';
-import { StorageUtils } from './Storage';
-import { Link } from 'react-router-dom';
+import { StorageOptions, StorageUtils } from './Storage';
 import Themes from './Themes';
+import { SettingsResponse } from './Interfaces';
+
+let JSONParse: (arg0: string) => any;
+import('json-with-bigint').then(module => {
+  JSONParse = module.JSONParse;
+});
+/* global BigInt */
 
 const themes = Array.from(Themes.keys());
 
@@ -13,27 +18,26 @@ const Settings = () => {
 
   const navigate = useNavigate();
 
-  const [key, setKey] = React.useState(null);
+  const [key, setKey] = React.useState<string>();
 
   //Server settings
-  const [settings, setSettings] = useState({});
+  const [settings, setSettings] = useState<SettingsResponse>();
 
-  //Client settings
-  const [preferences, setPreferences] = useState({
-    useLocalTime: false,
-    disableRatingColors: false,
-    //autoUpdate: false
+  // Client settings
+  const [preferences, setPreferences] = useState<StorageOptions>({
+    useLocalTime: null,
+    disableRatingColors: null,
   });
 
-  const handleChange = (event) => {
-    const newPreferences = {
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    const { name, checked } = event.target;
+    const newPreferences: StorageOptions = {
       ...preferences,
-      [event.target.name]: Boolean(event.target.checked) ? true : null
+      [name]: checked ? true : null,
     };
     setPreferences(newPreferences);
     StorageUtils.savePreferences(newPreferences);
   };
-
 
   useEffect(() => {
 
@@ -176,12 +180,11 @@ const Settings = () => {
       </Box>
       <Box m={2}>
         <Paper elevation={2} sx={{ p: 3 }}>
-          {key !== null ? ( //If we have a key set
+          {settings && key !== null ? ( //If we have a key set
             <Box>
               <Box sx={{ marginBottom: 2 }}>
                 <Button
                   variant='link'
-                  gutterBottom
                   sx={{ fontSize: '1rem' }}
                   onClick={() => navigate(`/player/${settings.id}`)}
                 >
