@@ -40,6 +40,7 @@ const Settings = () => {
   };
 
   useEffect(() => {
+    document.title = 'Settings | Puddle Farm';
 
     const fetchSettings = async () => {
 

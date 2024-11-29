@@ -32,6 +32,7 @@ const Search = () => {
   const [loading, setLoading ] = useState(true);
 
   useEffect(() => {
+    document.title = 'Search Results | Puddle Farm';
     window.scrollTo(0, 0);
 
     const fetchResults = async () => {

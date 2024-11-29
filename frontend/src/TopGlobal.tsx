@@ -48,6 +48,7 @@ const TopGlobal = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    document.title = 'Top Players | Puddle Farm';
     window.scrollTo(0, 0);
 
     const fetchRanking = async () => {
@@ -58,6 +59,11 @@ const TopGlobal = () => {
           + 'count=' + (count ? count : defaultCount)
           + '&offset=' + (offset ? offset : 0);
         const response = await fetch(url);
+
+        if (response.status === 404) {
+          navigate(`/`);
+          return;
+        }
 
         // eslint-disable-next-line
         const result = await response.text().then(body => {

@@ -167,6 +167,7 @@ const Matchup = () => {
   const [matchup, setMatchup] = React.useState<MatchupResponse>();
 
   useEffect(() => {
+    document.title = 'Matchup | Puddle Farm';
     fetch(`${API_ENDPOINT}/matchups`)
       .then((response) => response.json())
       .then((data) => {

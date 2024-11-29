@@ -29,6 +29,7 @@ const Stats = () => {
   const [stats, setStats] = useState<StatsResponse>();
 
   useEffect(() => {
+    document.title = 'Stats | Puddle Farm';
     window.scrollTo(0, 0);
 
     const fetchResults = async () => {

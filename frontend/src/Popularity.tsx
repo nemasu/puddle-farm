@@ -10,6 +10,7 @@ const Popularity = () => {
   const [popularity, setPopularity] = React.useState<PopularityResult>();
 
   useEffect(() => {
+    document.title = 'Popularity | Puddle Farm';
     fetch(`${API_ENDPOINT}/popularity`)
       .then((response) => response.json())
       .then((data) => {

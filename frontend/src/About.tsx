@@ -27,6 +27,7 @@ const About = () => {
   }
 
   useEffect(() => {
+    document.title = 'About | Puddle Farm';
     const fetchSupporters = async () => {
       const supporters_response = await fetch(API_ENDPOINT + '/supporters');
       const supporters_result = await supporters_response.text().then(body => {

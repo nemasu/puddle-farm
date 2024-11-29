@@ -51,6 +51,11 @@ const TopPlayer = () => {
           + '&offset=' + (offset ? offset : 0);
         const response = await fetch(url);
 
+        if (response.status === 404) {
+          navigate(`/`);
+          return;
+        }
+
         // eslint-disable-next-line
         const result = await response.text().then(body => {
 
@@ -64,6 +69,8 @@ const TopPlayer = () => {
           }
 
           setCharLong(parsed.ranks[0].char_long);
+
+          document.title = 'Top ' + parsed.ranks[0].char_long + ' Players | Puddle Farm';
 
           for (var key in parsed.ranks) {
             parsed.ranks[key].rating = parsed.ranks[key].rating.toFixed(2);

@@ -579,6 +579,9 @@ const Player = () => {
         var currentCharKey = null;
         for (var ckey in player_result.ratings) {
           if (player_result.ratings[ckey].char_short === char_short) {
+
+            document.title = player_result.name + ' (' + char_short + ') - ' + Number(player_result.ratings[ckey].rating).toFixed() + ' ±' + Number(player_result.ratings[ckey].deviation).toFixed() + ' | Puddle Farm';
+
             setCurrentCharData(player_result.ratings[ckey]);
             currentCharKey = ckey;
           }
