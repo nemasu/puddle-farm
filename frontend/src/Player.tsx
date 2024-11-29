@@ -10,7 +10,7 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import { Utils } from './Utils';
 import { Tag } from './Tag';
-import { PlayerResponse, PlayerResponsePlayer, PlayerSet, TagResponse } from "./Interfaces";
+import { PlayerResponse, PlayerResponsePlayer, RatingsResponse, TagResponse } from "./Interfaces";
 import { StorageUtils } from './Storage';
 
 let ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend;
@@ -57,6 +57,18 @@ interface GroupedMatch {
   ratingChange: number; // Change in rating after this set of matches
   timestamp: string; // Timestamp of the match set
   wins: number; // Number of wins in this set of matches
+}
+
+interface LineChartData {
+  labels: string[];
+  datasets: LineChartDataSet[];
+}
+
+interface LineChartDataSet {
+  label: string;
+  data: number[];
+  borderColor: string;
+  backgroundColor: string;
 }
 
 function getCurrentPlayerRating(player: PlayerResponse, char_short: string) {
@@ -443,7 +455,7 @@ const Player = () => {
   const [hideClaim, setHideClaim] = useState(false);
 
   const [lineChartOptions, setLineChartOptions] = useState({});
-  const [lineChartData, setLineChartData] = useState<{ labels: any; datasets: { label: string; data: any; borderColor: string; backgroundColor: string; }[] } | null>(null);
+  const [lineChartData, setLineChartData] = useState<LineChartData | null>(null);
 
   const [tags, setTags] = useState<{ [key: string]: TagResponse[] }>();
 
@@ -676,19 +688,19 @@ const Player = () => {
             setLineChartOptions(lineChartOptions);
 
             const lineChartData = {
-              labels: rating_history_result.map((item: { timestamp: string; }) => item.timestamp),
+              labels: rating_history_result.map((item: RatingsResponse) => item.timestamp),
               datasets: [
                 {
                   label: 'Rating',
-                  data: rating_history_result.map((item: { rating: number; }) => item.rating),
+                  data: rating_history_result.map((item: RatingsResponse) => item.rating),
                   borderColor: 'rgb(75, 192, 192)',
                   backgroundColor: 'rgba(75, 192, 192, 0.2)',
                 },
               ],
             };
-          }
 
-          setLineChartData(lineChartData);
+            setLineChartData(lineChartData);
+          }
 
           const matchups = await fetch(API_ENDPOINT + '/matchups/' + player_id_checked + '/' + char_short);
           if (matchups.status === 200) {
