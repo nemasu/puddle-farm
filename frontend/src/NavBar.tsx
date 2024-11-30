@@ -182,8 +182,6 @@ function NavBar() {
               'list' in page ? (
                 <Box key={page.name}>
                   <Button key={page.name}
-                    component={Link}
-                    to={page.link ?? '/'}
                     onClick={handleOpenCharNavMenu}
                     sx={{ margin: 0, my: 1, color: 'white', display: 'block' }
                     }>
