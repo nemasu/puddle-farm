@@ -38,14 +38,14 @@ const Distribution = () => {
         Floor
       </Typography>
       <Typography variant="body1" sx={{mb: 4}}>
-        This table shows the distribution of players across different floors for the past month.
+        This table shows the distribution of games across different floors for the past month.
       </Typography>
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
               <TableCell>Floor</TableCell>
-              <TableCell>Player Count</TableCell>
+              <TableCell>Game Count</TableCell>
               <TableCell>Percentage</TableCell>
             </TableRow>
           </TableHead>
