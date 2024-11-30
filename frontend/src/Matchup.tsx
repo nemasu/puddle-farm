@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, CircularProgress, Typography } from '@mui/material';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TableSortLabel } from '@mui/material';
 import { Utils } from './Utils';
 import { MatchupResponse, MatchupCharResponse, MatchupEntry } from './Interfaces';
@@ -49,7 +49,6 @@ const MatchupTable = ({ data, title }: { data: MatchupCharResponse[], title: str
         const compareResult = a.char_name.localeCompare(b.char_name);
         return order === 'asc' ? compareResult : -compareResult;
       }
-      
       // Handle matchup column sorting
       const indexA = (a.matchups[Number(orderBy)]?.wins / a.matchups[Number(orderBy)]?.total_games) || 0;
       const indexB = (b.matchups[Number(orderBy)]?.wins / b.matchups[Number(orderBy)]?.total_games) || 0;
@@ -164,6 +163,7 @@ const MatchupTable = ({ data, title }: { data: MatchupCharResponse[], title: str
 const Matchup = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
+  const [loading, setLoading] = React.useState(true);
   const [matchup, setMatchup] = React.useState<MatchupResponse>();
 
   useEffect(() => {
@@ -173,10 +173,21 @@ const Matchup = () => {
       .then((data) => {
         setMatchup(data);
       });
+
+    setLoading(false);
   }, [API_ENDPOINT]);
 
   return (
     <React.Fragment>
+      {loading ?
+        <CircularProgress
+          size={60}
+          variant="indeterminate"
+          disableShrink={true}
+          sx={{ position: 'absolute', top: '-1px', color: 'white' }}
+        />
+        : null
+      }
       <Box m={2}>
         <Paper elevation={2} sx={{ p: 3 }}>
           <Typography variant="h5" gutterBottom>

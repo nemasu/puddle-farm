@@ -155,3 +155,32 @@ export interface TagResponse {
   tag: string;
   style: string;
 }
+
+export interface DistributionResult {
+  /** Lower bound of the distribution range */
+  lower_bound: number;
+  /** Upper bound of the distribution range */
+  upper_bound: number;
+  /** Count of items in the distribution range */
+  count: number;
+  /** Percentage of items in the distribution range */
+  percentage: number;
+  /** Percentile of items in the distribution range */
+  percentile: number;
+}
+
+export interface DistributionEntry {
+  /** Distribution floor data */
+  distribution_floor: number[][];
+  /** Player count for past month */
+  one_month_players: number;
+  /** Distribution rating data */
+  distribution_rating: DistributionResult[];
+}
+
+export interface DistributionResponse {
+  /** Timestamp of the distribution data */
+  timestamp: string;
+  /** Distribution entry data */
+  data: DistributionEntry;
+}

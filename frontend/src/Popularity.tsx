@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, CircularProgress, Typography } from '@mui/material';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 import { Utils } from './Utils';
 import { PopularityResult } from './Interfaces';
@@ -7,6 +7,7 @@ import { PopularityResult } from './Interfaces';
 const Popularity = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
+  const [loading, setLoading] = React.useState(true);
   const [popularity, setPopularity] = React.useState<PopularityResult>();
 
   useEffect(() => {
@@ -16,10 +17,21 @@ const Popularity = () => {
       .then((data) => {
         setPopularity(data);
       });
+
+      setLoading(false);
   }, [API_ENDPOINT]);
 
   return (
     <React.Fragment>
+      {loading ?
+          <CircularProgress
+            size={60}
+            variant="indeterminate"
+            disableShrink={true}
+            sx={{ position: 'absolute', top: '-1px', color: 'white' }}
+          />
+          : null
+        }
       <Box m={5}>
         <Typography variant="h4" gutterBottom align="center">
           Popularity

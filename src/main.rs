@@ -1637,6 +1637,69 @@ async fn supporters(
     ))
 }
 
+#[derive(Serialize)]
+struct DistributionResponse {
+    timestamp: String,
+    data: DistributionEntry,
+}
+#[derive(Serialize)]
+struct DistributionEntry {
+    distribution_floor: Vec<Vec<i64>>,
+    one_month_players: i64,
+    distribution_rating: Vec<crate::pull::DistributionResult>,
+}
+async fn distribution(
+    State(pools): State<AppState>,
+) -> Result<Json<DistributionResponse>, (StatusCode, String)> {
+    let mut redis = pools.redis_pool.get().await.unwrap();
+
+    let distribution_floor = match redis::cmd("GET")
+        .arg("distribution_floor")
+        .query_async::<String>(&mut *redis)
+        .await
+    {
+        Ok(df) => df,
+        Err(_) => {
+            return Err((StatusCode::NOT_FOUND, "Distribution not found".to_string()));
+        }
+    };
+
+    let distribution_rating = redis::cmd("GET")
+        .arg("distribution_rating")
+        .query_async::<String>(&mut *redis)
+        .await
+        .expect("Error getting distribution_rating");
+
+    //Deserialize distribution_floor
+    let distribution_floor: Vec<Vec<i64>> = serde_json::from_str(&distribution_floor).unwrap();
+
+    //Deserialize distribution_rating
+    let distribution_rating: Vec<crate::pull::DistributionResult> =
+        serde_json::from_str(&distribution_rating).unwrap();
+
+    //Get one_month_players
+    let one_month_players = redis::cmd("GET")
+        .arg("one_month_players")
+        .query_async::<i64>(&mut *redis)
+        .await
+        .expect("Error getting one_month_players");
+
+    let timestamp = redis::cmd("GET")
+        .arg("last_update_hourly")
+        .query_async::<String>(&mut *redis)
+        .await
+        .expect("Error getting last_update_hourly");
+
+    Ok(Json(DistributionResponse {
+        timestamp,
+        data: DistributionEntry {
+            distribution_floor,
+            one_month_players,
+            distribution_rating,
+        },
+    }))
+}
+
 #[tokio::main(flavor = "multi_thread", worker_threads = 5)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().expect("Failed to read .env file");
@@ -1716,6 +1779,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/matchups", get(matchups))
                 .route("/api/matchups/:player_id/:char_id", get(player_matchups))
                 .route("/api/supporters", get(supporters))
+                .route("/api/distribution", get(distribution))
                 .with_state(state);
 
             if cfg!(debug_assertions) {

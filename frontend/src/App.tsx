@@ -20,6 +20,7 @@ import TopPlayer from './TopPlayer';
 import Stats from './Stats';
 import Popularity from './Popularity';
 import Matchup from './Matchup';
+import Distribution from './Distribution';
 
 const App = () => {
   const theme = useTheme();
@@ -42,6 +43,7 @@ const App = () => {
             <Route path="/stats" element={<Stats />} />
             <Route path="/popularity" element={<Popularity />} />
             <Route path="/matchup" element={<Matchup />} />
+            <Route path="/distribution" element={<Distribution />} />
           </Routes>
         </Box>
       ) : (
@@ -57,6 +59,7 @@ const App = () => {
             <Route path="/stats" element={<Stats />} />
             <Route path="/popularity" element={<Popularity />} />
             <Route path="/matchup" element={<Matchup />} />
+            <Route path="/distribution" element={<Distribution />} />
           </Routes>
         </Box>
       )}

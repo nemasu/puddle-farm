@@ -22,6 +22,7 @@ var pages: Page[] = [
   { name: 'Characters', list: [] },
   { name: 'Popularity', link: './popularity' },
   { name: 'Matchup', link: './matchup' },
+  { name: 'Distribution', link: './distribution' },
   { name: 'About', link: './about' },
   { name: 'Settings', link: './settings' },
   { name: 'Stats', link: './stats' },

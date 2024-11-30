@@ -266,6 +266,10 @@ async fn do_daily_update(
         error!("update_matchups failed: {e}");
     }
 
+    if let Err(e) = update_distribution(conn, redis_connection).await {
+        error!("update_distribution failed: {e}");
+    }
+
     //Now
     let last_update =
         chrono::DateTime::from_timestamp(chrono::Utc::now().naive_utc().and_utc().timestamp(), 0)
@@ -279,6 +283,94 @@ async fn do_daily_update(
         .query_async::<String>(&mut **redis_connection)
         .await
         .expect("Error setting last_update_daily");
+    Ok(())
+}
+
+#[derive(QueryableByName, serde::Serialize, serde::Deserialize)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct DistributionResult {
+    #[diesel(sql_type = diesel::sql_types::Integer)]
+    pub lower_bound: i32,
+    #[diesel(sql_type = diesel::sql_types::Integer)]
+    pub upper_bound: i32,
+    #[diesel(sql_type = diesel::sql_types::BigInt)]
+    pub count: i64,
+    #[diesel(sql_type = diesel::sql_types::Double)]
+    pub percentage: f64,
+    #[diesel(sql_type = diesel::sql_types::Double)]
+    pub percentile: f64,
+}
+async fn update_distribution(
+    conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
+    redis_connection: &mut PooledConnection<'_, RedisConnectionManager>,
+) -> Result<(), String> {
+    info!("Updating distribution");
+
+    let distribution_results = diesel::sql_query(
+        "
+        WITH buckets AS (
+            SELECT generate_series(-500, 2500, 100) AS lower_bound,
+                  generate_series(-400, 2600, 100) AS upper_bound
+        ),
+        bucket_counts AS (  -- CTE to count values in each bucket
+            SELECT 
+                b.lower_bound, 
+                b.upper_bound, 
+                count(t.value) AS bucket_count
+            FROM player_ratings t
+            LEFT JOIN buckets b ON t.value >= b.lower_bound AND t.value < b.upper_bound
+            GROUP BY b.lower_bound, b.upper_bound
+        ),
+        percentiles AS ( -- CTE to calculate cumulative percentage
+            SELECT 
+                lower_bound,
+                upper_bound,
+                bucket_count,
+                SUM(bucket_count) OVER (ORDER BY lower_bound) as cumulative_sum,
+                SUM(bucket_count) OVER () as total_count
+            FROM bucket_counts        
+        )
+        SELECT 
+            p.lower_bound,
+            p.upper_bound,
+            p.bucket_count AS count,
+            CAST(ROUND((p.bucket_count * 100.0 / sum(p.bucket_count) OVER ()), 2) AS FLOAT) AS percentage,
+            CAST(ROUND((p.cumulative_sum * 100.0 / p.total_count), 2) AS FLOAT) AS percentile
+        FROM percentiles p
+        ORDER BY p.lower_bound;
+        ",
+    );
+
+    let distribution_results = distribution_results
+        .get_results::<DistributionResult>(conn)
+        .await
+        .unwrap();
+
+    redis::cmd("SET")
+        .arg("distribution_rating")
+        .arg(serde_json::to_string(&distribution_results).unwrap())
+        .query_async::<String>(&mut **redis_connection)
+        .await
+        .expect("Error setting distribution");
+
+    let floor_distribution = schema::games::table
+        .filter(
+            schema::games::timestamp
+                .gt(chrono::Utc::now().naive_utc() - chrono::Duration::days(30)),
+        )
+        .group_by(schema::games::game_floor)
+        .select((schema::games::game_floor, count_star()))
+        .get_results::<(i16, i64)>(conn)
+        .await
+        .expect("Error loading games");
+
+    redis::cmd("SET")
+        .arg("distribution_floor")
+        .arg(serde_json::to_string(&floor_distribution).unwrap())
+        .query_async::<String>(&mut **redis_connection)
+        .await
+        .expect("Error setting floor_distribution");
+
     Ok(())
 }
 
