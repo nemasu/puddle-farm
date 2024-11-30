@@ -276,10 +276,13 @@ async fn player(
             .await
             .expect("Error loading games");
 
-        if top_defeated_res.len() > 1 {
+        if top_defeated_res.len() > 0 {
             let mut highest_index = 0;
-            if top_defeated_res[0].6.unwrap() < top_defeated_res[1].6.unwrap() {
-                highest_index = 1;
+
+            if top_defeated_res.len() > 1 {
+                if top_defeated_res[0].6.unwrap() < top_defeated_res[1].6.unwrap() {
+                    highest_index = 1;
+                }
             }
 
             top_defeated.insert(
@@ -337,10 +340,13 @@ async fn player(
                 .await
                 .expect("Error loading games");
 
-        if top_rating_res.len() > 1 {
+        if top_rating_res.len() > 0 {
             let mut highest_index = 0;
-            if top_rating_res[0].3.unwrap() < top_rating_res[1].3.unwrap() {
-                highest_index = 1;
+
+            if top_rating_res.len() > 1 {
+                if top_rating_res[0].3.unwrap() <= top_rating_res[1].3.unwrap() {
+                    highest_index = 1;
+                }
             }
 
             top_rating.insert(
@@ -935,12 +941,10 @@ async fn claim_poll(
         .first::<Option<String>>(&mut db)
         .await
     {
-        Ok(code) => {
-            match code {
-                Some(code) => code,
-                None => {
-                    return Err((StatusCode::NOT_FOUND, "Code not found".to_string()));
-                }
+        Ok(code) => match code {
+            Some(code) => code,
+            None => {
+                return Err((StatusCode::NOT_FOUND, "Code not found".to_string()));
             }
         },
         Err(_) => {
@@ -1540,36 +1544,36 @@ async fn matchups(
     }
 
     for c in 0..CHAR_NAMES.len() {
-      let key = format!("matchup_1700_{}", c);
+        let key = format!("matchup_1700_{}", c);
 
-      let value: String = match redis::cmd("GET").arg(key).query_async(&mut *redis).await {
-          Ok(v) => v,
-          Err(_) => {
-              return Err((StatusCode::NOT_FOUND, "Matchup not found".to_string()));
-          }
-      };
+        let value: String = match redis::cmd("GET").arg(key).query_async(&mut *redis).await {
+            Ok(v) => v,
+            Err(_) => {
+                return Err((StatusCode::NOT_FOUND, "Matchup not found".to_string()));
+            }
+        };
 
-      let matchups_data: Vec<crate::pull::Matchup> = serde_json::from_str(&value).unwrap();
-      let char_name = CHAR_NAMES[c].1.to_string();
-      let char_short = CHAR_NAMES[c].0.to_string();
+        let matchups_data: Vec<crate::pull::Matchup> = serde_json::from_str(&value).unwrap();
+        let char_name = CHAR_NAMES[c].1.to_string();
+        let char_short = CHAR_NAMES[c].0.to_string();
 
-      let matchup = MatchupCharResponse {
-          char_name,
-          char_short,
-          matchups: matchups_data
-              .iter()
-              .enumerate()
-              .map(|(i, m)| MatchupEntry {
-                  char_name: CHAR_NAMES[i].1.to_string(),
-                  char_short: CHAR_NAMES[i].0.to_string(),
-                  wins: m.wins,
-                  total_games: m.total_games,
-              })
-              .collect(),
-      };
+        let matchup = MatchupCharResponse {
+            char_name,
+            char_short,
+            matchups: matchups_data
+                .iter()
+                .enumerate()
+                .map(|(i, m)| MatchupEntry {
+                    char_name: CHAR_NAMES[i].1.to_string(),
+                    char_short: CHAR_NAMES[i].0.to_string(),
+                    wins: m.wins,
+                    total_games: m.total_games,
+                })
+                .collect(),
+        };
 
-      matchups_1700.push(matchup);
-  }
+        matchups_1700.push(matchup);
+    }
 
     let last_update = redis::cmd("GET")
         .arg("last_update_daily")
