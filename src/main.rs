@@ -1685,10 +1685,10 @@ async fn distribution(
         .expect("Error getting one_month_players");
 
     let timestamp = redis::cmd("GET")
-        .arg("last_update_hourly")
+        .arg("last_update_daily")
         .query_async::<String>(&mut *redis)
         .await
-        .expect("Error getting last_update_hourly");
+        .expect("Error getting last_update_daily");
 
     Ok(Json(DistributionResponse {
         timestamp,
