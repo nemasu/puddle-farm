@@ -688,7 +688,7 @@ const Player = () => {
             setLineChartOptions(lineChartOptions);
 
             const lineChartData = {
-              labels: rating_history_result.map((item: RatingsResponse) => item.timestamp),
+              labels: rating_history_result.map((item: RatingsResponse) => Utils.formatUTCToLocal(item.timestamp)),
               datasets: [
                 {
                   label: 'Rating',
