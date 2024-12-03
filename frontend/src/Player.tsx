@@ -459,6 +459,8 @@ const Player = () => {
 
   const [tags, setTags] = useState<{ [key: string]: TagResponse[] }>();
 
+  const [countdown, setCountdown] = useState<number | null>(null);
+
   //This is for matchup table
   //TODO - Move this to a separate component
   interface Matchup {
@@ -729,6 +731,25 @@ const Player = () => {
       }
     };
     fetchPlayerAndHistory();
+
+    if (StorageUtils.getAutoUpdate()) {
+      const interval = setInterval(() => {
+        fetchPlayerAndHistory();
+        setCountdown(60);
+      }, 60000);
+
+      const countdownInterval = setInterval(() => {
+        setCountdown((prevCountdown) => (prevCountdown !== null && prevCountdown > 0 ? prevCountdown - 1 : 0));
+      }, 1000);
+
+      setCountdown(60);
+
+      return () => {
+        clearInterval(interval);
+        clearInterval(countdownInterval);
+      };
+    }
+
   }, [player_id, char_short, count, API_ENDPOINT, player_id_checked, offset]);
 
   function onPrev(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
@@ -869,6 +890,13 @@ const Player = () => {
                   ) : null}
 
                 </React.Fragment>
+              ) : null}
+              {countdown !== null ? (
+                <Box>
+                  <Typography variant="h6" gutterBottom>
+                    Auto-update in: {countdown} seconds
+                  </Typography>
+                </Box>
               ) : null}
               {history ? (
                 <React.Fragment>
@@ -1025,6 +1053,13 @@ const Player = () => {
                   ) : null}
 
                 </React.Fragment>
+              ) : null}
+              {countdown !== null ? (
+                <Box>
+                  <Typography variant="h6" gutterBottom>
+                    Auto-update in: {countdown} seconds
+                  </Typography>
+                </Box>
               ) : null}
               {history ? (
                 <React.Fragment>

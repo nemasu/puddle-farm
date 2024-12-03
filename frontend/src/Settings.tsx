@@ -27,6 +27,7 @@ const Settings = () => {
   const [preferences, setPreferences] = useState<StorageOptions>({
     useLocalTime: null,
     disableRatingColors: null,
+    autoUpdate: null,
   });
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -138,7 +139,7 @@ const Settings = () => {
                 </Box>
               }
             />
-            {/* <FormControlLabel
+            <FormControlLabel
                 sx={{my: 1}}
                 control={
                     <Switch
@@ -151,11 +152,11 @@ const Settings = () => {
                     <Box>
                         <Typography variant="body1">Auto Update</Typography>
                         <Typography variant="caption" color="text.secondary">
-                            Automatically refresh when new matches are available.
+                            Refresh player page once per minute.
                         </Typography>
                     </Box>
                 }
-            /> */}
+            />
           </FormGroup>
         </Paper>
         <Paper elevation={2} sx={{ p: 3, my: 1 }}>

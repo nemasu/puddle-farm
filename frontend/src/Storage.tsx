@@ -11,6 +11,7 @@ const STORAGE_KEYS = {
 export interface StorageOptions {
   useLocalTime: boolean | null;
   disableRatingColors: boolean | null;
+  autoUpdate: boolean | null;
 }
 
 const Storage = {
@@ -122,15 +123,14 @@ const StorageUtils = {
       return {
           useLocalTime: StorageUtils.getUseLocalTime(),
           disableRatingColors: StorageUtils.getDisableRatingColors(),
-          //autoUpdate: StorageUtils.getAutoUpdate(),
+          autoUpdate: StorageUtils.getAutoUpdate(),
       };
   },
 
   savePreferences: (settings: StorageOptions) => {
       StorageUtils.setUseLocalTime(settings.useLocalTime);
       StorageUtils.setDisableRatingColors(settings.disableRatingColors);
-      //StorageUtils.setAutoUpdate(settings.autoUpdate);
-
+      StorageUtils.setAutoUpdate(settings.autoUpdate);
   },
 
 };
