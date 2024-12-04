@@ -142,7 +142,7 @@ async fn player(
         .inner_join(schema::player_ratings::table)
         .filter(schema::players::id.eq(id))
         .select((Player::as_select(), PlayerRating::as_select()))
-        .order(schema::player_ratings::char_id.asc())
+        .order((schema::player_ratings::value - schema::player_ratings::deviation).desc())
         .load(&mut db)
         .await
         .expect("Error loading player");
