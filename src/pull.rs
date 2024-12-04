@@ -319,6 +319,7 @@ async fn update_distribution(
                 count(t.value) AS bucket_count
             FROM player_ratings t
             LEFT JOIN buckets b ON t.value >= b.lower_bound AND t.value < b.upper_bound
+            WHERE t.deviation < 30.0
             GROUP BY b.lower_bound, b.upper_bound
         ),
         percentiles AS ( -- CTE to calculate cumulative percentage

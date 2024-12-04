@@ -24,7 +24,7 @@ const Distribution = () => {
   }, [API_ENDPOINT]);
 
   return (
-    <Box m={5}>
+    <Box m={5} sx={{maxWidth: '700px'}}>
       {loading ?
         <CircularProgress
           size={60}
@@ -65,7 +65,7 @@ const Distribution = () => {
         Rating
       </Typography>
       <Typography variant="body1" sx={{mb: 4}}>
-        This table shows the current distribution of players across different ratings.
+        This table shows the current distribution of active players (&lt;30 drift) across different ratings.
       </Typography>
       <TableContainer component={Paper}>
         <Table>
