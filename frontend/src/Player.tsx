@@ -790,11 +790,13 @@ const Player = () => {
             {player ? (
               <React.Fragment>
                 <Typography textAlign={'center'} variant="pageHeader" fontSize={30}>
-                  {player.tags ? player.tags.map((e, i) => (
-                    <Tag key={i} style={JSON.parse(e.style)}>
-                      {e.tag}
-                    </Tag>
-                  )) : null}
+                  <Box>
+                    {player.tags ? player.tags.map((e, i) => (
+                      <Tag key={i} style={JSON.parse(e.style)}>
+                        {e.tag}
+                      </Tag>
+                    )) : null}
+                  </Box>
                   {player.name}
                   <Typography variant="platform">
                     {player.platform}
@@ -808,7 +810,7 @@ const Player = () => {
               </React.Fragment>
             ) : null}
             {alias && alias.length > 0 ? (
-              <Box fontSize={17}>
+              <Box textAlign='center' fontSize={17}>
                 <Typography variant='platform' sx={{ position: 'relative', top: '0px', borderRadius: '5px', py: '5px' }} display={'inline-block'}>
                   AKA
                 </Typography>
@@ -827,13 +829,14 @@ const Player = () => {
             {player ? (
               <React.Fragment>
                 <Typography align='center' variant="pageHeader" fontSize={30}>
-                  {player.tags ? player.tags.map((e, i) => (
-                    <Tag key={i} style={JSON.parse(e.style)}>
-                      {e.tag}
-                    </Tag>
-                  )) : null}
+                  <Box>
+                    {player.tags ? player.tags.map((e, i) => (
+                      <Tag key={i} style={JSON.parse(e.style)}>
+                        {e.tag}
+                      </Tag>
+                    )) : null}
+                  </Box>
                   {player.name}
-
                   <Typography variant="platform">
                     {player.platform}
                   </Typography>
