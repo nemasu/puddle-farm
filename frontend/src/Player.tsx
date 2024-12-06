@@ -789,7 +789,7 @@ const Player = () => {
           <Box sx={{ minHeight: 50, display: { xs: 'block', md: 'none' } }}> {/* Mobile View */}
             {player ? (
               <React.Fragment>
-                <Typography textAlign={'center'} variant="pageHeader" fontSize={30}>
+                <Typography textAlign={'center'} variant="pageHeader" fontSize={30} marginTop={2}>
                   <Box>
                     {player.tags ? player.tags.map((e, i) => (
                       <Tag key={i} style={JSON.parse(e.style)}>
@@ -797,7 +797,9 @@ const Player = () => {
                       </Tag>
                     )) : null}
                   </Box>
-                  {player.name}
+                  <Typography variant="playerName">
+                    {player.name}
+                  </Typography>
                   <Typography variant="platform">
                     {player.platform}
                   </Typography>
@@ -811,14 +813,14 @@ const Player = () => {
             ) : null}
             {alias && alias.length > 0 ? (
               <Box textAlign='center' fontSize={17}>
-                <Typography variant='platform' sx={{ position: 'relative', top: '0px', borderRadius: '5px', py: '5px' }} display={'inline-block'}>
+                <Typography variant='platform' sx={{ position: 'relative', top: '0px', marginTop: '10px' }} display={'inline-block'}>
                   AKA
                 </Typography>
                 <Box m={1} sx={{ display: 'inline-block' }}>
                   {alias.map((item, i) => (
-                    <Box px={0.8} py={0.2} mx={0.3} my={0.2} sx={{ backgroundColor: 'primary.main', borderRadius: '3px' }} display={'inline-block'} key={i}>
+                    <Typography variant="playerName" px={0.8} py={0.2} mx={0.3} my={0.2} display={'inline-block'} key={i}>
                       {item}
-                    </Box>
+                    </Typography>
                   ))}
                 </Box>
               </Box>
@@ -836,7 +838,9 @@ const Player = () => {
                       </Tag>
                     )) : null}
                   </Box>
-                  {player.name}
+                  <Typography variant="playerName">
+                    {player.name}
+                  </Typography>
                   <Typography variant="platform">
                     {player.platform}
                   </Typography>
@@ -850,14 +854,14 @@ const Player = () => {
             ) : null}
             {alias && alias.length > 0 ? (
               <Box textAlign='center' fontSize={17}>
-                <Typography variant='platform' sx={{ position: 'relative', top: '0px', borderRadius: '5px', py: '5px' }} display={'inline-block'}>
+                <Typography variant='platform' sx={{ position: 'relative', top: '0px', marginTop: '10px' }} display={'inline-block'}>
                   AKA
                 </Typography>
                 <Box m={1} sx={{ display: 'inline-block' }}>
                   {alias.map((item, i) => (
-                    <Box px={0.8} py={0.2} mx={0.3} my={0.2} sx={{ backgroundColor: 'primary.main', borderRadius: '3px' }} display={'inline-block'} key={i}>
+                    <Typography variant="playerName" px={0.8} py={0.2} mx={0.3} my={0.2} display={'inline-block'} key={i}>
                       {item}
-                    </Box>
+                    </Typography>
                   ))}
                 </Box>
               </Box>

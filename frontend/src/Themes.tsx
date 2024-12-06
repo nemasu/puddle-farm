@@ -6,6 +6,7 @@ declare module '@mui/material/Typography' {
     char_rank: true;
     global_rank: true;
     pageHeader: true;
+    playerName: true;
   }
 }
 
@@ -21,13 +22,13 @@ Themes.set('Sol', createTheme({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#811104',
+      main: '#D2B45E',
     },
     secondary: {
-      main: '#C00000',
+      main: '#9B3725',
     },
     background: {
-      default: '#171717',
+      default: '#262A2C',
     },
   },
   components: {
@@ -35,6 +36,16 @@ Themes.set('Sol', createTheme({
       styleOverrides: {
         root: {
           variants: [
+            {
+              props: { variant: 'playerName' }, //Name on player page
+              style: {
+                color: 'white',
+                padding: '5px',
+                paddingRight: '12px',
+                paddingLeft: '12px',
+                display: 'inline-block',
+              }
+            },
             {
               props: { variant: 'pageHeader' },
               style: {
@@ -61,7 +72,7 @@ Themes.set('Sol', createTheme({
               props: { variant: 'char_rank' },
               style: {
                 fontSize: '.8rem',
-                backgroundColor: '#811104',
+                backgroundColor: '#9B3725',
                 color: 'white',
                 fontWeight: 'bold',
                 borderRadius: '8px',
@@ -76,7 +87,7 @@ Themes.set('Sol', createTheme({
               props: { variant: 'global_rank' },
               style: {
                 fontSize: '.8rem',
-                backgroundColor: 'rgb(255, 224, 138)',
+                backgroundColor: '#FFB42C',
                 color: 'rgba(0, 0, 0, 0.7)',
                 fontWeight: 'bold',
                 borderRadius: '8px',
@@ -94,14 +105,14 @@ Themes.set('Sol', createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          color: '#C00000',
+          color: '#9B3725',
           borderWidth: '4px',
           variants: [
             {
               props: { variant: 'link' },
               style: {
                 textTransform: 'none',
-                color: '#F8B552',
+                color: '#FFB42C',
                 padding: '5px 0px 5px 0px',
                 justifyContent: 'left',
                 verticalAlign: 'baseline',
@@ -114,7 +125,7 @@ Themes.set('Sol', createTheme({
     MuiAppBar: {
       styleOverrides: {
         root: {
-          backgroundColor: '#811104',
+          backgroundColor: '#2E2C2F',
         },
       },
     },
@@ -146,6 +157,16 @@ Themes.set('Ky', createTheme({
       styleOverrides: {
         root: {
           variants: [
+            {
+              props: { variant: 'playerName' },
+              style: {
+                color: 'black',
+                padding: '5px',
+                paddingRight: '12px',
+                paddingLeft: '12px',
+                display: 'inline-block',
+              }
+            },
             {
               props: { variant: 'pageHeader' },
               style: {
@@ -187,7 +208,7 @@ Themes.set('Ky', createTheme({
               props: { variant: 'global_rank' },
               style: {
                 fontSize: '.8rem',
-                backgroundColor: 'rgb(255, 224, 138)',
+                backgroundColor: '#CF8545',
                 color: 'rgba(0, 0, 0, 0.7)',
                 fontWeight: 'bold',
                 borderRadius: '8px',
@@ -212,7 +233,7 @@ Themes.set('Ky', createTheme({
               props: { variant: 'link' },
               style: {
                 textTransform: 'none',
-                color: '#F8B552',
+                color: '#CF8545',
                 padding: '5px 0px 5px 0px',
                 justifyContent: 'left',
                 verticalAlign: 'baseline',
@@ -257,6 +278,16 @@ Themes.set('Ramlethal', createTheme({
       styleOverrides: {
         root: {
           variants: [
+            {
+              props: { variant: 'playerName' },
+              style: {
+                color: 'black',
+                padding: '5px',
+                paddingRight: '12px',
+                paddingLeft: '12px',
+                display: 'inline-block',
+              }
+            },
             {
               props: { variant: 'pageHeader' },
               style: {
@@ -369,6 +400,16 @@ Themes.set('Nagoriyuki', createTheme({
         root: {
           variants: [
             {
+              props: { variant: 'playerName' },
+              style: {
+                color: 'black',
+                padding: '5px',
+                paddingRight: '12px',
+                paddingLeft: '12px',
+                display: 'inline-block',
+              }
+            },
+            {
               props: { variant: 'pageHeader' },
               style: {
                 display: 'block',
@@ -461,6 +502,127 @@ Themes.set('Nagoriyuki', createTheme({
   },
 }));
 
+Themes.set('Bridget', createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#799BB6', //Mostly just button border, also alias box background
+    },
+    secondary: {
+      main: '#799BB6', //Header (not appbar)
+    },
+    background: {
+      default: '#35312E',//Main page background
+    },
+  },
+  components: {
+    MuiTypography: {
+      styleOverrides: {
+        root: {
+          variants: [
+            {
+              props: { variant: 'playerName' },
+              style: {
+                color: 'white',
+                padding: '5px',
+                paddingRight: '12px',
+                paddingLeft: '12px',
+                display: 'inline-block',
+              }
+            },
+            {
+              props: { variant: 'pageHeader' },
+              style: {
+                display: 'block',
+                fontSize: 34,
+                color: '#D6D4CE',//Page header text color
+              }
+            },
+            {
+              props: { variant: 'platform' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: '#383733',
+                color: 'white',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            },
+            {
+              props: { variant: 'char_rank' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: '#5777A3',
+                color: 'white',
+                fontWeight: 'bold',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            },
+            {
+              props: { variant: 'global_rank' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: '#A94F44',
+                color: 'rgba(0, 0, 0, 0.7)',
+                fontWeight: 'bold',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            }
+          ],
+        }
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          color: '#DDDBD5',
+          borderWidth: '4px', //Only applies to 'outlined' variant
+          variants: [
+            {
+              props: { variant: 'link' },
+              style: {
+                textTransform: 'none',
+                color: '#F5C74C',
+                padding: '5px 0px 5px 0px',
+                justifyContent: 'left',
+                verticalAlign: 'baseline',
+              }
+            },
+          ],
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#5777A3',
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          background: '#383733',
+        },
+      },
+    },
+  },
+}));
+
 Themes.set('Bedman?', createTheme({
   palette: {
     mode: 'dark',
@@ -479,6 +641,16 @@ Themes.set('Bedman?', createTheme({
       styleOverrides: {
         root: {
           variants: [
+            {
+              props: { variant: 'playerName' },
+              style: {
+                color: 'white',
+                padding: '5px',
+                paddingRight: '12px',
+                paddingLeft: '12px',
+                display: 'inline-block',
+              }
+            },
             {
               props: { variant: 'pageHeader' },
               style: {
@@ -505,7 +677,7 @@ Themes.set('Bedman?', createTheme({
               props: { variant: 'char_rank' },
               style: {
                 fontSize: '.8rem',
-                backgroundColor: '#471d37',
+                backgroundColor: '#D02F28',
                 color: 'white',
                 fontWeight: 'bold',
                 borderRadius: '8px',
@@ -520,8 +692,8 @@ Themes.set('Bedman?', createTheme({
               props: { variant: 'global_rank' },
               style: {
                 fontSize: '.8rem',
-                backgroundColor: 'rgb(255, 224, 138)',
-                color: 'rgba(0, 0, 0, 0.7)',
+                backgroundColor: '#471d37',
+                color: 'white',
                 fontWeight: 'bold',
                 borderRadius: '8px',
                 padding: '8px 10px',
@@ -545,7 +717,7 @@ Themes.set('Bedman?', createTheme({
               props: { variant: 'link' },
               style: {
                 textTransform: 'none',
-                color: '#F8B552',
+                color: '#D02F28',
                 padding: '5px 0px 5px 0px',
                 justifyContent: 'left',
                 verticalAlign: 'baseline',
@@ -566,6 +738,127 @@ Themes.set('Bedman?', createTheme({
       styleOverrides: {
         paper: {
           background: '#171717',
+        },
+      },
+    },
+  },
+}));
+
+Themes.set('Johnny', createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#927757', //Mostly just button border, also alias box background
+    },
+    secondary: {
+      main: '#848280', //Header (not appbar)
+    },
+    background: {
+      default: '#464541',//Main page background
+    },
+  },
+  components: {
+    MuiTypography: {
+      styleOverrides: {
+        root: {
+          variants: [
+            {
+              props: { variant: 'playerName' },
+              style: {
+                color: 'white',
+                padding: '5px',
+                paddingRight: '12px',
+                paddingLeft: '12px',
+                display: 'inline-block',
+              }
+            },
+            {
+              props: { variant: 'pageHeader' },
+              style: {
+                display: 'block',
+                fontSize: 34,
+                color: '#D6D4CE',//Page header text color
+              }
+            },
+            {
+              props: { variant: 'platform' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: '#383733',
+                color: 'white',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            },
+            {
+              props: { variant: 'char_rank' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: '#353235',
+                color: 'white',
+                fontWeight: 'bold',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            },
+            {
+              props: { variant: 'global_rank' },
+              style: {
+                fontSize: '.8rem',
+                backgroundColor: '#C4A160',
+                color: 'rgba(0, 0, 0, 0.7)',
+                fontWeight: 'bold',
+                borderRadius: '8px',
+                padding: '8px 10px',
+                display: 'inline-block',
+                marginLeft: '8px',
+                top: '-4px',
+                position: 'relative',
+              }
+            }
+          ],
+        }
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          color: '#DDDBD5',
+          borderWidth: '4px', //Only applies to 'outlined' variant
+          variants: [
+            {
+              props: { variant: 'link' },
+              style: {
+                textTransform: 'none',
+                color: '#C4A160',
+                padding: '5px 0px 5px 0px',
+                justifyContent: 'left',
+                verticalAlign: 'baseline',
+              }
+            },
+          ],
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#353235',
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          background: '#383733',
         },
       },
     },
