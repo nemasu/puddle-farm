@@ -1,7 +1,6 @@
-import { CircularProgress } from '@mui/material';
+import { CircularProgress, Button } from '@mui/material';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
-import { default as Button, default as TextButton } from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -12,12 +11,13 @@ import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { PlayerSearchResponse } from './Interfaces';
+import { PlayerSearchResponse } from '../interfaces/API';
 
 let JSONParse: (arg0: string) => any;
 import('json-with-bigint').then(module => {
   JSONParse = module.JSONParse;
 });
+// eslint-disable-next-line
 /* global BigInt */
 
 const Search = () => {
@@ -97,7 +97,7 @@ const Search = () => {
             <TableBody>
               {results.map((player, index) => (
                 <TableRow key={index}>
-                  <TableCell><TextButton component={Link} variant="link" to={`/player/${player.id}/${player.char_short}`}>{player.name}</TextButton></TableCell>
+                  <TableCell><Button component={Link} to={`/player/${player.id}/${player.char_short}`}>{player.name}</Button></TableCell>
                   <TableCell>{player.char_short}</TableCell>
                   <TableCell><Box component={'span'} title={player.rating.toString()}>{Number(player.rating).toFixed(0)}</Box> <Box component={'span'} title={player.deviation.toString()}>±{Number(player.deviation).toFixed(0)}</Box></TableCell>
                 </TableRow>

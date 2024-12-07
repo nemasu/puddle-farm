@@ -1,4 +1,4 @@
-// storage.js
+import { StorageOptions } from '../interfaces/Storage';
 
 const STORAGE_KEYS = {
   API_KEY: 'key',
@@ -7,12 +7,6 @@ const STORAGE_KEYS = {
   disableRatingColors: 'disableRatingColors',
   autoUpdate: 'autoUpdate',
 };
-
-export interface StorageOptions {
-  useLocalTime: boolean | null;
-  disableRatingColors: boolean | null;
-  autoUpdate: boolean | null;
-}
 
 const Storage = {
   // Set item with optional expiry
@@ -136,3 +130,4 @@ const StorageUtils = {
 };
 
 export { StorageUtils };
+export type { StorageOptions };

@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Button, Typography, FormGroup, FormControlLabel, Switch, Paper } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { StorageOptions, StorageUtils } from './Storage';
-import Themes from './Themes';
-import { SettingsResponse } from './Interfaces';
+import { StorageOptions, StorageUtils } from './../utils/Storage';
+import Themes from './../utils/Themes';
+import { SettingsResponse } from '../interfaces/API';
 
 let JSONParse: (arg0: string) => any;
 import('json-with-bigint').then(module => {
   JSONParse = module.JSONParse;
 });
+// eslint-disable-next-line
 /* global BigInt */
 
 const themes = Array.from(Themes.keys());
@@ -186,7 +187,6 @@ const Settings = () => {
             <Box>
               <Box sx={{ marginBottom: 2 }}>
                 <Button
-                  variant='link'
                   sx={{ fontSize: '1rem' }}
                   onClick={() => navigate(`/player/${settings.id}`)}
                 >

@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
-import { DistributionResponse, DistributionResult } from './Interfaces';
-import { Utils } from './Utils';
+import { DistributionResponse, DistributionResult } from '../interfaces/API';
+import { Utils } from './../utils/Utils';
 
 const Distribution = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;

@@ -1,30 +1,20 @@
 import React, { useEffect } from 'react';
 import { Box, Button, Typography } from '@mui/material';
-import { Link, To, useNavigate } from 'react-router-dom';
-import { Tag } from './Tag';
-import { Supporter, TagResponse } from './Interfaces';
+import { Link } from 'react-router-dom';
+import { Tag } from './../components/Tag';
+import { Supporter, TagResponse } from '../interfaces/API';
 
 let JSONParse: (arg0: string) => any;
 import('json-with-bigint').then(module => {
   JSONParse = module.JSONParse;
 });
+// eslint-disable-next-line
 /* global BigInt */
 
 const About = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
-  const navigate = useNavigate();
   
   const [supporters, setSupporters] = React.useState<Supporter[]>([]);
-
-  function onProfileClick(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>, url: string) {
-    if (event.button === 1) { //Middle mouse click
-      window.open(url?.toString(), '_blank');
-    } else if (event.button === 0) { //Left mouse click
-      if (url) {
-        navigate(url);
-      }
-    }
-  }
 
   useEffect(() => {
     document.title = 'About | Puddle Farm';
@@ -37,7 +27,7 @@ const About = () => {
       setSupporters(supporters_result);
     }
     fetchSupporters();
-  }, []);
+  }, [API_ENDPOINT]);
 
   return (
     <React.Fragment>
@@ -106,7 +96,6 @@ const About = () => {
                 <li key={index}>
                   <Button sx={{ fontSize: '16px' }}
                     component={Link}
-                    variant="link"
                     to={`/player/${supporter.id}`}
                   >
                     {supporter.name}

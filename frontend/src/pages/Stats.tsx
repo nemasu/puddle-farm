@@ -11,8 +11,8 @@ import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Utils } from './Utils';
-import { StatsResponse } from './Interfaces';
+import { Utils } from './../utils/Utils';
+import { StatsResponse } from '../interfaces/API';
 
 let JSONParse: (arg0: string) => any;
 import('json-with-bigint').then(module => {

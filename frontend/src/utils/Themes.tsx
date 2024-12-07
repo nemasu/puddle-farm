@@ -10,12 +10,6 @@ declare module '@mui/material/Typography' {
   }
 }
 
-declare module '@mui/material/Button' {
-  interface ButtonPropsVariantOverrides {
-    link: true;
-  }
-}
-
 let Themes = new Map();
 
 Themes.set('Sol', createTheme({
@@ -105,20 +99,9 @@ Themes.set('Sol', createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          color: '#9B3725',
+          color: '#FFB42C',
           borderWidth: '4px',
-          variants: [
-            {
-              props: { variant: 'link' },
-              style: {
-                textTransform: 'none',
-                color: '#FFB42C',
-                padding: '5px 0px 5px 0px',
-                justifyContent: 'left',
-                verticalAlign: 'baseline',
-              }
-            }
-          ],
+          textTransform: 'none',
         },
       },
     },
@@ -226,20 +209,9 @@ Themes.set('Ky', createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          color: '#DDDBD5',
+          color: '#CF8545',
           borderWidth: '4px',
-          variants: [
-            {
-              props: { variant: 'link' },
-              style: {
-                textTransform: 'none',
-                color: '#CF8545',
-                padding: '5px 0px 5px 0px',
-                justifyContent: 'left',
-                verticalAlign: 'baseline',
-              }
-            }
-          ],
+          textTransform: 'none',
         },
       },
     },
@@ -347,20 +319,9 @@ Themes.set('Ramlethal', createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          color: '#DDDBD5',
+          color: '#A4FD33',
           borderWidth: '4px', //Only applies to 'outlined' variant
-          variants: [
-            {
-              props: { variant: 'link' },
-              style: {
-                textTransform: 'none',
-                color: '#A4FD33',
-                padding: '5px 0px 5px 0px',
-                justifyContent: 'left',
-                verticalAlign: 'baseline',
-              }
-            },
-          ],
+          textTransform: 'none',
         },
       },
     },
@@ -468,20 +429,9 @@ Themes.set('Nagoriyuki', createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          color: '#DDDBD5',
+          color: '#DA2A46',
           borderWidth: '4px',
-          variants: [
-            {
-              props: { variant: 'link' },
-              style: {
-                textTransform: 'none',
-                color: '#DA2A46',
-                padding: '5px 0px 5px 0px',
-                justifyContent: 'left',
-                verticalAlign: 'baseline',
-              }
-            }
-          ],
+          textTransform: 'none',
         },
       },
     },
@@ -589,20 +539,9 @@ Themes.set('Bridget', createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          color: '#DDDBD5',
+          color: '#F5C74C',
           borderWidth: '4px', //Only applies to 'outlined' variant
-          variants: [
-            {
-              props: { variant: 'link' },
-              style: {
-                textTransform: 'none',
-                color: '#F5C74C',
-                padding: '5px 0px 5px 0px',
-                justifyContent: 'left',
-                verticalAlign: 'baseline',
-              }
-            },
-          ],
+          textTransform: 'none',
         },
       },
     },
@@ -710,20 +649,9 @@ Themes.set('Bedman?', createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          color: '#A83B5E',
+          color: '#D02F28',
           borderWidth: '4px',
-          variants: [
-            {
-              props: { variant: 'link' },
-              style: {
-                textTransform: 'none',
-                color: '#D02F28',
-                padding: '5px 0px 5px 0px',
-                justifyContent: 'left',
-                verticalAlign: 'baseline',
-              }
-            }
-          ],
+          textTransform: 'none',
         },
       },
     },
@@ -831,20 +759,9 @@ Themes.set('Johnny', createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          color: '#DDDBD5',
+          color: '#C4A160',
           borderWidth: '4px', //Only applies to 'outlined' variant
-          variants: [
-            {
-              props: { variant: 'link' },
-              style: {
-                textTransform: 'none',
-                color: '#C4A160',
-                padding: '5px 0px 5px 0px',
-                justifyContent: 'left',
-                verticalAlign: 'baseline',
-              }
-            },
-          ],
+          textTransform: 'none',
         },
       },
     },

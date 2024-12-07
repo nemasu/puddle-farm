@@ -9,18 +9,18 @@ import { ReactComponent as DiscordIcon } from './images/discord-mark-white.svg';
 import { ReactComponent as GitHubIcon } from './images/github-mark-white.svg';
 import { ReactComponent as PatreonIcon } from './images/patreon-mark-white.svg';
 
-import NavBar from './NavBar';
-import Player from './Player';
-import TopGlobal from './TopGlobal';
-import ThemeManager from './ThemeManager';
-import About from './About';
-import Settings from './Settings';
-import Search from './Search';
-import TopPlayer from './TopPlayer';
-import Stats from './Stats';
-import Popularity from './Popularity';
-import Matchup from './Matchup';
-import Distribution from './Distribution';
+import NavBar from './components/NavBar';
+import Player from './pages/Player';
+import TopGlobal from './pages/TopGlobal';
+import ThemeManager from './components/ThemeManager';
+import About from './pages/About';
+import Settings from './pages/Settings';
+import Search from './pages/Search';
+import TopPlayer from './pages/TopPlayer';
+import Stats from './pages/Stats';
+import Popularity from './pages/Popularity';
+import Matchup from './pages/Matchup';
+import Distribution from './pages/Distribution';
 
 const App = () => {
   const theme = useTheme();
@@ -69,9 +69,9 @@ const App = () => {
         </Typography>
       </Box>
       <Box sx={{ minHeight: 100, textAlign: 'center' }}>
-        <Button component={Link} variant="link" target="_blank" href="https://github.com/nemasu/puddle-farm"><GitHubIcon style={{ transform: 'scale(0.65)' }} /></Button>
-        <Button component={Link} variant="link" target="_blank" href="https://discord.gg/vY4mE8exXB"><DiscordIcon style={{ transform: 'scale(0.65)' }} /></Button>
-        <Button component={Link} variant="link" target="_blank" href="https://patreon.com/nemasu"><PatreonIcon style={{ transform: 'scale(0.55)', position: 'relative', top: '7px' }} /></Button>
+        <Button component={Link} target="_blank" href="https://github.com/nemasu/puddle-farm"><GitHubIcon style={{ transform: 'scale(0.65)' }} /></Button>
+        <Button component={Link} target="_blank" href="https://discord.gg/vY4mE8exXB"><DiscordIcon style={{ transform: 'scale(0.65)' }} /></Button>
+        <Button component={Link} target="_blank" href="https://patreon.com/nemasu"><PatreonIcon style={{ transform: 'scale(0.55)', position: 'relative', top: '7px' }} /></Button>
       </Box>
     </ThemeManager>
   );

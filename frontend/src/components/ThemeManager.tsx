@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import Themes from "./Themes";
+import Themes from "../utils/Themes";
 import { ThemeProvider } from '@mui/material/styles';
-import { StorageUtils } from "./Storage";
+import { StorageUtils } from "../utils/Storage";
 
 import { ReactNode } from 'react';
 

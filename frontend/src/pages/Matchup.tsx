@@ -1,20 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, TableSortLabel } from '@mui/material';
-import { Utils } from './Utils';
-import { MatchupResponse, MatchupCharResponse, MatchupEntry } from './Interfaces';
+import { Utils } from './../utils/Utils';
+import { MatchupResponse, MatchupCharResponse, MatchupEntry } from '../interfaces/API';
+import { CharWinRates } from '../interfaces/Matchup';
 
 const calculateAverageWinRate = (matchups: MatchupEntry[]) => {
   const totalWins = matchups.reduce((sum, m) => sum + m.wins, 0);
   const totalGames = matchups.reduce((sum, m) => sum + m.total_games, 0);
   return totalGames > 0 ? (totalWins / totalGames) * 100 : 0;
 };
-
-export interface CharWinRates {
-  charName: string;
-  charShort: string;
-  winRate: number;
-}
 
 const getCharacterWinRates = (matchupData: MatchupCharResponse[]): CharWinRates[] => {
   if (!matchupData) return [];

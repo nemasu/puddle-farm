@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
-import { Utils } from './Utils';
-import { PopularityResult } from './Interfaces';
+import { Utils } from './../utils/Utils';
+import { PopularityResult } from '../interfaces/API';
 
 const Popularity = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
