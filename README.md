@@ -1,3 +1,5 @@
+![Build Status](https://github.com/nemasu/puddle-farm/actions/workflows/rust.yml/badge.svg)
+
 # Puddle Farm
 
 This project is aimed to become a replacement for [Rating Update](https://github.com/nemasu/rating-update).
