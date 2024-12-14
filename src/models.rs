@@ -62,7 +62,7 @@ pub struct PlayerName {
     pub name: String,
 }
 
-#[derive(Selectable, Insertable, Queryable, Identifiable)]
+#[derive(Selectable, Insertable, Queryable, Identifiable, Clone)]
 #[diesel(primary_key(id, char_id))]
 pub struct PlayerRating {
     pub id: i64,
@@ -114,7 +114,7 @@ impl FromSql<crate::schema::sql_types::Status, Pg> for Status {
     }
 }
 
-#[derive(Selectable, Insertable, Queryable)]
+#[derive(Selectable, Insertable, Queryable, Clone)]
 pub struct Player {
     pub id: i64,
     pub name: String,

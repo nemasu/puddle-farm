@@ -1,9 +1,7 @@
 use crate::{ggst_api, schema, CHAR_NAMES};
 
-use bb8::PooledConnection;
-use bb8_redis::{redis, RedisConnectionManager};
+use bb8_redis::redis;
 use diesel::prelude::*;
-use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
 use std::time::Duration;
 use tokio::time;
@@ -27,6 +25,8 @@ define_sql_function! {
 }
 
 pub const ONE_MINUTE: u64 = 1 * 60;
+
+//TODO move the db stuff from this file into db.rs and imdb.rs
 
 pub async fn pull_and_update_continuous(state: crate::AppState) {
     // Processing loop
@@ -223,8 +223,8 @@ pub async fn do_daily_update_once(state: crate::AppState) {
 }
 
 async fn do_hourly_update(
-    conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
-    redis_connection: &mut PooledConnection<'_, RedisConnectionManager>,
+    conn: &mut crate::Connection<'_>,
+    redis_connection: &mut crate::RedisConnection<'_>,
 ) -> Result<(), String> {
     if let Err(e) = decay(conn).await {
         error!("decay failed: {e}");
@@ -255,8 +255,8 @@ async fn do_hourly_update(
 }
 
 async fn do_daily_update(
-    conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
-    redis_connection: &mut PooledConnection<'_, RedisConnectionManager>,
+    conn: &mut crate::Connection<'_>,
+    redis_connection: &mut crate::RedisConnection<'_>,
 ) -> Result<(), String> {
     if let Err(e) = update_popularity(conn, redis_connection).await {
         error!("update_popularity failed: {e}");
@@ -301,8 +301,8 @@ pub struct DistributionResult {
     pub percentile: f64,
 }
 async fn update_distribution(
-    conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
-    redis_connection: &mut PooledConnection<'_, RedisConnectionManager>,
+    conn: &mut crate::Connection<'_>,
+    redis_connection: &mut crate::RedisConnection<'_>,
 ) -> Result<(), String> {
     info!("Updating distribution");
 
@@ -385,8 +385,8 @@ pub struct Matchup {
     pub total_games: i64,
 }
 async fn update_matchups(
-    conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
-    redis_connection: &mut PooledConnection<'_, RedisConnectionManager>,
+    conn: &mut crate::Connection<'_>,
+    redis_connection: &mut crate::RedisConnection<'_>,
 ) -> Result<(), String> {
     info!("Updating matchups");
 
@@ -532,8 +532,8 @@ struct PopularityResultTotal {
     count: i64,
 }
 async fn update_popularity(
-    conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
-    redis_connection: &mut PooledConnection<'_, RedisConnectionManager>,
+    conn: &mut crate::Connection<'_>,
+    redis_connection: &mut crate::RedisConnection<'_>,
 ) -> Result<(), String> {
     info!("Updating popularity");
     //We're using subqueries here, so we need to use sql_query
@@ -643,8 +643,8 @@ struct CountResult {
     count: i64,
 }
 async fn update_stats(
-    conn: &mut PooledConnection<'_, AsyncDieselConnectionManager<AsyncPgConnection>>,
-    redis_connection: &mut PooledConnection<'_, RedisConnectionManager>,
+    conn: &mut crate::Connection<'_>,
+    redis_connection: &mut crate::RedisConnection<'_>,
 ) -> Result<(), String> {
     info!("Updating stats");
 
