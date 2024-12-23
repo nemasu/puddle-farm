@@ -625,6 +625,7 @@ const ClaimDialog: React.FC<ClaimDialogProps> = ({ playerId, API_ENDPOINT }) => 
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState('');
   const [isPolling, setIsPolling] = useState(false);
+  const [showConfirmButton, setShowConfirmButton] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const counter = useRef(0);
 
@@ -654,12 +655,17 @@ const ClaimDialog: React.FC<ClaimDialogProps> = ({ playerId, API_ENDPOINT }) => 
 
     if (code === '') {
       const response = await fetch(API_ENDPOINT + '/claim/' + playerId);
-      const result = await response.text().then(body => {
-        var parsed = JSONParse(body);
-        return parsed;
-      });
+      if (response.status === 200) {
+        const result = await response.text().then(body => {
+          var parsed = JSONParse(body);
+          return parsed;
+        });
 
-      setCode(result);
+        setCode(result);
+        setShowConfirmButton(true);
+      } else {
+        setCode("Error connecting to GGST, patch? Try again later.");
+      }
     }
 
     setOpen(true);
@@ -703,6 +709,13 @@ const ClaimDialog: React.FC<ClaimDialogProps> = ({ playerId, API_ENDPOINT }) => 
             document.location.href = '/settings';
           }, 2000);
         }
+      } else if (req.readyState === 4 && req.status !== 200) {
+        if (timerRef && timerRef.current) {
+          clearInterval(timerRef.current);
+        }
+
+        alert("Error connecting to GGST, patch? Try again later.");
+        document.location.reload();
       }
     }
 
@@ -723,10 +736,14 @@ const ClaimDialog: React.FC<ClaimDialogProps> = ({ playerId, API_ENDPOINT }) => 
         <DialogContent>
           <DialogContentText>
             {code}<br /><br /><br />
-            To confirm that this is your profile, put the above code in your R-Code "free comment" section
-            and close the R-Code so that it saves.<br /><br />
-            Press <Button onClick={startPolling}>THIS</Button> once you've done this.<br /><br />
-            After the profile has been confirmed you can change your R-code comment back to whatever you want.
+            {showConfirmButton ? (
+              <React.Fragment>
+                To confirm that this is your profile, put the above code in your R-Code "free comment" section
+                and close the R-Code so that it saves.<br /><br />
+                Press <Button onClick={startPolling}>THIS</Button> once you've done this.<br /><br />
+                After the profile has been confirmed you can change your R-code comment back to whatever you want.
+              </React.Fragment>
+            ) : null}
           </DialogContentText>
         </DialogContent>
         <DialogActions>

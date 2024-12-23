@@ -3,9 +3,7 @@ use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, ORIGIN};
 use axum::http::Method;
 use axum::{extract::State, http::StatusCode, response::Json, routing::get, Router};
 use bb8::PooledConnection;
-use diesel_async::{
-    pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection,
-};
+use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
 use handlers::common::{Pagination, TagResponse};
 use models::{CharacterRank, GlobalRank, Player, PlayerRating, Status};
 use serde::Serialize;
@@ -254,6 +252,13 @@ async fn claim(
     State(pools): State<AppState>,
     Path(player_id): Path<i64>,
 ) -> Result<Json<String>, (StatusCode, String)> {
+    if !std::fs::exists("token.txt").unwrap_or(false) {
+        return Err((
+            StatusCode::NOT_FOUND,
+            "GGST is not connected, patch?".to_string(),
+        ));
+    }
+
     let mut db = pools.db_pool.get().await.unwrap();
 
     let rcode_check_code = generate_code();
@@ -274,6 +279,13 @@ async fn claim_poll(
     State(pools): State<AppState>,
     Path(player_id): Path<i64>,
 ) -> Result<Json<String>, (StatusCode, String)> {
+    if !std::fs::exists("token.txt").unwrap_or(false) {
+        return Err((
+            StatusCode::NOT_FOUND,
+            "GGST is not connected, patch?".to_string(),
+        ));
+    }
+
     let mut db = pools.db_pool.get().await.unwrap();
 
     let code = match db::get_claim_code(player_id, &mut db).await {
@@ -622,39 +634,37 @@ async fn matchups(
 
     let data_all: Vec<MatchupCharResponse> = data_all
         .iter()
-        .map(|m| {
-            MatchupCharResponse {
-                char_name: m.char_name.clone(),
-                char_short: m.char_short.clone(),
-                matchups: m.matchups
-                    .iter()
-                    .map(|entry| MatchupEntry {
-                        char_name: entry.char_name.clone(),
-                        char_short: entry.char_short.clone(),
-                        wins: entry.wins,
-                        total_games: entry.total_games,
-                    })
-                    .collect(),
-            }
+        .map(|m| MatchupCharResponse {
+            char_name: m.char_name.clone(),
+            char_short: m.char_short.clone(),
+            matchups: m
+                .matchups
+                .iter()
+                .map(|entry| MatchupEntry {
+                    char_name: entry.char_name.clone(),
+                    char_short: entry.char_short.clone(),
+                    wins: entry.wins,
+                    total_games: entry.total_games,
+                })
+                .collect(),
         })
         .collect();
 
-        let data_1700: Vec<MatchupCharResponse> = data_1700
+    let data_1700: Vec<MatchupCharResponse> = data_1700
         .iter()
-        .map(|m| {
-            MatchupCharResponse {
-                char_name: m.char_name.clone(),
-                char_short: m.char_short.clone(),
-                matchups: m.matchups
-                    .iter()
-                    .map(|entry| MatchupEntry {
-                        char_name: entry.char_name.clone(),
-                        char_short: entry.char_short.clone(),
-                        wins: entry.wins,
-                        total_games: entry.total_games,
-                    })
-                    .collect(),
-            }
+        .map(|m| MatchupCharResponse {
+            char_name: m.char_name.clone(),
+            char_short: m.char_short.clone(),
+            matchups: m
+                .matchups
+                .iter()
+                .map(|entry| MatchupEntry {
+                    char_name: entry.char_name.clone(),
+                    char_short: entry.char_short.clone(),
+                    wins: entry.wins,
+                    total_games: entry.total_games,
+                })
+                .collect(),
         })
         .collect();
 
@@ -729,13 +739,12 @@ async fn distribution(
 ) -> Result<Json<DistributionResponse>, (StatusCode, String)> {
     let mut redis = pools.redis_pool.get().await.unwrap();
 
-    let (ts, distrubition_entry) =
-        match imdb::get_distribution(&mut redis).await {
-            Ok(data) => data,
-            Err(e) => {
-                return Err((StatusCode::NOT_FOUND, e));
-            }
-        };
+    let (ts, distrubition_entry) = match imdb::get_distribution(&mut redis).await {
+        Ok(data) => data,
+        Err(e) => {
+            return Err((StatusCode::NOT_FOUND, e));
+        }
+    };
 
     Ok(Json(DistributionResponse {
         timestamp: ts,
