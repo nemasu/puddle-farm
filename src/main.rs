@@ -752,6 +752,50 @@ async fn distribution(
     }))
 }
 
+async fn health(State(pools): State<AppState>) -> Result<String, (StatusCode, String)> {
+    let mut db = pools.db_pool.get().await.unwrap();
+    let mut redis = pools.redis_pool.get().await.unwrap();
+
+    
+    let mut latest_game_time = match imdb::get_latest_game_time(&mut redis).await {
+        Ok(latest_game_time) => Some(latest_game_time),
+        Err(_) => {
+            None
+        }
+    };
+
+    let now = chrono::Utc::now().timestamp();
+
+    if latest_game_time.is_none() {
+      //Recent game check
+      
+      latest_game_time = match db::get_latest_game_time(&mut db).await {
+          Ok(latest_game_time) => Some(latest_game_time),
+          Err(_) => {
+              return Err((StatusCode::INTERNAL_SERVER_ERROR, "No New (5m) Replays!".to_string()));
+          }
+      };
+
+      match imdb::set_latest_game_time(latest_game_time.unwrap().clone(), &mut redis).await {
+          Ok(_) => {}
+          Err(e) => {
+              return Err((StatusCode::INTERNAL_SERVER_ERROR, e));
+          }
+      };
+    }
+
+    if now - 120 > latest_game_time.unwrap().and_utc().timestamp() {
+        return Err((StatusCode::INTERNAL_SERVER_ERROR, "No New (2m) Replays!".to_string()));
+    }
+
+    let last_update_daily = imdb::get_last_update_daily(&mut redis).await.unwrap();
+    if now - 86400 > last_update_daily.and_utc().timestamp() {
+        return Ok("Daily Update Running. Replays are still being collected and will show up shortly.".to_string());
+    }
+    
+    Ok("OK".to_string())
+}
+
 fn init_tracing(prefix: &str) -> WorkerGuard {
     // Create a rolling file appender
     let file_appender = tracing_appender::rolling::RollingFileAppender::new(
@@ -873,6 +917,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/matchups/:player_id/:char_id", get(player_matchups))
                 .route("/api/supporters", get(supporters))
                 .route("/api/distribution", get(distribution))
+                .route("/api/health", get(health))
                 .with_state(state);
 
             if cfg!(debug_assertions) {

@@ -750,9 +750,7 @@ pub async fn get_matchups(
     }
 }
 
-pub async fn get_supporters(
-    db: &mut crate::Connection<'_>,
-) -> Result<Vec<(i64, String)>, String> {
+pub async fn get_supporters(db: &mut crate::Connection<'_>) -> Result<Vec<(i64, String)>, String> {
     match schema::tags::table
         .inner_join(schema::players::table.on(schema::tags::player_id.eq(schema::players::id)))
         .select((schema::tags::player_id, schema::players::name))
@@ -763,4 +761,30 @@ pub async fn get_supporters(
         Ok(supporters) => Ok(supporters),
         Err(_) => Err("Supporters not found".to_string()),
     }
+}
+
+pub async fn get_latest_game_time(
+    db: &mut crate::Connection<'_>,
+) -> Result<chrono::NaiveDateTime, String> {
+    let latest_game_time = match schema::games::table
+        .select(crate::pull::coalesce(
+            schema::games::real_timestamp,
+            schema::games::timestamp,
+        ))
+        .order(
+            crate::pull::coalesce(schema::games::real_timestamp, schema::games::timestamp).desc(),
+        )
+        .filter(
+            crate::pull::coalesce(schema::games::real_timestamp, schema::games::timestamp)
+                .gt(chrono::Utc::now().naive_utc() - chrono::Duration::minutes(5)),
+        )
+        .limit(1)
+        .first::<chrono::NaiveDateTime>(db)
+        .await
+    {
+        Ok(game_time) => game_time,
+        Err(_) => return Err("Latest game not found".to_string()),
+    };
+
+    Ok(latest_game_time)
 }

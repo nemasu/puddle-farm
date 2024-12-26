@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use bb8_redis::redis;
+use chrono::NaiveDateTime;
 
 use crate::{DistributionEntry, CHAR_NAMES};
 
@@ -32,9 +33,7 @@ pub struct Stats {
     pub one_hour_players: i64,
 }
 pub async fn get_stats(redis: &mut crate::RedisConnection<'_>) -> Result<Stats, String> {
-    let timestamp = match get_string("last_update_hourly", redis)
-        .await
-    {
+    let timestamp = match get_string("last_update_hourly", redis).await {
         Ok(ts) => ts,
         Err(_) => {
             return Err("Stats (last_update_hourly) not found".to_string());
@@ -74,9 +73,7 @@ pub struct Popularity {
     pub per_character_total: i64,
     pub last_update: String,
 }
-pub async fn get_popularity(
-    redis: &mut crate::RedisConnection<'_>,
-) -> Result<Popularity, String> {
+pub async fn get_popularity(redis: &mut crate::RedisConnection<'_>) -> Result<Popularity, String> {
     let mut per_player: Vec<(String, i64)> = vec![];
 
     for e in CHAR_NAMES.iter() {
@@ -114,65 +111,62 @@ pub async fn get_popularity(
 }
 
 pub struct MatchupChar {
-  pub char_name: String,
-  pub char_short: String,
-  pub matchups: Vec<MatchupEntry>, //Wins, Total Games
+    pub char_name: String,
+    pub char_short: String,
+    pub matchups: Vec<MatchupEntry>, //Wins, Total Games
 }
 
 pub struct MatchupEntry {
-  pub char_name: String,
-  pub char_short: String,
-  pub wins: i64,
-  pub total_games: i64,
+    pub char_name: String,
+    pub char_short: String,
+    pub wins: i64,
+    pub total_games: i64,
 }
 
 async fn get_matchup(
     prefix: &str,
     redis: &mut crate::RedisConnection<'_>,
 ) -> Result<Vec<MatchupChar>, String> {
-    
-  let mut matchups = vec![];
+    let mut matchups = vec![];
 
-  for c in 0..CHAR_NAMES.len() {
-      let key = format!("{}_{}", prefix, c);
+    for c in 0..CHAR_NAMES.len() {
+        let key = format!("{}_{}", prefix, c);
 
-      let value: String = match get_string(&key, redis).await {
-          Ok(v) => v,
-          Err(_) => {
-              return Err("Matchup not found".to_string());
-          }
-      };
+        let value: String = match get_string(&key, redis).await {
+            Ok(v) => v,
+            Err(_) => {
+                return Err("Matchup not found".to_string());
+            }
+        };
 
-      let matchups_data: Vec<crate::pull::Matchup> = serde_json::from_str(&value).unwrap();
-      let char_name = CHAR_NAMES[c].1.to_string();
-      let char_short = CHAR_NAMES[c].0.to_string();
+        let matchups_data: Vec<crate::pull::Matchup> = serde_json::from_str(&value).unwrap();
+        let char_name = CHAR_NAMES[c].1.to_string();
+        let char_short = CHAR_NAMES[c].0.to_string();
 
-      let matchup = MatchupChar {
-          char_name,
-          char_short,
-          matchups: matchups_data
-              .iter()
-              .enumerate()
-              .map(|(i, m)| MatchupEntry {
-                  char_name: CHAR_NAMES[i].1.to_string(),
-                  char_short: CHAR_NAMES[i].0.to_string(),
-                  wins: m.wins,
-                  total_games: m.total_games,
-              })
-              .collect(),
-      };
-      matchups.push(matchup);
-  }
-  Ok(matchups)
+        let matchup = MatchupChar {
+            char_name,
+            char_short,
+            matchups: matchups_data
+                .iter()
+                .enumerate()
+                .map(|(i, m)| MatchupEntry {
+                    char_name: CHAR_NAMES[i].1.to_string(),
+                    char_short: CHAR_NAMES[i].0.to_string(),
+                    wins: m.wins,
+                    total_games: m.total_games,
+                })
+                .collect(),
+        };
+        matchups.push(matchup);
+    }
+    Ok(matchups)
 }
 
 pub struct Matchups {
-  pub last_update: String,
-  pub matchups: HashMap<String, Vec<MatchupChar>>,
+    pub last_update: String,
+    pub matchups: HashMap<String, Vec<MatchupChar>>,
 }
-pub async fn get_matchups(
-    redis: &mut crate::RedisConnection<'_>,
-) -> Result<Matchups, String> {
+pub async fn get_matchups(redis: &mut crate::RedisConnection<'_>) -> Result<Matchups, String> {
     let prefixes = vec!["matchup", "matchup_1700"];
     let mut matchups: HashMap<String, Vec<MatchupChar>> = HashMap::new();
 
@@ -192,10 +186,7 @@ pub async fn get_matchups(
 pub async fn get_distribution(
     redis: &mut crate::RedisConnection<'_>,
 ) -> Result<(String, DistributionEntry), String> {
-
-  let distribution_floor = match get_string("distribution_floor", redis)
-        .await
-    {
+    let distribution_floor = match get_string("distribution_floor", redis).await {
         Ok(df) => df,
         Err(_) => {
             return Err("Distribution not found".to_string());
@@ -216,9 +207,71 @@ pub async fn get_distribution(
 
     let timestamp = get_string("last_update_daily", redis).await?;
 
-    Ok((timestamp, DistributionEntry {
-        distribution_floor,
-        distribution_rating,
-        one_month_players,
-    }))
+    Ok((
+        timestamp,
+        DistributionEntry {
+            distribution_floor,
+            distribution_rating,
+            one_month_players,
+        },
+    ))
+}
+
+pub async fn get_latest_game_time(
+    redis: &mut crate::RedisConnection<'_>,
+) -> Result<NaiveDateTime, String> {
+    let latest_game_time = match get_string("latest_game_time", redis).await {
+        Ok(lgt) => lgt,
+        Err(_) => {
+            return Err("Failed to get latest_game_time".to_string());
+        }
+    };
+
+    let latest_game_time =
+        NaiveDateTime::parse_from_str(&latest_game_time, "%Y-%m-%d %H:%M:%S").unwrap();
+
+    Ok(latest_game_time)
+}
+
+pub async fn set_latest_game_time(
+    timestamp: NaiveDateTime,
+    redis: &mut crate::RedisConnection<'_>,
+) -> Result<(), String> {
+    match redis::cmd("SET")
+        .arg("latest_game_time")
+        .arg(timestamp.to_string())
+        .arg("EX")
+        .arg("30")
+        .query_async::<String>(&mut **redis)
+        .await
+    {
+        Ok(_) => Ok(()),
+        Err(_) => Err("Failed to set latest_game_time".to_string()),
+    }
+}
+
+pub async fn clear_latest_game_time(
+    redis: &mut crate::RedisConnection<'_>,
+) -> Result<(), String> {
+    match redis::cmd("DEL").arg("latest_game_time").query_async::<i64>(&mut **redis).await {
+        Ok(_) => Ok(()),
+        Err(_) => Err("Failed to clear latest_game_time".to_string()),
+    }
+}
+
+
+pub async fn get_last_update_daily(
+    redis: &mut crate::RedisConnection<'_>,
+) -> Result<NaiveDateTime, String> {
+    let last_update_daily = match get_string("last_update_daily", redis).await {
+        Ok(lud) => lud,
+        Err(_) => {
+            return Err("Failed to get last_update_daily".to_string());
+        }
+    };
+
+    let last_update_daily =
+        NaiveDateTime::parse_from_str(&last_update_daily, "%Y-%m-%d %H:%M:%S").unwrap();
+
+    Ok(last_update_daily)
 }

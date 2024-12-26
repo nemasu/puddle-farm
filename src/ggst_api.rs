@@ -7,7 +7,7 @@ use hex;
 use lazy_static::lazy_static;
 use reqwest::header;
 use serde::{Deserialize, Serialize};
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 use std::{error::Error, ops::Deref};
 use tokio::sync::Mutex;
 
@@ -42,7 +42,7 @@ pub async fn get_token() -> Result<String, String> {
     {
         let token = TOKEN.lock().await;
         if let Some(t) = token.deref() {
-            info!("Already have a strive token");
+            debug!("Already have a strive token");
             return Ok(t.to_owned());
         }
     }
@@ -98,7 +98,7 @@ pub async fn get_replays() -> Result<Vec<responses::Replay>, String> {
     let token = get_token().await?;
     let mut replays = Vec::new();
     for i in 0..5 {
-        info!("Grabbing replays (page {i})");
+        debug!("Grabbing replays (page {i})");
         let request_data = requests::generate_replay_request(i, 127, &token);
         let request_data = encrypt_data(&request_data);
         let client = reqwest::Client::new();

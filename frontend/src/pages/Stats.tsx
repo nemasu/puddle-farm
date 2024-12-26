@@ -27,6 +27,7 @@ const Stats = () => {
 
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<StatsResponse>();
+  const [health, setHealth] = useState<String>("");
 
   useEffect(() => {
     document.title = 'Stats | Puddle Farm';
@@ -48,6 +49,26 @@ const Stats = () => {
 
           return parsed;
         });
+
+        const health_url = API_ENDPOINT
+          + '/health';
+
+        const health_response = await fetch(health_url);
+
+        if (health_response.status === 200) {
+          const result = await health_response.text().then(body => {
+            return body;
+          });
+  
+          setHealth(result);
+          
+        } else if (health_response.status === 500) {
+          const result = await health_response.text().then(body => {
+            return body;
+          });
+
+          setHealth("Error! "+ result);
+        }
 
         setLoading(false);
       } catch (error) {
@@ -136,6 +157,11 @@ const Stats = () => {
             </TableBody>
           </Table>
         </TableContainer>
+
+        <Typography my={3} variant='h5'>Server Health</Typography>
+        {health ? (
+          <pre>{health}</pre>
+        ) : null}
         <Typography my={10}>Statistics are updated once an hour.</Typography>
       </Box>
     </React.Fragment>

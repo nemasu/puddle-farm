@@ -283,6 +283,11 @@ async fn do_daily_update(
         .query_async::<String>(&mut **redis_connection)
         .await
         .expect("Error setting last_update_daily");
+
+    //Clear this so that health check doesn't fail
+    crate::imdb::clear_latest_game_time(redis_connection)
+        .await
+        .unwrap();
     Ok(())
 }
 
@@ -372,6 +377,7 @@ async fn update_distribution(
         .await
         .expect("Error setting floor_distribution");
 
+    info!("Updating distribution - Done");
     Ok(())
 }
 
@@ -516,6 +522,7 @@ async fn update_matchups(
         }
     }
 
+    info!("Updating matchups - Done");
     Ok(())
 }
 
@@ -633,6 +640,7 @@ async fn update_popularity(
             .expect("Error setting popularity per game");
     }
 
+    info!("Updating popularity - Done");
     Ok(())
 }
 
@@ -858,6 +866,7 @@ async fn update_stats(
         .await
         .expect("Error setting one_hour_players");
 
+    info!("Updating stats - Done");
     Ok(())
 }
 
@@ -874,6 +883,7 @@ async fn decay(connection: &mut AsyncPgConnection) -> Result<(), String> {
         .await
         .unwrap();
 
+    info!("Decaying ratings - Done");
     Ok(())
 }
 
@@ -943,6 +953,7 @@ async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> 
         );
     }
 
+    info!("Updating ranks - Done");
     Ok(())
 }
 
@@ -1100,6 +1111,7 @@ async fn grab_games(connection: &mut AsyncPgConnection) -> Result<Vec<Game>, Str
         }
     }
 
+    info!("Grabbing replays - Done");
     Ok(new_games)
 }
 
@@ -1264,6 +1276,7 @@ async fn update_ratings(connection: &mut AsyncPgConnection) -> Result<(), String
                 .unwrap();
         }
     }
+    info!("Updating ratings - Done");
     Ok(())
 }
 
