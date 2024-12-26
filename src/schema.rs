@@ -15,13 +15,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    constants (key) {
-        key -> Text,
-        value -> Text,
-    }
-}
-
-diesel::table! {
     games (timestamp, id_a, id_b) {
         timestamp -> Timestamp,
         id_a -> Int8,
@@ -100,7 +93,6 @@ diesel::joinable!(player_ratings -> players (id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     character_ranks,
-    constants,
     games,
     global_ranks,
     player_names,

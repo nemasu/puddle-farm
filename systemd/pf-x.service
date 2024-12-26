@@ -1,0 +1,13 @@
+[Unit]
+Description=Puddle Farm Steam
+After=network.target
+
+[Service]
+Type=forking
+User=user
+WorkingDirectory=/home/user/puddle-farm
+ExecStart=/home/user/puddle-farm/scripts/startx.sh
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

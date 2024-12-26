@@ -1,0 +1,14 @@
+[Unit]
+Description=Puddle Farm - Pull
+After=network.target pf-x.service
+Requires=pf-x.service
+
+[Service]
+Type=simple
+User=user
+WorkingDirectory=/home/user/puddle-farm
+ExecStart=/home/user/puddle-farm/scripts/start.sh pull
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

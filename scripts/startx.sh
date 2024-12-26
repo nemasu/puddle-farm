@@ -8,4 +8,4 @@ x11vnc -nodpms -forever -nopw &
 sleep 1
 fluxbox &
 sleep 3
-/usr/games/steam &
+steam &
