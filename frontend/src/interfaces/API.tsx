@@ -184,3 +184,11 @@ export interface DistributionResponse {
   /** Distribution entry data */
   data: DistributionEntry;
 }
+
+export interface RatingCalculationResponse {
+  rating_a_new: number;
+  drift_a_new: number;
+  rating_b_new: number;
+  drift_b_new: number;
+  win_prob: number;
+}

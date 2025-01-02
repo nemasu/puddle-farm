@@ -13,9 +13,6 @@ use diesel::dsl::*;
 
 use crate::models::*;
 
-use rstat::univariate;
-use rstat::Distribution;
-
 use diesel_async::scoped_futures::ScopedFutureExt;
 
 use diesel::sql_types::{BigInt, Integer};
@@ -1201,8 +1198,8 @@ async fn update_ratings(connection: &mut AsyncPgConnection) -> Result<(), String
 
         if Some(Status::Public) == entry.1 && Some(Status::Public) == entry.2 {
             //Calculate value and deviation
-            let (new_value_a, new_value_b, new_deviation_a, new_deviation_b, win_prob) =
-                update_mean_and_variance(
+            let (new_value_a, new_deviation_a, new_value_b, new_deviation_b, win_prob) =
+                crate::rating::update_mean_and_variance(
                     player_rating_a.value as f64,
                     player_rating_a.deviation as f64,
                     player_rating_b.value as f64,
@@ -1278,113 +1275,4 @@ async fn update_ratings(connection: &mut AsyncPgConnection) -> Result<(), String
     }
     info!("Updating ratings - Done");
     Ok(())
-}
-
-pub fn update_mean_and_variance(
-    mean_a: f64,
-    sigma_a: f64,
-    mean_b: f64,
-    sigma_b: f64,
-    a_wins: bool,
-) -> (f64, f64, f64, f64, f64) {
-    //### Calculate some helpful values. ###
-
-    let rating_diff = mean_a - mean_b; //#This can be negative, that is intended.
-    let match_variablity = sigma_a.powf(2.0) + sigma_b.powf(2.0); //#A simple method to combine the variablity of both players.
-    let sqrt_match_variablity = f64::sqrt(match_variablity); //#We end up computing this a lot
-
-    //#How likely is a win for A? Bayesian methods let us create a normal distrubution by combining the two players ratings and variabiilies to estimate this.
-    let dist = univariate::normal::Normal::standard();
-    let x = rating_diff / (sqrt_match_variablity + 241.0);
-    let win_prob = dist.cdf(&x);
-
-    //#How suprising was the result?
-    //#Also, the direction is positive when A wins, and negative if B wins.
-    let result_suprise: f64;
-    let direction_of_update: f64;
-    if a_wins {
-        result_suprise = 1.0 - win_prob;
-        direction_of_update = 1.0;
-    } else {
-        result_suprise = win_prob.into();
-        direction_of_update = -1.0;
-    }
-
-    //### Update Means ###
-    //# We scale the update by how suprising the result is. A win with a 99% chance of winning divides the total update by 100 (multiplying by (1.0 - 0.99) is the same as dividing by 100)
-    //# But, since either player could have a contoller failure, computer issue, or any number of other external events. There is always some "suprise" to a win. Therefore, we add 0.001.
-    //# This has the added bonus of some numerical stability as well, since result_suprise can be a very small number.
-    //# Further, we scale by the variance of the player and divide by the overall variablity of the match.
-    let mean_a_new = mean_a
-        + direction_of_update
-            * 10.0
-            * (result_suprise + 0.001)
-            * f64::sqrt(sigma_a / sqrt_match_variablity);
-    let mean_b_new = mean_b
-        - direction_of_update
-            * 10.0
-            * (result_suprise + 0.001)
-            * f64::sqrt(sigma_b / sqrt_match_variablity);
-
-    //# Going over each term:
-    //# mean is the original rating of the player
-    //# direction_of_update is who won, and that's either 1.0 or -1.0. The direction of the update.
-    //# 10 is used to flatly increase the size of updates so they are more human interpretable.
-    //# result_suprise is between 0.001 and 1.001, therefore it will (almost) always reduce the size of the update. It models the intuition that a "sure" win doesn't offer much information, whereas a massive upset calls into question our assumptions about how good the player really is.
-    //# (sigma**2.5 / match_variablity) = (sigma**2.5 / sigma_A**2 + sigma_B**2). This term effectively reduces the size of the update depending on how uncertain we are about the opponents rating and increased it based on how uncertain we about the player's rating.
-
-    //### Update Variance ###
-    //# Before we start, it's important to understand this is *not* a statistical valid way of estiamting variance.
-    //# We explicitly are using a simplified, biased, and suboptimal model.
-    //# There are two mean reasons for this.
-    //# First, the assumptions required to use an unbiased and optimal model are unlikely to be furfilled, causing it to become biased and suboptimal while also being highly complex
-    //# Second, optimal and unbiased models tend to be brittle, when they start to break, they break hard.
-
-    //# Onto the biased and suboptimal but also resilent and simple method!
-    //# First, we want a higher level scaling factor. This is a number which is pretty close to 1.0, and gently increases or decreases the overall variance.
-
-    //# Second, we want to add or subtract from the variance.
-    //# If the result is a suprise, we should add to it, otherwise, reduce.
-    //# (result_suprise-0.5) moves result_suprise into the -0.5 to 0.5 range, straddling the 50% win chance.
-    //# We multiply that by one hundred and then multiple it again by the result_suprise. Multiplying by result_suprise is a technique from importance sampling.
-    //# Then, we want to create a mild reduction in variance if two players of equal skill continously go even.
-    //# We multiply by (1-result_suprise) in this case because a 60% suprise should reduce variance less than a 40% suprise.
-
-    let variance_adjustment_factor = (2.0 + result_suprise) / 2.501;
-    let variance_adjustment_constant = ((result_suprise - 0.5) * 2.0) * result_suprise;
-
-    let mut sigma_a_new = (sigma_a + variance_adjustment_constant) * variance_adjustment_factor;
-    let mut sigma_b_new = (sigma_b + variance_adjustment_constant) * variance_adjustment_factor;
-
-    //#We don't actually want variance to reduce that much if the mean isn't changing.
-    //#e.g. A player farming someone rated 500 points below them shouldn't see much change in their variance.
-
-    let adjusted_mean_gap_a = (mean_a - mean_a_new).powf(2.0);
-    let adjusted_mean_gap_b = (mean_b - mean_b_new).powf(2.0);
-
-    if adjusted_mean_gap_a < 1.0 {
-        sigma_a_new = sigma_a * (1.0 - adjusted_mean_gap_a) + sigma_a_new * adjusted_mean_gap_a
-    }
-    if adjusted_mean_gap_b < 1.0 {
-        sigma_b_new = sigma_b * (1.0 - adjusted_mean_gap_b) + sigma_b_new * adjusted_mean_gap_b
-    }
-
-    //# Important to note that a suprising event applies to both players
-    //# An upset increases variance for both players, and an expected result decreases it
-
-    //# One last detail to help the stability of the overall model.
-    //# Taking the max of the new variation and 1.0 ensures that we don't enter situations where 1.0 or less variance causes numerical problems.
-    sigma_a_new = f64::max(1.0, sigma_a_new);
-    sigma_b_new = f64::max(1.0, sigma_b_new);
-
-    //#This should be complimented with real time variance increase. I'd suggest no change for the first 21 hours, and then a old_variance*1.05 + 1 increase every 21 hours after.
-    //#There are advantages to not using 24 hours.
-
-    (
-        mean_a_new,
-        mean_b_new,
-        sigma_a_new,
-        sigma_b_new,
-        win_prob.into(),
-    )
 }

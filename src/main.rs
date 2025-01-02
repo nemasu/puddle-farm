@@ -6,7 +6,7 @@ use bb8::PooledConnection;
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
 use handlers::common::{Pagination, TagResponse};
 use models::{CharacterRank, GlobalRank, Player, PlayerRating, Status};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
 use std::vec;
@@ -36,6 +36,7 @@ mod handlers;
 mod imdb;
 mod models;
 mod pull;
+mod rating;
 mod requests;
 mod responses;
 mod schema;
@@ -756,44 +757,82 @@ async fn health(State(pools): State<AppState>) -> Result<String, (StatusCode, St
     let mut db = pools.db_pool.get().await.unwrap();
     let mut redis = pools.redis_pool.get().await.unwrap();
 
-    
     let mut latest_game_time = match imdb::get_latest_game_time(&mut redis).await {
         Ok(latest_game_time) => Some(latest_game_time),
-        Err(_) => {
-            None
-        }
+        Err(_) => None,
     };
 
     let now = chrono::Utc::now().timestamp();
 
     if latest_game_time.is_none() {
-      //Recent game check
-      
-      latest_game_time = match db::get_latest_game_time(&mut db).await {
-          Ok(latest_game_time) => Some(latest_game_time),
-          Err(_) => {
-              return Err((StatusCode::INTERNAL_SERVER_ERROR, "No New (5m) Replays!".to_string()));
-          }
-      };
+        //Recent game check
 
-      match imdb::set_latest_game_time(latest_game_time.unwrap().clone(), &mut redis).await {
-          Ok(_) => {}
-          Err(e) => {
-              return Err((StatusCode::INTERNAL_SERVER_ERROR, e));
-          }
-      };
+        latest_game_time = match db::get_latest_game_time(&mut db).await {
+            Ok(latest_game_time) => Some(latest_game_time),
+            Err(_) => {
+                return Err((
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "No New (5m) Replays!".to_string(),
+                ));
+            }
+        };
+
+        match imdb::set_latest_game_time(latest_game_time.unwrap().clone(), &mut redis).await {
+            Ok(_) => {}
+            Err(e) => {
+                return Err((StatusCode::INTERNAL_SERVER_ERROR, e));
+            }
+        };
     }
 
     if now - 120 > latest_game_time.unwrap().and_utc().timestamp() {
-        return Err((StatusCode::INTERNAL_SERVER_ERROR, "No New (2m) Replays!".to_string()));
+        return Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "No New (2m) Replays!".to_string(),
+        ));
     }
 
     let last_update_daily = imdb::get_last_update_daily(&mut redis).await.unwrap();
     if now - 86400 > last_update_daily.and_utc().timestamp() {
-        return Ok("Daily Update Running. Replays are still being collected and will show up shortly.".to_string());
+        return Ok(
+            "Daily Update Running. Replays are still being collected and will show up shortly."
+                .to_string(),
+        );
     }
-    
+
     Ok("OK".to_string())
+}
+
+#[derive(Deserialize)]
+struct CalcRatingRequest{
+  rating_a: f64,
+  drift_a: f64,
+  rating_b: f64,
+  drift_b: f64,
+  a_wins: bool
+}
+
+#[derive(Serialize)]
+struct CalcRatingResponse {
+    rating_a_new: f64,
+    drift_a_new: f64,
+    rating_b_new: f64,
+    drift_b_new: f64,
+    win_prob: f64,
+}
+async fn calc_rating(
+   ratings: Query<CalcRatingRequest>,
+) -> Result<Json<CalcRatingResponse>, (StatusCode, String)> {
+    let (rating_a_new, drift_a_new, rating_b_new, drift_b_new, win_prob) =
+        crate::rating::update_mean_and_variance(ratings.rating_a, ratings.drift_a, ratings.rating_b, ratings.drift_b, ratings.a_wins);
+
+    Ok(Json(CalcRatingResponse {
+        rating_a_new,
+        drift_a_new,
+        rating_b_new,
+        drift_b_new,
+        win_prob,
+    }))
 }
 
 fn init_tracing(prefix: &str) -> WorkerGuard {
@@ -918,6 +957,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/supporters", get(supporters))
                 .route("/api/distribution", get(distribution))
                 .route("/api/health", get(health))
+                .route("/api/calc_rating", get(calc_rating))
                 .with_state(state);
 
             if cfg!(debug_assertions) {

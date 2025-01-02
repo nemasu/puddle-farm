@@ -50,6 +50,8 @@ const Stats = () => {
           return parsed;
         });
 
+        setLoading(false);
+
         const health_url = API_ENDPOINT
           + '/health';
 
@@ -59,18 +61,18 @@ const Stats = () => {
           const result = await health_response.text().then(body => {
             return body;
           });
-  
+
           setHealth(result);
-          
+
         } else if (health_response.status === 500) {
           const result = await health_response.text().then(body => {
             return body;
           });
 
-          setHealth("Error! "+ result);
+          setHealth("Error! " + result);
         }
 
-        setLoading(false);
+
       } catch (error) {
         console.error('Error fetching player data:', error);
       }
@@ -157,12 +159,15 @@ const Stats = () => {
             </TableBody>
           </Table>
         </TableContainer>
-
-        <Typography my={3} variant='h5'>Server Health</Typography>
-        {health ? (
-          <pre>{health}</pre>
-        ) : null}
         <Typography my={10}>Statistics are updated once an hour.</Typography>
+      </Box>
+      <Box m={4}>
+        {health ? (
+          <React.Fragment>
+          <Box component="span">Health: </Box>
+          <Box component="span">{health}</Box>
+          </React.Fragment>
+        ) : null}
       </Box>
     </React.Fragment>
   );
