@@ -823,6 +823,11 @@ struct CalcRatingResponse {
 async fn calc_rating(
    ratings: Query<CalcRatingRequest>,
 ) -> Result<Json<CalcRatingResponse>, (StatusCode, String)> {
+
+    if ratings.drift_a < 1.0 || ratings.drift_b < 1.0 {
+        return Err((StatusCode::BAD_REQUEST, "Drift must be greater than 1".to_string()));
+    }
+
     let (rating_a_new, drift_a_new, rating_b_new, drift_b_new, win_prob) =
         crate::rating::update_mean_and_variance(ratings.rating_a, ratings.drift_a, ratings.rating_b, ratings.drift_b, ratings.a_wins);
 

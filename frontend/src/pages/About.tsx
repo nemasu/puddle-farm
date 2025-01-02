@@ -38,8 +38,15 @@ const About = () => {
     setLoading(true);
     try {
       const response = await fetch(`${API_ENDPOINT}/calc_rating?rating_a=${ratingA}&drift_a=${driftA}&rating_b=${ratingB}&drift_b=${driftB}&a_wins=${aWins}`);
-      const data = await response.json();
-      setRatingData(data);
+      if (response.status === 200) {
+        const data = await response.json();
+        setRatingData(data);
+      } else {
+        const data = await response.text();
+        alert(data);
+      }
+
+
     } catch (error) {
       console.error('Error fetching rating data:', error);
     } finally {
@@ -90,89 +97,89 @@ const About = () => {
           </Typography>
           <Typography variant="body1">
             The new system used for rating is based on the <Link to="https://en.wikipedia.org/wiki/Bradley%E2%80%93Terry_model" target='_blank'>Bradley-Terry Model</Link>.
-            <Box>
+            <Box component={'span'} sx={{ display: 'block' }}>
               <Button variant="contained" color="primary" onClick={handleClickOpen}>
                 Open Rating Calculator
               </Button>
             </Box>
-            <Dialog open={open} onClose={handleClose}>
-              <DialogTitle>Rating Calculator</DialogTitle>
-              <DialogContent>
-                <TextField
-                  label="Rating A"
-                  type="number"
-                  value={ratingA}
-                  onChange={(e) => setRatingA(parseFloat(e.target.value))}
-                  fullWidth
-                  margin="normal"
-                />
-                <TextField
-                  label="Drift A"
-                  type="number"
-                  value={driftA}
-                  onChange={(e) => setDriftA(parseFloat(e.target.value))}
-                  fullWidth
-                  margin="normal"
-                />
-                <TextField
-                  label="Rating B"
-                  type="number"
-                  value={ratingB}
-                  onChange={(e) => setRatingB(parseFloat(e.target.value))}
-                  fullWidth
-                  margin="normal"
-                />
-                <TextField
-                  label="Drift B"
-                  type="number"
-                  value={driftB}
-                  onChange={(e) => setDriftB(parseFloat(e.target.value))}
-                  fullWidth
-                  margin="normal"
-                />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={aWins}
-                      onChange={(e) => setAWins(e.target.checked)}
-                    />
-                  }
-                  label="A Wins?"
-                />
-                {loading ? (
-                  <CircularProgress />
-                ) : (
-                  ratingData && (
-                    <Box mt={2}>
-                      <Typography variant="body1">
-                        <strong>New Rating A:</strong> {ratingData.rating_a_new.toFixed(2)}
-                      </Typography>
-                      <Typography variant="body1">
-                        <strong>New Drift A:</strong> {ratingData.drift_a_new.toFixed(2)}
-                      </Typography>
-                      <Typography variant="body1">
-                        <strong>New Rating B:</strong> {ratingData.rating_b_new.toFixed(2)}
-                      </Typography>
-                      <Typography variant="body1">
-                        <strong>New Drift B:</strong> {ratingData.drift_b_new.toFixed(2)}
-                      </Typography>
-                      <Typography variant="body1">
-                        <strong>Win Probability:</strong> {(ratingData.win_prob * 100).toFixed(2)}%
-                      </Typography>
-                    </Box>
-                  )
-                )}
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={handleClose} color="primary">
-                  Close
-                </Button>
-                <Button onClick={handleCalculate} color="primary" variant="contained">
-                  Calculate
-                </Button>
-              </DialogActions>
-            </Dialog>
           </Typography>
+          <Dialog open={open} onClose={handleClose}>
+            <DialogTitle>Rating Calculator</DialogTitle>
+            <DialogContent>
+              <TextField
+                label="Rating A"
+                type="number"
+                value={ratingA}
+                onChange={(e) => setRatingA(parseFloat(e.target.value))}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
+                label="Drift A"
+                type="number"
+                value={driftA}
+                onChange={(e) => setDriftA(parseFloat(e.target.value))}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
+                label="Rating B"
+                type="number"
+                value={ratingB}
+                onChange={(e) => setRatingB(parseFloat(e.target.value))}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
+                label="Drift B"
+                type="number"
+                value={driftB}
+                onChange={(e) => setDriftB(parseFloat(e.target.value))}
+                fullWidth
+                margin="normal"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={aWins}
+                    onChange={(e) => setAWins(e.target.checked)}
+                  />
+                }
+                label="A Wins?"
+              />
+              {loading ? (
+                <CircularProgress />
+              ) : (
+                ratingData && (
+                  <Box mt={2}>
+                    <Typography variant="body1">
+                      <strong>New Rating A:</strong> {ratingData.rating_a_new.toFixed(2)}
+                    </Typography>
+                    <Typography variant="body1">
+                      <strong>New Drift A:</strong> {ratingData.drift_a_new.toFixed(2)}
+                    </Typography>
+                    <Typography variant="body1">
+                      <strong>New Rating B:</strong> {ratingData.rating_b_new.toFixed(2)}
+                    </Typography>
+                    <Typography variant="body1">
+                      <strong>New Drift B:</strong> {ratingData.drift_b_new.toFixed(2)}
+                    </Typography>
+                    <Typography variant="body1">
+                      <strong>Win Probability:</strong> {(ratingData.win_prob * 100).toFixed(2)}%
+                    </Typography>
+                  </Box>
+                )
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleClose} color="primary">
+                Close
+              </Button>
+              <Button onClick={handleCalculate} color="primary" variant="contained">
+                Calculate
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Box>
         <Box mb={4}>
           <Typography variant="h5" sx={{ fontWeight: 'bold', marginBottom: 1 }}>
