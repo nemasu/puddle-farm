@@ -71,7 +71,7 @@ const App = () => {
       <Box sx={{ minHeight: 100, textAlign: 'center' }}>
         <Button component={Link} target="_blank" href="https://github.com/nemasu/puddle-farm"><GitHubIcon style={{ transform: 'scale(0.65)' }} /></Button>
         <Button component={Link} target="_blank" href="https://discord.gg/vY4mE8exXB"><DiscordIcon style={{ transform: 'scale(0.65)' }} /></Button>
-        <Button component={Link} target="_blank" href="https://patreon.com/nemasu"><PatreonIcon style={{ transform: 'scale(0.55)', position: 'relative', top: '7px' }} /></Button>
+        <Button component={Link} target="_blank" href="https://patreon.com/nemasu"><PatreonIcon style={{ transform: 'scale(0.55)' }} /></Button>
       </Box>
     </ThemeManager>
   );

@@ -98,7 +98,7 @@ const About = () => {
           <Typography variant="body1">
             The new system used for rating is based on the <Link to="https://en.wikipedia.org/wiki/Bradley%E2%80%93Terry_model" target='_blank'>Bradley-Terry Model</Link>.
             <Box component={'span'} sx={{ display: 'block' }}>
-              <Button variant="contained" color="primary" onClick={handleClickOpen}>
+              <Button variant="outlined" color="primary" onClick={handleClickOpen}>
                 Open Rating Calculator
               </Button>
             </Box>
@@ -175,7 +175,7 @@ const About = () => {
               <Button onClick={handleClose} color="primary">
                 Close
               </Button>
-              <Button onClick={handleCalculate} color="primary" variant="contained">
+              <Button onClick={handleCalculate} color="primary" variant="outlined">
                 Calculate
               </Button>
             </DialogActions>

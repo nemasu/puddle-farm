@@ -363,7 +363,7 @@ const Player = () => {
                     {player.platform}
                   </Typography>
                   {player.top_global !== 0 ? (
-                    <Typography variant="global_rank">
+                    <Typography variant="global_rank" onMouseDown={(event) => navigate(`/top_global`)} sx={{ cursor: 'pointer' }}>
                       #{player.top_global} Overall
                     </Typography>
                   ) : null}
@@ -404,7 +404,7 @@ const Player = () => {
                     {player.platform}
                   </Typography>
                   {player.top_global !== 0 ? (
-                    <Typography variant="global_rank">
+                    <Typography variant="global_rank" onMouseDown={(event) => navigate(`/top_global`)} sx={{ cursor: 'pointer' }}>
                       #{player.top_global} Overall
                     </Typography>
                   ) : null}
@@ -437,7 +437,7 @@ const Player = () => {
                   <Typography variant='h5' my={2}>
                     {currentCharData.character} Rating: <Box title={currentCharData.rating.toString()} component={"span"}>{Math.round(currentCharData.rating)}</Box> ±<Box title={currentCharData.deviation.toString()} component={"span"}>{Math.round(currentCharData.deviation)}</Box> ({currentCharData.match_count} games)
                     {currentCharData.top_char !== 0 ? (
-                      <Typography variant="char_rank">
+                      <Typography variant="char_rank" onMouseDown={(event) => navigate(`/top/${currentCharData.char_short}`)} sx={{ cursor: 'pointer' }}>
                         #{currentCharData.top_char} {currentCharData.character}
                       </Typography>
                     ) : null}
@@ -521,7 +521,7 @@ const Player = () => {
                   <Typography variant='h5' my={2}>
                     {currentCharData.character} Rating: <Box title={currentCharData.rating.toString()} component={"span"}>{Math.round(currentCharData.rating)}</Box> ±<Box title={currentCharData.deviation.toString()} component={"span"}>{Math.round(currentCharData.deviation)}</Box> ({currentCharData.match_count} games)
                     {currentCharData.top_char !== 0 ? (
-                      <Typography variant="char_rank">
+                      <Typography variant="char_rank" onMouseDown={(event) => navigate(`/top/${currentCharData.char_short}`)} sx={{ cursor: 'pointer' }}>
                         #{currentCharData.top_char} {currentCharData.character}
                       </Typography>
                     ) : null}
