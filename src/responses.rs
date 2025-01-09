@@ -76,3 +76,9 @@ pub struct PlayerStats {
     pub json: String,
     _int2: i64,
 }
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct PlayerAvatar {
+    _int1: i64,
+    pub png: String,
+}

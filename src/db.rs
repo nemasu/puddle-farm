@@ -788,3 +788,17 @@ pub async fn get_latest_game_time(
 
     Ok(latest_game_time)
 }
+
+pub async fn player_exists(db: &mut crate::Connection<'_>, player_id: i64) -> Result<bool, String> {
+    let exists = match schema::players::table
+        .filter(schema::players::id.eq(player_id))
+        .count()
+        .get_result::<i64>(db)
+        .await
+    {
+        Ok(count) => Ok(count > 0),
+        Err(_) => Err("Player not found".to_string()),
+    };
+
+    exists
+}

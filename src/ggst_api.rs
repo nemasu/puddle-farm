@@ -38,6 +38,30 @@ pub async fn get_player_stats(player_id: String) -> Result<String, String> {
     }
 }
 
+
+pub async fn get_player_avatar(player_id: String) -> Result<String, String> {
+  let request_data = requests::generate_player_avatar_request(player_id);
+  let request_data = encrypt_data(&request_data);
+
+  let client = reqwest::Client::new();
+  let form = client
+      .post("https://ggst-game.guiltygear.com/api/tus/read")
+      .header(header::USER_AGENT, "GGST/Steam")
+      .header(header::CACHE_CONTROL, "no-store")
+      .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+      .header("x-client-version", "1")
+      .form(&[("data", request_data)]);
+
+  let response = form.send().await.unwrap();
+  let response_bytes = response.bytes().await.unwrap();
+
+  if let Ok(r) = decrypt_response::<responses::PlayerAvatar>(&response_bytes) {
+      Ok(r.body.png)
+  } else {
+      return Err("Couldn't get player avatar".to_owned());
+  }
+}
+
 pub async fn get_token() -> Result<String, String> {
     {
         let token = TOKEN.lock().await;

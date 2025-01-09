@@ -30,7 +30,6 @@ struct RequestHeader {
     platform: i64,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReplayRequest {
     int1: i64,
@@ -40,7 +39,6 @@ pub struct ReplayRequest {
     platforms: i64,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 struct ReplayQuery {
     int1: i64,
@@ -55,7 +53,6 @@ struct ReplayQuery {
     int2: i64,
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PlayerStatsRequest {
     player_id: String,
@@ -82,6 +79,28 @@ pub fn generate_player_stats_request(player_id: String) -> Request<PlayerStatsRe
             int3: 1,
             int4: -1,
             int5: -1,
+        },
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PlayerAvatarRequest {
+    player_id: String,
+    int1: i64,
+}
+
+pub fn generate_player_avatar_request(player_id: String) -> Request<PlayerAvatarRequest> {
+    Request {
+        header: RequestHeader {
+            player_id: PLAYER_ID.to_owned(),
+            token: std::fs::read_to_string("token.txt").unwrap(),
+            int1: 2,
+            version: VERSION.to_owned(),
+            platform: 3, //PC
+        },
+        body: PlayerAvatarRequest {
+            player_id: player_id,
+            int1: 1,
         },
     }
 }

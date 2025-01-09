@@ -1,6 +1,7 @@
 use axum::extract::{Path, Query};
-use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, ORIGIN};
-use axum::http::Method;
+use axum::http::header::{self, ACCEPT, AUTHORIZATION, CONTENT_TYPE, ORIGIN};
+use axum::http::{HeaderMap, HeaderValue, Method};
+use axum::response::IntoResponse;
 use axum::{extract::State, http::StatusCode, response::Json, routing::get, Router};
 use bb8::PooledConnection;
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
@@ -804,12 +805,12 @@ async fn health(State(pools): State<AppState>) -> Result<String, (StatusCode, St
 }
 
 #[derive(Deserialize)]
-struct CalcRatingRequest{
-  rating_a: f64,
-  drift_a: f64,
-  rating_b: f64,
-  drift_b: f64,
-  a_wins: bool
+struct CalcRatingRequest {
+    rating_a: f64,
+    drift_a: f64,
+    rating_b: f64,
+    drift_b: f64,
+    a_wins: bool,
 }
 
 #[derive(Serialize)]
@@ -821,15 +822,23 @@ struct CalcRatingResponse {
     win_prob: f64,
 }
 async fn calc_rating(
-   ratings: Query<CalcRatingRequest>,
+    ratings: Query<CalcRatingRequest>,
 ) -> Result<Json<CalcRatingResponse>, (StatusCode, String)> {
-
     if ratings.drift_a < 1.0 || ratings.drift_b < 1.0 {
-        return Err((StatusCode::BAD_REQUEST, "Drift must be greater than 1".to_string()));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Drift must be greater than 1".to_string(),
+        ));
     }
 
     let (rating_a_new, drift_a_new, rating_b_new, drift_b_new, win_prob) =
-        crate::rating::update_mean_and_variance(ratings.rating_a, ratings.drift_a, ratings.rating_b, ratings.drift_b, ratings.a_wins);
+        crate::rating::update_mean_and_variance(
+            ratings.rating_a,
+            ratings.drift_a,
+            ratings.rating_b,
+            ratings.drift_b,
+            ratings.a_wins,
+        );
 
     Ok(Json(CalcRatingResponse {
         rating_a_new,
@@ -838,6 +847,32 @@ async fn calc_rating(
         drift_b_new,
         win_prob,
     }))
+}
+
+async fn avatar(Path(player_id): Path<i64>, State(pools): State<AppState>) -> impl IntoResponse {
+    let mut db = pools.db_pool.get().await.unwrap();
+
+    let exists = match crate::db::player_exists(&mut db, player_id).await {
+      Ok(e) => e,
+      Err(e) => return Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
+    };
+
+    if !exists {
+      return Err((StatusCode::NOT_FOUND, "Player not found".to_string()));
+    }
+
+    let png = match crate::ggst_api::get_player_avatar(player_id.to_string()).await {
+        Ok(png) => png,
+        Err(e) => return Err((StatusCode::SERVICE_UNAVAILABLE, e)),
+    };
+
+    let output = crate::handlers::avatar::handle_get_avatar(png).await;
+   
+    // Create response headers
+    let mut headers = HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("image/png"));
+
+    Ok((headers, output))
 }
 
 fn init_tracing(prefix: &str) -> WorkerGuard {
@@ -963,6 +998,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/distribution", get(distribution))
                 .route("/api/health", get(health))
                 .route("/api/calc_rating", get(calc_rating))
+                .route("/api/avatar/:player_id", get(avatar))
                 .with_state(state);
 
             if cfg!(debug_assertions) {
