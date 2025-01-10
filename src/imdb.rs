@@ -250,15 +250,16 @@ pub async fn set_latest_game_time(
     }
 }
 
-pub async fn clear_latest_game_time(
-    redis: &mut crate::RedisConnection<'_>,
-) -> Result<(), String> {
-    match redis::cmd("DEL").arg("latest_game_time").query_async::<i64>(&mut **redis).await {
+pub async fn clear_latest_game_time(redis: &mut crate::RedisConnection<'_>) -> Result<(), String> {
+    match redis::cmd("DEL")
+        .arg("latest_game_time")
+        .query_async::<i64>(&mut **redis)
+        .await
+    {
         Ok(_) => Ok(()),
         Err(_) => Err("Failed to clear latest_game_time".to_string()),
     }
 }
-
 
 pub async fn get_last_update_daily(
     redis: &mut crate::RedisConnection<'_>,
@@ -274,4 +275,33 @@ pub async fn get_last_update_daily(
         NaiveDateTime::parse_from_str(&last_update_daily, "%Y-%m-%d %H:%M:%S").unwrap();
 
     Ok(last_update_daily)
+}
+
+pub async fn get_avatar(id: i64, redis: &mut crate::RedisConnection<'_>) -> Result<String, String> {
+    let key = format!("avatar_{}", id);
+
+    match get_string(&key, redis).await {
+        Ok(avatar) => Ok(avatar),
+        Err(_) => Err("Failed to get avatar".to_string()),
+    }
+}
+
+pub async fn set_avatar(
+    id: i64,
+    avatar: &str,
+    redis: &mut crate::RedisConnection<'_>,
+) -> Result<(), String> {
+    let key = format!("avatar_{}", id);
+
+    match redis::cmd("SET")
+        .arg(&key)
+        .arg(avatar)
+        .arg("EX")
+        .arg("86400")
+        .query_async::<String>(&mut **redis)
+        .await
+    {
+        Ok(_) => Ok(()),
+        Err(_) => Err("Failed to set avatar".to_string()),
+    }
 }

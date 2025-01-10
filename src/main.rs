@@ -851,23 +851,30 @@ async fn calc_rating(
 
 async fn avatar(Path(player_id): Path<i64>, State(pools): State<AppState>) -> impl IntoResponse {
     let mut db = pools.db_pool.get().await.unwrap();
+    let mut redis = pools.redis_pool.get().await.unwrap();
 
     let exists = match crate::db::player_exists(&mut db, player_id).await {
-      Ok(e) => e,
-      Err(e) => return Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
+        Ok(e) => e,
+        Err(e) => return Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
     };
 
     if !exists {
-      return Err((StatusCode::NOT_FOUND, "Player not found".to_string()));
+        return Err((StatusCode::NOT_FOUND, "Player not found".to_string()));
     }
 
-    let png = match crate::ggst_api::get_player_avatar(player_id.to_string()).await {
-        Ok(png) => png,
-        Err(e) => return Err((StatusCode::SERVICE_UNAVAILABLE, e)),
+    let png = match crate::imdb::get_avatar(player_id, &mut redis).await {
+        Ok(avatar) => avatar,
+        Err(_) => match crate::ggst_api::get_player_avatar(player_id.to_string()).await {
+            Ok(png) => {
+                let _ = crate::imdb::set_avatar(player_id, &png, &mut redis).await;
+                png
+            }
+            Err(e) => return Err((StatusCode::SERVICE_UNAVAILABLE, e)),
+        },
     };
 
     let output = crate::handlers::avatar::handle_get_avatar(png).await;
-   
+
     // Create response headers
     let mut headers = HeaderMap::new();
     headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("image/png"));

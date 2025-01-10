@@ -85,6 +85,8 @@ const Player = () => {
 
   const [matchups, setMatchups] = useState<Matchups | null>(null);
 
+  const [avatar, setAvatar] = useState<string | null>();
+
   let player_id_checked: BigInt;
   if (player_id && player_id.match(/[a-zA-Z]/)) {
     player_id_checked = BigInt('0x' + player_id);
@@ -130,6 +132,7 @@ const Player = () => {
           setLineChartData(null);
           setMatchups(null);
           setLoading(false);
+          setAvatar(null);
           return;
         }
 
@@ -281,6 +284,12 @@ const Player = () => {
               setMatchups(matchups_result);
             }
           }
+        }
+
+        const avatar_response = await fetch(API_ENDPOINT + '/avatar/' + player_id_checked);
+        if (avatar_response.status === 200) {
+          const avatar_result = await avatar_response.blob();
+          setAvatar(URL.createObjectURL(avatar_result));
         }
 
         setLoading(false);
@@ -490,6 +499,7 @@ const Player = () => {
             ) : null}
           </Box>
           <Box marginLeft={10} marginTop={13} sx={{ width: .18, maxWidth: '235px' }}>
+            {avatar && <img src={avatar} alt="Player Avatar" style={{ transform: 'scale(0.5)' }} />}
             {player && player.id !== BigInt(0) ? (
               <React.Fragment>
                 <hr />
@@ -593,7 +603,8 @@ const Player = () => {
               <Matchup matchups={matchups} />
             ) : null}
           </Box>
-          <Box marginTop={25} sx={{ width: 300, overflowY: 'auto', minWidth: '200px' }}>
+          <Box sx={{ width: 300, overflowY: 'auto', minWidth: '200px' }}>
+            {avatar && <img src={avatar} alt="Player Avatar" style={{ transform: 'scale(0.5)' }} />}
             {player && player.id !== BigInt(0) ? (
               <React.Fragment>
                 <hr />
