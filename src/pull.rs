@@ -156,11 +156,12 @@ pub async fn pull_and_update_continuous(state: crate::AppState) {
             info!("Replay pull");
 
             let mut connection = pull_state.db_pool.get().await.unwrap();
+            let mut redis_connection = pull_state.redis_pool.get().await.unwrap();
 
             if let Err(e) = connection
                 .transaction::<_, diesel::result::Error, _>(|conn| {
                     async move {
-                        match grab_games(conn).await {
+                        match grab_games(conn, &mut redis_connection).await {
                             Ok(new_games) => {
                                 info!("New games: {:?}", new_games.len());
                             }
@@ -1021,7 +1022,7 @@ async fn update_player_info(
     Ok(())
 }
 
-async fn grab_games(connection: &mut AsyncPgConnection) -> Result<Vec<Game>, String> {
+async fn grab_games(connection: &mut AsyncPgConnection, redis_connection: &mut crate::RedisConnection<'_>) -> Result<Vec<Game>, String> {
     info!("Grabbing replays");
 
     let replays = ggst_api::get_replays().await;
@@ -1106,6 +1107,15 @@ async fn grab_games(connection: &mut AsyncPgConnection) -> Result<Vec<Game>, Str
 
             new_games.push(new_game);
         }
+    }
+    
+    //Set set_latest_game_time for health check
+    if let Some(last_game) = new_games.last() {
+      let ts = last_game.real_timestamp.unwrap_or(last_game.timestamp);
+
+        crate::imdb::set_latest_game_time(ts, redis_connection)
+            .await
+            .unwrap();
     }
 
     info!("Grabbing replays - Done");

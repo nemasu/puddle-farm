@@ -2,8 +2,8 @@ use axum::body::Bytes;
 
 fn process_channel(value: u8) -> u8 {
     if value != 0 && value != 255 {
-        let n = f64::sqrt(value as f64 / 256.0);
-        (n * 256.0) as u8
+        let n = f64::sqrt(value as f64 / 255.0);
+        (n * 255.0) as u8
     } else {
         value
     }

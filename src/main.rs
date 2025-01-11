@@ -755,36 +755,19 @@ async fn distribution(
 }
 
 async fn health(State(pools): State<AppState>) -> Result<String, (StatusCode, String)> {
-    let mut db = pools.db_pool.get().await.unwrap();
     let mut redis = pools.redis_pool.get().await.unwrap();
 
-    let mut latest_game_time = match imdb::get_latest_game_time(&mut redis).await {
+    let latest_game_time = match imdb::get_latest_game_time(&mut redis).await {
         Ok(latest_game_time) => Some(latest_game_time),
-        Err(_) => None,
+        Err(_) => {
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "latest_game_time does not exist!".to_string(),
+            ))
+        }
     };
 
     let now = chrono::Utc::now().timestamp();
-
-    if latest_game_time.is_none() {
-        //Recent game check
-
-        latest_game_time = match db::get_latest_game_time(&mut db).await {
-            Ok(latest_game_time) => Some(latest_game_time),
-            Err(_) => {
-                return Err((
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "No New (5m) Replays!".to_string(),
-                ));
-            }
-        };
-
-        match imdb::set_latest_game_time(latest_game_time.unwrap().clone(), &mut redis).await {
-            Ok(_) => {}
-            Err(e) => {
-                return Err((StatusCode::INTERNAL_SERVER_ERROR, e));
-            }
-        };
-    }
 
     if now - 120 > latest_game_time.unwrap().and_utc().timestamp() {
         return Err((

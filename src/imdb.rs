@@ -240,8 +240,6 @@ pub async fn set_latest_game_time(
     match redis::cmd("SET")
         .arg("latest_game_time")
         .arg(timestamp.to_string())
-        .arg("EX")
-        .arg("30")
         .query_async::<String>(&mut **redis)
         .await
     {

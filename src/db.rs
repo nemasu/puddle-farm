@@ -763,32 +763,6 @@ pub async fn get_supporters(db: &mut crate::Connection<'_>) -> Result<Vec<(i64, 
     }
 }
 
-pub async fn get_latest_game_time(
-    db: &mut crate::Connection<'_>,
-) -> Result<chrono::NaiveDateTime, String> {
-    let latest_game_time = match schema::games::table
-        .select(crate::pull::coalesce(
-            schema::games::real_timestamp,
-            schema::games::timestamp,
-        ))
-        .order(
-            crate::pull::coalesce(schema::games::real_timestamp, schema::games::timestamp).desc(),
-        )
-        .filter(
-            crate::pull::coalesce(schema::games::real_timestamp, schema::games::timestamp)
-                .gt(chrono::Utc::now().naive_utc() - chrono::Duration::minutes(5)),
-        )
-        .limit(1)
-        .first::<chrono::NaiveDateTime>(db)
-        .await
-    {
-        Ok(game_time) => game_time,
-        Err(_) => return Err("Latest game not found".to_string()),
-    };
-
-    Ok(latest_game_time)
-}
-
 pub async fn player_exists(db: &mut crate::Connection<'_>, player_id: i64) -> Result<bool, String> {
     let exists = match schema::players::table
         .filter(schema::players::id.eq(player_id))
