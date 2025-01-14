@@ -45,8 +45,6 @@ CREATE INDEX games_id_char_b ON games(id_b, char_b);
 CREATE INDEX games_value_deviation_a ON games(value_a, deviation_a);
 CREATE INDEX games_value_deviation_b ON games(value_b, deviation_b);
 
-CREATE INDEX games_timestamps ON games(timestamp, real_timestamp);
-
 CREATE TABLE global_ranks (
     rank INT NOT NULL PRIMARY KEY,
     id BIGINT NOT NULL REFERENCES players(id),
