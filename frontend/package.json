@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@babel/preset-env": "^7.26.0",
     "@emotion/react": "^11.13.5",
     "@emotion/styled": "^11.13.5",
     "@fontsource/roboto": "^5.1.0",
@@ -36,6 +37,7 @@
   "browserslist": {
     "production": [
       ">0.2%",
+      "iOS >16",
       "not dead",
       "not op_mini all"
     ],
@@ -43,6 +45,16 @@
       "last 1 chrome version",
       "last 1 firefox version",
       "last 1 safari version"
+    ]
+  },
+  "babel": {
+    "presets": [
+      [
+        "babel-preset-react-app",
+        {
+          "absoluteRuntime": false
+        }
+      ]
     ]
   }
 }
