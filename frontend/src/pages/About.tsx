@@ -3,13 +3,7 @@ import { Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogC
 import { Link } from 'react-router-dom';
 import { Tag } from './../components/Tag';
 import { RatingCalculationResponse, Supporter, TagResponse } from '../interfaces/API';
-
-let JSONParse: (arg0: string) => any;
-import('json-with-bigint').then(module => {
-  JSONParse = module.JSONParse;
-});
-// eslint-disable-next-line
-/* global BigInt */
+import { JSONParse } from '../utils/JSONParse';
 
 const About = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;

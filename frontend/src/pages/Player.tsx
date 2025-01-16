@@ -16,6 +16,7 @@ import Matchup from '../components/PlayerMatchup';
 import { Matchups } from '../interfaces/PlayerMatchups';
 import HistoryRow from '../components/HistoryRow';
 import { groupMatches } from '../utils/Player';
+import { JSONParse } from '../utils/JSONParse';
 
 let ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend;
 import('chart.js').then(module => {
@@ -43,13 +44,6 @@ let Line: React.ComponentType<any>;
 import('react-chartjs-2').then(module => {
   Line = module.Line;
 });
-
-let JSONParse: (arg0: string) => any;
-import('json-with-bigint').then(module => {
-  JSONParse = module.JSONParse;
-});
-// eslint-disable-next-line
-/* global BigInt */
 
 const Player = () => {
   const theme = useTheme();

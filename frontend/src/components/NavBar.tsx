@@ -5,11 +5,7 @@ import { Link } from "react-router-dom";
 import SearchIcon from '@mui/icons-material/Search';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import { useNavigate } from 'react-router-dom';
-
-let JSONParse: (arg0: string) => any;
-import('json-with-bigint').then(module => {
-  JSONParse = module.JSONParse;
-});
+import { JSONParse } from '../utils/JSONParse';
 
 interface Page {
   name: string;

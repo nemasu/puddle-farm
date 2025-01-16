@@ -12,13 +12,7 @@ import Typography from '@mui/material/Typography';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { PlayerSearchResponse } from '../interfaces/API';
-
-let JSONParse: (arg0: string) => any;
-import('json-with-bigint').then(module => {
-  JSONParse = module.JSONParse;
-});
-// eslint-disable-next-line
-/* global BigInt */
+import { JSONParse } from '../utils/JSONParse';
 
 const Search = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;

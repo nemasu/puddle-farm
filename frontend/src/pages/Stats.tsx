@@ -13,12 +13,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Utils } from './../utils/Utils';
 import { StatsResponse } from '../interfaces/API';
-
-let JSONParse: (arg0: string) => any;
-import('json-with-bigint').then(module => {
-  JSONParse = module.JSONParse;
-});
-/* global BigInt */
+import { JSONParse } from '../utils/JSONParse';
 
 const Stats = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
