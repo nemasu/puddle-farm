@@ -42,6 +42,13 @@ const TopGlobal = () => {
 
   useEffect(() => {
     document.title = 'Top Players | Puddle Farm';
+    
+    //TopGlobal is the default page if a route is not found, so make the URL match the route
+    const page = new URL(window.location.href);
+    if( page.pathname != '/' ) {
+      window.location.replace('/');
+    }
+
     window.scrollTo(0, 0);
 
     const fetchRanking = async () => {

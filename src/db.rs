@@ -724,7 +724,7 @@ pub async fn get_matchups(
         FROM games
         WHERE char_a = $1
         AND id_a = $2
-        --AND timestamp > now() - interval '3 month'
+        AND timestamp > now() - interval '3 month'
         UNION ALL
         SELECT 
             char_a as opponent_char, 
@@ -733,7 +733,7 @@ pub async fn get_matchups(
         FROM games
         WHERE char_b = $1
         AND id_b = $2
-        --AND timestamp > now() - interval '3 month'
+        AND timestamp > now() - interval '3 month'
     ) as combined_results
     GROUP BY opponent_char
     ORDER BY opponent_char;

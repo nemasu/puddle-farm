@@ -44,6 +44,7 @@ const App = () => {
             <Route path="/popularity" element={<Popularity />} />
             <Route path="/matchup" element={<Matchup />} />
             <Route path="/distribution" element={<Distribution />} />
+            <Route path="*" element={<TopGlobal />} />
           </Routes>
         </Box>
       ) : (
@@ -60,6 +61,7 @@ const App = () => {
             <Route path="/popularity" element={<Popularity />} />
             <Route path="/matchup" element={<Matchup />} />
             <Route path="/distribution" element={<Distribution />} />
+            <Route path="*" element={<TopGlobal />} />
           </Routes>
         </Box>
       )}
