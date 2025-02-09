@@ -73,16 +73,11 @@ const About = () => {
         </Typography>
         <Box mb={4}>
           <Typography variant="h5" sx={{ fontWeight: 'bold', marginBottom: 1 }}>
-            What happened to Rating Update?
+            What is this?
           </Typography>
           <Typography variant="body1">
-            Rating Update started to get reworked due to multiple reasons.
-            <br />
-            The biggest problem was the SQLite database, it was not fit for concurrent access with long-running transactions.
-            <br />
-            Additionally, a new rating algorithm was proposed. Also, I wanted to separate the frontend and backend for maintenance and development.
-            <br />
-            So aside from some GGST API code, Puddle Farm is a complete rewrite.
+            This website collects replay data for the game <Link to="https://www.guiltygear.com/ggst/en/" target='_blank'>Guilty Gear Strive</Link> and uses it to calculate player ratings and other statistics.<br />
+            It is not affiliated with Arc System Works or any other company.
           </Typography>
         </Box>
         <Box mb={4}>
