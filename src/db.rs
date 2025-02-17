@@ -667,6 +667,7 @@ pub struct RatingResult {
 pub async fn get_ratings(
     id: i64,
     char_id: i16,
+    duration: i32,
     db: &mut crate::Connection<'_>,
 ) -> Result<Vec<RatingResult>, String> {
     //TODO when positional_order_by + limit is released, change this to ORM query.
@@ -692,7 +693,7 @@ pub async fn get_ratings(
     match results
         .bind::<diesel::sql_types::BigInt, _>(i64::try_from(id).unwrap())
         .bind::<diesel::sql_types::Integer, _>(i32::try_from(char_id).unwrap())
-        .bind::<diesel::sql_types::Integer, _>(i32::try_from(100).unwrap())
+        .bind::<diesel::sql_types::Integer, _>(i32::try_from(duration).unwrap())
         .get_results::<RatingResult>(db)
         .await
     {
@@ -704,6 +705,7 @@ pub async fn get_ratings(
 pub async fn get_matchups(
     id: i64,
     char_id: i16,
+    duration: i32,
     db: &mut crate::Connection<'_>,
 ) -> Result<Vec<Matchup>, String> {
     let results = diesel::sql_query(
@@ -724,7 +726,7 @@ pub async fn get_matchups(
         FROM games
         WHERE char_a = $1
         AND id_a = $2
-        AND timestamp > now() - interval '3 month'
+        AND timestamp > now() - ($3 || ' week')::interval
         UNION ALL
         SELECT 
             char_a as opponent_char, 
@@ -733,7 +735,7 @@ pub async fn get_matchups(
         FROM games
         WHERE char_b = $1
         AND id_b = $2
-        AND timestamp > now() - interval '3 month'
+        AND timestamp > now() - ($3 || ' week')::interval
     ) as combined_results
     GROUP BY opponent_char
     ORDER BY opponent_char;
@@ -742,6 +744,7 @@ pub async fn get_matchups(
     match results
         .bind::<Integer, _>(i32::try_from(char_id).unwrap())
         .bind::<BigInt, _>(i64::try_from(id).unwrap())
+        .bind::<Integer, _>(i32::try_from(duration).unwrap())
         .get_results::<crate::pull::Matchup>(db)
         .await
     {

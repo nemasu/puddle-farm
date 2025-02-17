@@ -9,41 +9,14 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import { Utils } from './../utils/Utils';
 import { Tag } from './../components/Tag';
-import { PlayerResponse, PlayerResponsePlayer, RatingsResponse, TagResponse } from "../interfaces/API";
+import { PlayerResponse, PlayerResponsePlayer, TagResponse } from "../interfaces/API";
 import { StorageUtils } from './../utils/Storage';
-import { ClaimDialogProps, GroupedMatch, LineChartData } from '../interfaces/Player';
+import { ClaimDialogProps, GroupedMatch } from '../interfaces/Player';
 import Matchup from '../components/PlayerMatchup';
-import { Matchups } from '../interfaces/PlayerMatchups';
 import HistoryRow from '../components/HistoryRow';
 import { groupMatches } from '../utils/Player';
 import { JSONParse } from '../utils/JSONParse';
-
-let ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend;
-import('chart.js').then(module => {
-  ChartJS = module.Chart;
-  CategoryScale = module.CategoryScale;
-  LinearScale = module.LinearScale;
-  PointElement = module.PointElement;
-  LineElement = module.LineElement;
-  Title = module.Title;
-  Tooltip = module.Tooltip;
-  Legend = module.Legend;
-
-  ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend
-  );
-});
-
-let Line: React.ComponentType<any>;
-import('react-chartjs-2').then(module => {
-  Line = module.Line;
-});
+import RatingChart from '../components/RatingChart';
 
 const Player = () => {
   const theme = useTheme();
@@ -70,14 +43,9 @@ const Player = () => {
 
   const [hideClaim, setHideClaim] = useState(false);
 
-  const [lineChartOptions, setLineChartOptions] = useState({});
-  const [lineChartData, setLineChartData] = useState<LineChartData | null>(null);
-
   const [tags, setTags] = useState<{ [key: string]: TagResponse[] }>();
 
   const [countdown, setCountdown] = useState<number | null>(null);
-
-  const [matchups, setMatchups] = useState<Matchups | null>(null);
 
   const [avatar, setAvatar] = useState<string | null>();
 
@@ -123,8 +91,6 @@ const Player = () => {
           setHistory([]);
           setCurrentCharData(null);
           setAlias([]);
-          setLineChartData(null);
-          setMatchups(null);
           setLoading(false);
           setAvatar(null);
           return;
@@ -207,76 +173,6 @@ const Player = () => {
               }
             }
             setAlias(alias_result);
-          }
-        }
-
-        const rating_history_response = await fetch(API_ENDPOINT + '/ratings/' + player_id_checked + '/' + char_short);
-        if (rating_history_response.status === 200) {
-          const rating_history_result = await rating_history_response.json();
-
-          if (rating_history_result !== null && currentCharKey !== null && currentCharKey in player_result.ratings) {
-
-            rating_history_result.reverse();
-
-            //Add current rating to the end
-            rating_history_result.push({
-              timestamp: "Now",
-              rating: player_result.ratings[currentCharKey].rating,
-            });
-
-            const lineChartOptions = {
-              responsive: true,
-              plugins: {
-                legend: {
-                  position: 'top',
-                },
-                title: {
-                  display: true,
-                  text: 'Rating History (100 matches)',
-                },
-              },
-              scales: {
-                x: {
-                  ticks: {
-                    display: false,
-                  }
-                }
-              }
-            };
-            setLineChartOptions(lineChartOptions);
-
-            const lineChartData = {
-              labels: rating_history_result.map((item: RatingsResponse) => Utils.formatUTCToLocal(item.timestamp)),
-              datasets: [
-                {
-                  label: 'Rating',
-                  data: rating_history_result.map((item: RatingsResponse) => item.rating),
-                  borderColor: 'rgb(75, 192, 192)',
-                  backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                },
-              ],
-            };
-
-            setLineChartData(lineChartData);
-          }
-
-          const matchups = await fetch(API_ENDPOINT + '/matchups/' + player_id_checked + '/' + char_short);
-          if (matchups.status === 200) {
-            const matchups_result = await matchups.json();
-            if (matchups_result !== null) {
-
-              let total_wins = 0;
-              let total_games = 0;
-              for (var mkey in matchups_result.matchups) {
-                total_wins += matchups_result.matchups[mkey].wins;
-                total_games += matchups_result.matchups[mkey].total_games;
-              }
-
-              matchups_result.total_wins = total_wins;
-              matchups_result.total_games = total_games;
-
-              setMatchups(matchups_result);
-            }
           }
         }
 
@@ -485,12 +381,10 @@ const Player = () => {
                 </React.Fragment>
               ) : null}
             </Box>
-            {lineChartData ? (
-              <Line options={lineChartOptions} data={lineChartData} />
+            {currentCharData ? (
+              <RatingChart player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} latest_rating={currentCharData.rating} />
             ) : null}
-            {matchups ? (
-              <Matchup matchups={matchups} />
-            ) : null}
+            <Matchup player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} />
           </Box>
           <Box marginLeft={10} marginTop={13} sx={{ width: .18, maxWidth: '235px' }}>
             {avatar && <img src={avatar} alt="Player Avatar" style={{ transform: 'scale(0.5)' }} />}
@@ -590,12 +484,10 @@ const Player = () => {
                 </React.Fragment>
               ) : null}
             </Box>
-            {lineChartData ? (
-              <Line options={lineChartOptions} data={lineChartData} />
+            {currentCharData ? (
+              <RatingChart player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} latest_rating={currentCharData.rating} />
             ) : null}
-            {matchups ? (
-              <Matchup matchups={matchups} />
-            ) : null}
+            <Matchup player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} />
           </Box>
           <Box sx={{ width: 300, overflowY: 'auto', minWidth: '200px' }}>
             {avatar && <img src={avatar} alt="Player Avatar" style={{ transform: 'scale(0.5)' }} />}

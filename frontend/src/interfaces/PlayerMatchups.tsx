@@ -1,5 +1,7 @@
 export interface MatchupProps {
-  matchups: Matchups;
+  API_ENDPOINT: string;
+  char_short: string | undefined;
+  player_id: BigInt;
 }
 
 export interface Matchup {

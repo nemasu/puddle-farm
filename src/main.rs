@@ -420,7 +420,7 @@ struct RatingsResponse {
 }
 async fn ratings(
     State(pools): State<AppState>,
-    Path((player_id, char_id)): Path<(i64, String)>,
+    Path((player_id, char_id, duration)): Path<(i64, String, i32)>,
 ) -> Result<Json<Vec<RatingsResponse>>, (StatusCode, String)> {
     let char_id = match CHAR_NAMES.iter().position(|(c, _)| *c == char_id) {
         Some(id) => id as i16,
@@ -431,7 +431,7 @@ async fn ratings(
 
     let mut db = pools.db_pool.get().await.unwrap();
 
-    let results = match db::get_ratings(player_id, char_id, &mut db).await {
+    let results = match db::get_ratings(player_id, char_id, duration, &mut db).await {
         Ok(results) => results,
         Err(e) => {
             return Err((StatusCode::NOT_FOUND, e));
@@ -451,7 +451,7 @@ async fn ratings(
 
 async fn player_matchups(
     State(pools): State<AppState>,
-    Path((player_id, char_id)): Path<(i64, String)>,
+    Path((player_id, char_id, duration)): Path<(i64, String, i32)>,
 ) -> Result<Json<MatchupCharResponse>, (StatusCode, String)> {
     let char_id = match CHAR_NAMES.iter().position(|(c, _)| *c == char_id) {
         Some(id) => id as i16,
@@ -462,7 +462,7 @@ async fn player_matchups(
 
     let mut db = pools.db_pool.get().await.unwrap();
 
-    let char_matchup = match db::get_matchups(player_id, char_id, &mut db).await {
+    let char_matchup = match db::get_matchups(player_id, char_id, duration, &mut db).await {
         Ok(char_matchup) => char_matchup,
         Err(e) => {
             return Err((StatusCode::NOT_FOUND, e));
@@ -979,11 +979,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/settings/:key", get(settings))
                 .route("/api/toggle_private/:key", get(toggle_private))
                 .route("/api/alias/:player_id", get(alias))
-                .route("/api/ratings/:player_id/:char_id", get(ratings))
+                .route("/api/ratings/:player_id/:char_id/:duration", get(ratings))
                 .route("/api/stats", get(stats))
                 .route("/api/popularity", get(popularity))
                 .route("/api/matchups", get(matchups))
-                .route("/api/matchups/:player_id/:char_id", get(player_matchups))
+                .route("/api/matchups/:player_id/:char_id/:duration", get(player_matchups))
                 .route("/api/supporters", get(supporters))
                 .route("/api/distribution", get(distribution))
                 .route("/api/health", get(health))

@@ -27,3 +27,10 @@ export interface ClaimDialogProps {
   playerId: BigInt;
   API_ENDPOINT: string;
 }
+
+export interface RatingChartProps {
+  player_id: BigInt;
+  char_short: string | undefined;
+  API_ENDPOINT: string;
+  latest_rating: number;
+}

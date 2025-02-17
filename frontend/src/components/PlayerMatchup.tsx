@@ -1,19 +1,88 @@
-import { Box, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, Typography } from "@mui/material";
-import React from "react";
-import { useState } from "react";
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Paper, Select, SelectChangeEvent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, TextField, Typography } from "@mui/material";
+import React, { useEffect, useState } from "react";
 import { Utils } from "../utils/Utils";
-import { MatchupProps } from "../interfaces/PlayerMatchups";
+import { MatchupProps, Matchups } from '../interfaces/PlayerMatchups';
 
-const Matchup: React.FC<MatchupProps> = ({ matchups }) => {
-
+const Matchup: React.FC<MatchupProps> = ({ API_ENDPOINT, char_short, player_id }) => {
   const [orderBy, setOrderBy] = useState<string | null>(null);
   const [order, setOrder] = useState<'asc' | 'desc' | undefined>(undefined);
+  const [duration, setDuration] = useState<string>('12');
+  const [matchups, setMatchups] = useState<Matchups | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [customWeeks, setCustomWeeks] = useState<string>('');
+  const [tempWeeks, setTempWeeks] = useState<string>('');
+  const [openDialog, setOpenDialog] = useState(false);
 
+  const handleCustomWeeksChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setCustomWeeks(event.target.value);
+  };
+
+  const handleOpenDialog = () => {
+    setTempWeeks(customWeeks);
+    setOpenDialog(true);
+  };
+
+  const handleTempWeeksChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setTempWeeks(event.target.value);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+  };
+
+  const handleApplyCustomWeeks = () => {
+    const weeks = parseInt(tempWeeks);
+    if (!isNaN(weeks) && weeks > 0) {
+      setCustomWeeks(tempWeeks);
+      setDuration(tempWeeks);
+      handleCloseDialog();
+    }
+  };
+
+  useEffect(() => {
+    const fetchMatchups = async () => {
+      if (duration === undefined || duration === '') {
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const matchups = await fetch(API_ENDPOINT + '/matchups/' + player_id + '/' + char_short + '/' + duration);
+        if (matchups.status === 200) {
+          const matchups_result = await matchups.json();
+          if (matchups_result !== null) {
+
+            let total_wins = 0;
+            let total_games = 0;
+            for (var mkey in matchups_result.matchups) {
+              total_wins += matchups_result.matchups[mkey].wins;
+              total_games += matchups_result.matchups[mkey].total_games;
+            }
+
+            matchups_result.total_wins = total_wins;
+            matchups_result.total_games = total_games;
+
+            setMatchups(matchups_result);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching matchups:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMatchups();
+  }, [duration]);
 
   const handleRequestSort = (property: string) => {
     const isAsc = orderBy === property && order === 'asc';
     setOrder(isAsc ? 'desc' : 'asc');
     setOrderBy(property);
+  };
+
+  const handleDurationChange = (event: SelectChangeEvent) => {
+    setDuration(event.target.value);
   };
 
   const sortedMatchups = React.useMemo(() => {
@@ -52,13 +121,57 @@ const Matchup: React.FC<MatchupProps> = ({ matchups }) => {
     });
   }, [matchups, orderBy, order]);
 
+  if (loading) {
+    return <Typography>Loading...</Typography>;
+  }
+
+  if (!matchups) {
+    return <Typography>No data available</Typography>;
+  }
+
   return (
     <React.Fragment>
-      <Typography sx={{ marginTop: 10 }} variant="h6" gutterBottom>
-        Matchup Table (past 3 months)
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 10, marginBottom: 2 }}>
+        <Typography variant="h6">Matchup Table</Typography>
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <InputLabel>Duration</InputLabel>
+          <Select
+            value={duration}
+            label="Duration"
+            onChange={handleDurationChange}
+          >
+            <MenuItem value="4">1 Month</MenuItem>
+            <MenuItem value="12">3 Months</MenuItem>
+            <MenuItem value="24">6 Months</MenuItem>
+            <MenuItem value="520">All Time</MenuItem>
+            <MenuItem value={customWeeks} onClick={handleOpenDialog}>Custom...</MenuItem>
+          </Select>
+          <Dialog open={openDialog} onClose={handleCloseDialog} disableScrollLock={true}>
+            <DialogTitle>Custom Duration</DialogTitle>
+            <DialogContent>
+              <TextField
+                autoFocus={false}
+                label="Number of Weeks"
+                type="number"
+                value={tempWeeks}
+                onChange={handleTempWeeksChange}
+                inputProps={{
+                  min: 1
+                }}
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseDialog}>Cancel</Button>
+              <Button onClick={handleApplyCustomWeeks}>Apply</Button>
+            </DialogActions>
+          </Dialog>
+        </FormControl>
+      </Box>
       <Typography variant='body1'>
-        This includes all games played in the past 3 months.
+        {duration === '520'
+          ? 'This includes all games played.'
+          : `This includes all games played in the past ${duration} week${duration === '1' ? '' : 's'}.`
+        }
       </Typography>
       <Typography p={2} variant="body1">
         Win Rate
@@ -130,9 +243,9 @@ const Matchup: React.FC<MatchupProps> = ({ matchups }) => {
           </TableBody>
         </Table>
       </TableContainer>
+
     </React.Fragment>
   );
-
 }
 
 export default Matchup;
