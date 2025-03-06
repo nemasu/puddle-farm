@@ -45,7 +45,7 @@ const TopGlobal = () => {
     
     //TopGlobal is the default page if a route is not found, so make the URL match the route
     const page = new URL(window.location.href);
-    if( page.pathname != '/' ) {
+    if( page.pathname != '/' && !page.pathname.startsWith('/top_global/') ) {
       window.location.replace('/');
     }
 
