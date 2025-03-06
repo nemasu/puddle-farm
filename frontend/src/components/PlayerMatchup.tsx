@@ -73,7 +73,7 @@ const Matchup: React.FC<MatchupProps> = ({ API_ENDPOINT, char_short, player_id }
     };
 
     fetchMatchups();
-  }, [duration]);
+  }, [duration, char_short, player_id, API_ENDPOINT]);
 
   const handleRequestSort = (property: string) => {
     const isAsc = orderBy === property && order === 'asc';
