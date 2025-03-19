@@ -504,6 +504,7 @@ pub async fn find_player(
         .select((Player::as_select(), PlayerRating::as_select()))
         .filter(schema::players::name.ilike(exact_like))
         .filter(schema::players::status.eq(Status::Public))
+        .order((schema::player_ratings::value - schema::player_ratings::deviation).desc())
         .limit(count)
         .offset(offset)
         .load(db)
