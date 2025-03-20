@@ -21,6 +21,7 @@ import Stats from './pages/Stats';
 import Popularity from './pages/Popularity';
 import Matchup from './pages/Matchup';
 import Distribution from './pages/Distribution';
+import Terms from './pages/Terms';
 
 const App = () => {
   const theme = useTheme();
@@ -44,6 +45,7 @@ const App = () => {
             <Route path="/popularity" element={<Popularity />} />
             <Route path="/matchup" element={<Matchup />} />
             <Route path="/distribution" element={<Distribution />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="*" element={<TopGlobal />} />
           </Routes>
         </Box>
@@ -61,6 +63,7 @@ const App = () => {
             <Route path="/popularity" element={<Popularity />} />
             <Route path="/matchup" element={<Matchup />} />
             <Route path="/distribution" element={<Distribution />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="*" element={<TopGlobal />} />
           </Routes>
         </Box>
@@ -74,6 +77,9 @@ const App = () => {
         <Button component={Link} target="_blank" href="https://github.com/nemasu/puddle-farm"><GitHubIcon style={{ transform: 'scale(0.65)' }} /></Button>
         <Button component={Link} target="_blank" href="https://discord.gg/vY4mE8exXB"><DiscordIcon style={{ transform: 'scale(0.65)' }} /></Button>
         <Button component={Link} target="_blank" href="https://patreon.com/nemasu"><PatreonIcon style={{ transform: 'scale(0.55)' }} /></Button>
+      </Box>
+      <Box sx={{ minHeight: 100, textAlign: 'center' }}>
+        <Button component={Link} href="/terms">Terms & Privacy</Button>
       </Box>
     </ThemeManager>
   );
