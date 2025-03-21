@@ -131,119 +131,122 @@ const Matchup: React.FC<MatchupProps> = ({ API_ENDPOINT, char_short, player_id }
 
   return (
     <React.Fragment>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 10, marginBottom: 2 }}>
-        <Typography variant="h6">Matchup Table</Typography>
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>Duration</InputLabel>
-          <Select
-            value={duration}
-            label="Duration"
-            onChange={handleDurationChange}
-          >
-            <MenuItem value="4">1 Month</MenuItem>
-            <MenuItem value="12">3 Months</MenuItem>
-            <MenuItem value="24">6 Months</MenuItem>
-            <MenuItem value="520">All Time</MenuItem>
-            <MenuItem value={customWeeks} onClick={handleOpenDialog}>Custom...</MenuItem>
-          </Select>
-          <Dialog open={openDialog} onClose={handleCloseDialog} disableScrollLock={true}>
-            <DialogTitle>Custom Duration</DialogTitle>
-            <DialogContent>
-              <TextField
-                autoFocus={false}
-                label="Number of Weeks"
-                type="number"
-                value={tempWeeks}
-                onChange={handleTempWeeksChange}
-                inputProps={{
-                  min: 1
-                }}
-              />
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleCloseDialog}>Cancel</Button>
-              <Button onClick={handleApplyCustomWeeks}>Apply</Button>
-            </DialogActions>
-          </Dialog>
-        </FormControl>
-      </Box>
-      <Typography variant='body1'>
-        {duration === '520'
-          ? 'This includes all games played.'
-          : `This includes all games played in the past ${duration} week${duration === '1' ? '' : 's'}.`
-        }
-      </Typography>
-      <Typography p={2} variant="body1">
-        Win Rate
-      </Typography>
-      <Box component={Paper} sx={{ maxWidth: 350 }}>
-        <Typography p={2} variant='body1'>
-          {Utils.colorChangeForPercent(((matchups.total_wins / matchups.total_games) * 100).toFixed(2))} ( {matchups.total_wins} / {matchups.total_games} )
-        </Typography>
-      </Box>
-      <TableContainer component={Paper} sx={{ maxWidth: 400 }}>
-        <Table stickyHeader>
-          <TableHead>
-            <TableRow>
-              <TableCell>
-                <TableSortLabel
-                  active={orderBy === 'character'}
-                  direction={orderBy === 'character' ? order : 'asc'}
-                  onClick={() => handleRequestSort('character')}
-                >
-                  Character
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                <TableSortLabel
-                  active={orderBy === 'winrate'}
-                  direction={orderBy === 'winrate' ? order : 'asc'}
-                  onClick={() => handleRequestSort('winrate')}
-                >
-                  WR
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                <TableSortLabel
-                  active={orderBy === 'wins'}
-                  direction={orderBy === 'wins' ? order : 'asc'}
-                  onClick={() => handleRequestSort('wins')}
-                >
-                  Wins
-                </TableSortLabel>
-              </TableCell>
-              <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                <TableSortLabel
-                  active={orderBy === 'total'}
-                  direction={orderBy === 'total' ? order : 'asc'}
-                  onClick={() => handleRequestSort('total')}
-                >
-                  Total
-                </TableSortLabel>
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {sortedMatchups.map((matchup, rowIndex) => (
-              <TableRow key={rowIndex}>
-                <TableCell component="th" scope="row" sx={{ position: 'sticky', left: 0, background: 'black', zIndex: 1 }}>
-                  {matchup.char_name} ({matchup.char_short})
-                </TableCell>
-                <TableCell>
-                  {Utils.colorChangeForPercent(((matchup.wins / matchup.total_games) * 100).toFixed(2))}
-                </TableCell>
-                <TableCell>
-                  {matchup.wins}
-                </TableCell>
-                <TableCell>
-                  {matchup.total_games}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
+      {matchups && matchups.matchups.length !== 0 ? (
+        <React.Fragment>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 10, marginBottom: 2 }}>
+            <Typography variant="h6">Matchup Table</Typography>
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <InputLabel>Duration</InputLabel>
+              <Select
+                value={duration}
+                label="Duration"
+                onChange={handleDurationChange}
+              >
+                <MenuItem value="4">1 Month</MenuItem>
+                <MenuItem value="12">3 Months</MenuItem>
+                <MenuItem value="24">6 Months</MenuItem>
+                <MenuItem value="520">All Time</MenuItem>
+                <MenuItem value={customWeeks} onClick={handleOpenDialog}>Custom...</MenuItem>
+              </Select>
+              <Dialog open={openDialog} onClose={handleCloseDialog} disableScrollLock={true}>
+                <DialogTitle>Custom Duration</DialogTitle>
+                <DialogContent>
+                  <TextField
+                    autoFocus={false}
+                    label="Number of Weeks"
+                    type="number"
+                    value={tempWeeks}
+                    onChange={handleTempWeeksChange}
+                    inputProps={{
+                      min: 1
+                    }}
+                  />
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={handleCloseDialog}>Cancel</Button>
+                  <Button onClick={handleApplyCustomWeeks}>Apply</Button>
+                </DialogActions>
+              </Dialog>
+            </FormControl>
+          </Box>
+          <Typography variant='body1'>
+            {duration === '520'
+              ? 'This includes all games played.'
+              : `This includes all games played in the past ${duration} week${duration === '1' ? '' : 's'}.`
+            }
+          </Typography>
+          <Typography p={2} variant="body1">
+            Win Rate
+          </Typography>
+          <Box component={Paper} sx={{ maxWidth: 350 }}>
+            <Typography p={2} variant='body1'>
+              {Utils.colorChangeForPercent(((matchups.total_wins / matchups.total_games) * 100).toFixed(2))} ( {matchups.total_wins} / {matchups.total_games} )
+            </Typography>
+          </Box>
+          <TableContainer component={Paper} sx={{ maxWidth: 400 }}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell>
+                    <TableSortLabel
+                      active={orderBy === 'character'}
+                      direction={orderBy === 'character' ? order : 'asc'}
+                      onClick={() => handleRequestSort('character')}
+                    >
+                      Character
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                    <TableSortLabel
+                      active={orderBy === 'winrate'}
+                      direction={orderBy === 'winrate' ? order : 'asc'}
+                      onClick={() => handleRequestSort('winrate')}
+                    >
+                      WR
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                    <TableSortLabel
+                      active={orderBy === 'wins'}
+                      direction={orderBy === 'wins' ? order : 'asc'}
+                      onClick={() => handleRequestSort('wins')}
+                    >
+                      Wins
+                    </TableSortLabel>
+                  </TableCell>
+                  <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                    <TableSortLabel
+                      active={orderBy === 'total'}
+                      direction={orderBy === 'total' ? order : 'asc'}
+                      onClick={() => handleRequestSort('total')}
+                    >
+                      Total
+                    </TableSortLabel>
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {sortedMatchups.map((matchup, rowIndex) => (
+                  <TableRow key={rowIndex}>
+                    <TableCell component="th" scope="row" sx={{ position: 'sticky', left: 0, background: 'black', zIndex: 1 }}>
+                      {matchup.char_name} ({matchup.char_short})
+                    </TableCell>
+                    <TableCell>
+                      {Utils.colorChangeForPercent(((matchup.wins / matchup.total_games) * 100).toFixed(2))}
+                    </TableCell>
+                    <TableCell>
+                      {matchup.wins}
+                    </TableCell>
+                    <TableCell>
+                      {matchup.total_games}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </React.Fragment>
+      ) : null}
     </React.Fragment>
   );
 }

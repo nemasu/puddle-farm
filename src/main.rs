@@ -462,6 +462,22 @@ async fn player_matchups(
 
     let mut db = pools.db_pool.get().await.unwrap();
 
+    // Check if player is public first
+    match db::get_player_status(player_id, &mut db).await {
+        Ok(status) => {
+            if status != Status::Public {
+                return Ok(Json(MatchupCharResponse {
+                    char_short: String::new(),
+                    char_name: String::new(),
+                    matchups: vec![],
+                }));
+            }
+        }
+        Err(_) => {
+            return Err((StatusCode::NOT_FOUND, "Player not found".to_string()));
+        }
+    };
+
     let char_matchup = match db::get_matchups(player_id, char_id, duration, &mut db).await {
         Ok(char_matchup) => char_matchup,
         Err(e) => {
@@ -983,7 +999,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/stats", get(stats))
                 .route("/api/popularity", get(popularity))
                 .route("/api/matchups", get(matchups))
-                .route("/api/matchups/:player_id/:char_id/:duration", get(player_matchups))
+                .route(
+                    "/api/matchups/:player_id/:char_id/:duration",
+                    get(player_matchups),
+                )
                 .route("/api/supporters", get(supporters))
                 .route("/api/distribution", get(distribution))
                 .route("/api/health", get(health))
