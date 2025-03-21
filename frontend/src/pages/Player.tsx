@@ -58,7 +58,7 @@ const Player = () => {
     player_id_checked = BigInt(0);
   }
 
-  function onProfileClick(event: React.MouseEvent<HTMLAnchorElement, MouseEvent>, url: string) {
+  function onLinkClick(event: React.MouseEvent<HTMLElement, MouseEvent>, url: string) {
     if (event.button === 1) { //Middle mouse click
       window.open(url, '_blank');
     } else if (event.button === 0) { //Left mouse click
@@ -336,7 +336,7 @@ const Player = () => {
                   <Typography variant='h5' my={2}>
                     {currentCharData.character} Rating: <Box title={currentCharData.rating.toString()} component={"span"}>{Math.round(currentCharData.rating)}</Box> ±<Box title={currentCharData.deviation.toString()} component={"span"}>{Math.round(currentCharData.deviation)}</Box> ({currentCharData.match_count} games)
                     {currentCharData.top_char !== 0 ? (
-                      <Typography variant="char_rank" onMouseDown={(event) => navigate(`/top/${currentCharData.char_short}`)} sx={{ cursor: 'pointer' }}>
+                      <Typography variant="char_rank" onMouseDown={(event) => onLinkClick(event, `/top/${currentCharData.char_short}`)} sx={{ cursor: 'pointer' }}>
                         #{currentCharData.top_char} {currentCharData.character}
                       </Typography>
                     ) : null}
@@ -350,7 +350,7 @@ const Player = () => {
                   ) : null}
                   {currentCharData.top_defeated.value !== 0.0 ? (
                     <Typography>
-                      Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} onMouseDown={(event) => onProfileClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
+                      Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} onMouseDown={(event) => onLinkClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
                     </Typography>
                   ) : null}
 
@@ -396,7 +396,7 @@ const Player = () => {
                 </Typography>
                 {player.ratings && player.ratings.map((item, i) => (
                   <Box key={i}>
-                    <Button variant="text" onClick={() => { navigate(`/player/${player.id}/${item.char_short}`) }} sx={{ textAlign: 'left', color: 'white' }}>
+                    <Button variant="text" onMouseDown={(event) => { onLinkClick(event, `/player/${player.id}/${item.char_short}`) }} sx={{ textAlign: 'left', color: 'white' }}>
                       <Typography fontSize={12.5} my={0.3}>
                         {item.character} {item.rating} ±{item.deviation}<br />({item.match_count} games)
                       </Typography>
@@ -419,7 +419,7 @@ const Player = () => {
                   <Typography variant='h5' my={2}>
                     {currentCharData.character} Rating: <Box title={currentCharData.rating.toString()} component={"span"}>{Math.round(currentCharData.rating)}</Box> ±<Box title={currentCharData.deviation.toString()} component={"span"}>{Math.round(currentCharData.deviation)}</Box> ({currentCharData.match_count} games)
                     {currentCharData.top_char !== 0 ? (
-                      <Typography variant="char_rank" onMouseDown={(event) => navigate(`/top/${currentCharData.char_short}`)} sx={{ cursor: 'pointer' }}>
+                      <Typography variant="char_rank" onMouseDown={(event) => onLinkClick(event, `/top/${currentCharData.char_short}`)} sx={{ cursor: 'pointer' }}>
                         #{currentCharData.top_char} {currentCharData.character}
                       </Typography>
                     ) : null}
@@ -435,7 +435,7 @@ const Player = () => {
 
                   {currentCharData.top_defeated.value !== 0.0 ? (
                     <Typography>
-                      Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} onMouseDown={(event) => onProfileClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
+                      Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} onMouseDown={(event) => onLinkClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
                     </Typography>
                   ) : null}
 
@@ -499,7 +499,7 @@ const Player = () => {
                 </Typography>
                 {player.ratings && player.ratings.map((item, i) => (
                   <Box key={i}>
-                    <Button variant="text" onClick={() => { navigate(`/player/${player.id}/${item.char_short}`) }} sx={{ textAlign: 'left', color: 'white' }}>
+                    <Button variant="text" onMouseDown={(event) => { onLinkClick(event, `/player/${player.id}/${item.char_short}`) }} sx={{ textAlign: 'left', color: 'white' }}>
                       <Typography fontSize={12.5} my={0.3}>
                         {item.character} {item.rating} ±{item.deviation}<br />({item.match_count} games)
                       </Typography>
