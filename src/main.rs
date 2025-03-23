@@ -1,3 +1,5 @@
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use axum::extract::{Path, Query};
 use axum::http::header::{self, ACCEPT, AUTHORIZATION, CONTENT_TYPE, ORIGIN};
 use axum::http::{HeaderMap, HeaderValue, Method};
@@ -29,6 +31,7 @@ type RedisConnection<'a> = PooledConnection<'a, RedisConnectionManager>;
 struct AppState {
     db_pool: Pool,
     redis_pool: RedisPool,
+    toggle_delay: Arc<Mutex<Vec<(i64,String,Status)>>>,//Timestamp, Key, Status
 }
 
 mod db;
@@ -338,16 +341,13 @@ async fn toggle_private(
         }
     };
 
-    let updated_row_count = match db::set_player_status_using_key(key, status, &mut db).await {
-        Ok(updated_row_count) => updated_row_count,
-        Err(_) => {
-            return Ok(Json("Invalid Key".to_string()));
-        }
-    };
-
-    if !updated_row_count {
-        return Ok(Json("Invalid Key".to_string()));
-    }
+    //Add to toggle_delay, if it already exists, do nothing
+    let now = chrono::Utc::now().timestamp();
+    let mut toggle_delay = pools.toggle_delay.lock().await;
+    if !toggle_delay.iter().any(|(_, k, _)| k == &key) {
+        tracing::debug!("Toggling status for key: {} to {:?}", key, status);
+        toggle_delay.push((now + 60, key.clone(), status));
+    }    
 
     Ok(Json("true".to_string()))
 }
@@ -922,6 +922,40 @@ fn init_tracing(prefix: &str) -> WorkerGuard {
     guard
 }
 
+async fn process_background_tasks(state: &AppState) -> Result<(), Box<dyn std::error::Error>> {
+    // Get connections from the pools
+    let mut db = state.db_pool.get().await?;
+    let mut toggle_delay = state.toggle_delay.lock().await;
+
+    // Process the background tasks
+    let now = chrono::Utc::now().timestamp();
+
+    // Process toggle delay.
+    // Loop through toggle_delay and check if the timestamp has passed 1 minute
+    // If it has, update the player status
+    let mut i = 0;
+    while i < toggle_delay.len() {
+        let (timestamp, key, status) = &toggle_delay[i];
+        if now > *timestamp {
+            match db::set_player_status_using_key(key.clone(), status.clone(), &mut db).await {
+                Ok(_) => {
+                    tracing::debug!("Updated player status for key: {}", key);
+                    toggle_delay.remove(i);
+                }
+                Err(e) => {
+                    error!("Error updating player status: {}", e);
+                    i += 1;
+                }
+            }
+        } else {
+            i += 1;
+        }
+    }   
+
+
+    Ok(())
+}
+
 #[tokio::main(flavor = "multi_thread", worker_threads = 5)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().expect("Failed to read .env file");
@@ -955,6 +989,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState {
         db_pool: pool,
         redis_pool,
+        toggle_delay: Arc::new(Mutex::new(vec![])),
     };
 
     let args = std::env::args().skip(1).collect::<Vec<_>>();
@@ -979,6 +1014,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => {
             // No args, run the web server
             let _guard = init_tracing("web");
+
+            // Clone state for the processing thread
+            let processing_state = state.clone();
+
+            // Spawn background processing thread
+            tokio::spawn(async move {
+                loop {
+                    // Add your processing tasks here
+                    tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+
+                    match process_background_tasks(&processing_state).await {
+                        Ok(_) => {
+                            tracing::debug!("Background processing completed successfully");
+                        }
+                        Err(e) => {
+                            tracing::error!("Background processing failed: {}", e);
+                        }
+                    }
+                }
+            });
 
             let mut app = Router::new()
                 .route("/api/player/:id", get(player))

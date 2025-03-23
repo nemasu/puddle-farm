@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, Typography, FormGroup, FormControlLabel, Switch, Paper } from '@mui/material';
+import { Box, Button, Typography, FormGroup, FormControlLabel, Switch, Paper, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { StorageOptions, StorageUtils } from './../utils/Storage';
 import Themes from './../utils/Themes';
@@ -24,6 +24,9 @@ const Settings = () => {
     disableRatingColors: null,
     autoUpdate: null,
   });
+
+  const [isToggleDisabled, setIsToggleDisabled] = useState(false);
+  const [toggleCountdown, setToggleCountdown] = useState<number | null>(null);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
     const { name, checked } = event.target;
@@ -79,14 +82,31 @@ const Settings = () => {
   }, [API_ENDPOINT]);
 
   function toggleStatus() {
-    const url = API_ENDPOINT
-      + '/toggle_private/'
-      + key;
+    setIsToggleDisabled(true);
+    setToggleCountdown(75);
 
+    // Start countdown
+    const interval = setInterval(() => {
+      setToggleCountdown(prev => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          clearInterval(interval);
+          window.location.reload();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    const url = API_ENDPOINT + '/toggle_private/' + key;
     fetch(url)
-      .then(response => response)
-      .then(result => {
-        window.location.reload();
+      .then(response => {
+        if (!response.ok) {
+          // Handle error - reset the disabled state
+          setIsToggleDisabled(false);
+          setToggleCountdown(null);
+          clearInterval(interval);
+        }
       });
   }
 
@@ -135,22 +155,22 @@ const Settings = () => {
               }
             />
             <FormControlLabel
-                sx={{my: 1}}
-                control={
-                    <Switch
-                        checked={preferences.autoUpdate ? true : false}
-                        onChange={handleChange}
-                        name="autoUpdate"
-                    />
-                }
-                label={
-                    <Box>
-                        <Typography variant="body1">Auto Update</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                            Refresh player page once per minute.
-                        </Typography>
-                    </Box>
-                }
+              sx={{ my: 1 }}
+              control={
+                <Switch
+                  checked={preferences.autoUpdate ? true : false}
+                  onChange={handleChange}
+                  name="autoUpdate"
+                />
+              }
+              label={
+                <Box>
+                  <Typography variant="body1">Auto Update</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Refresh player page once per minute.
+                  </Typography>
+                </Box>
+              }
             />
           </FormGroup>
         </Paper>
@@ -190,17 +210,34 @@ const Settings = () => {
               </Box>
               <FormControlLabel
                 control={
-                  <Switch
-                    checked={settings.status === 'Hidden'}
-                    onChange={toggleStatus}
-                    name="status"
-                  />
+                  <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                    <Switch
+                      checked={settings.status === 'Hidden'}
+                      onChange={toggleStatus}
+                      name="status"
+                      disabled={isToggleDisabled}
+                    />
+                    {isToggleDisabled && (
+                      <CircularProgress
+                        size={24}
+                        sx={{
+                          position: 'absolute',
+                          left: -8,
+                          top: -8,
+                          zIndex: 1,
+                        }}
+                      />
+                    )}
+                  </Box>
                 }
                 label={
                   <Box>
                     <Typography variant="body1">Private Profile</Typography>
                     <Typography variant="caption" color="text.secondary">
                       Hide your profile from the public.
+                      {isToggleDisabled && toggleCountdown !== null && (
+                        <span> (Changes in {toggleCountdown}s)</span>
+                      )}
                     </Typography>
                   </Box>
                 }
