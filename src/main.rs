@@ -75,6 +75,7 @@ pub const CHAR_NAMES: &[(&str, &str)] = &[
     ("AB", "A.B.A."),
     ("SL", "Slayer"),
     ("DI", "Dizzy"),
+    ("VE", "Venom"),
 ];
 
 async fn player(
