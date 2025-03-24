@@ -849,6 +849,11 @@ async fn calc_rating(
 }
 
 async fn avatar(Path(player_id): Path<i64>, State(pools): State<AppState>) -> impl IntoResponse {
+    //If token.txt does not exist, return 503
+    if !std::fs::exists("token.txt").unwrap_or(false) {
+      return Err((StatusCode::SERVICE_UNAVAILABLE, "GGST is not connected, patch?".to_string()));
+  }
+    
     let mut db = pools.db_pool.get().await.unwrap();
     let mut redis = pools.redis_pool.get().await.unwrap();
 
