@@ -1138,6 +1138,7 @@ async fn update_ratings(connection: &mut AsyncPgConnection) -> Result<(), String
         ))
         .filter(games::value_a.is_null())
         .order(coalesce(games::real_timestamp, games::timestamp).asc())
+        .limit(5000)
         .get_results::<(Game, Option<Status>, Option<Status>)>(connection)
         .await
         .unwrap();
