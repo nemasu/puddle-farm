@@ -908,14 +908,31 @@ async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> 
     let results = sql_query(
         "
         INSERT INTO global_ranks (rank, id, char_id)
-        SELECT ROW_NUMBER()
-        OVER (ORDER BY value DESC) as rank, r.id, r.char_id
-        FROM player_ratings r
-        LEFT JOIN players p ON p.id = r.id
-        WHERE r.deviation < 30.0
-        AND p.status = 'public'
-        ORDER BY value DESC
-        LIMIT 1000  
+        SELECT
+          ROW_NUMBER() OVER (ORDER BY r.value DESC) as rank,
+          r.id,
+          r.char_id
+        FROM (
+          SELECT
+            id,
+            char_id,
+            value,
+            deviation,
+            ROW_NUMBER() OVER (PARTITION BY id ORDER BY value DESC) as rn
+          FROM
+            player_ratings
+          WHERE
+            deviation < 30.0
+        ) r
+        LEFT JOIN
+          players p ON p.id = r.id
+        WHERE
+          r.rn = 1
+          AND r.deviation < 30.0
+          AND p.status = 'public'
+        ORDER BY
+          r.value DESC
+        LIMIT 1000
         RETURNING rank
     ",
     );
@@ -1022,7 +1039,10 @@ async fn update_player_info(
     Ok(())
 }
 
-async fn grab_games(connection: &mut AsyncPgConnection, redis_connection: &mut crate::RedisConnection<'_>) -> Result<Vec<Game>, String> {
+async fn grab_games(
+    connection: &mut AsyncPgConnection,
+    redis_connection: &mut crate::RedisConnection<'_>,
+) -> Result<Vec<Game>, String> {
     info!("Grabbing replays");
 
     let replays = ggst_api::get_replays().await;
@@ -1108,10 +1128,10 @@ async fn grab_games(connection: &mut AsyncPgConnection, redis_connection: &mut c
             new_games.push(new_game);
         }
     }
-    
+
     //Set set_latest_game_time for health check
     if let Some(last_game) = new_games.last() {
-      let ts = last_game.real_timestamp.unwrap_or(last_game.timestamp);
+        let ts = last_game.real_timestamp.unwrap_or(last_game.timestamp);
 
         crate::imdb::set_latest_game_time(ts, redis_connection)
             .await
