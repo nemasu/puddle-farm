@@ -1,5 +1,3 @@
-use std::sync::Arc;
-use tokio::sync::Mutex;
 use axum::extract::{Path, Query};
 use axum::http::header::{self, ACCEPT, AUTHORIZATION, CONTENT_TYPE, ORIGIN};
 use axum::http::{HeaderMap, HeaderValue, Method};
@@ -12,7 +10,9 @@ use models::{CharacterRank, GlobalRank, Player, PlayerRating, Status};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
+use std::sync::Arc;
 use std::vec;
+use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, warn};
 use tracing_appender::non_blocking::WorkerGuard;
@@ -31,7 +31,7 @@ type RedisConnection<'a> = PooledConnection<'a, RedisConnectionManager>;
 struct AppState {
     db_pool: Pool,
     redis_pool: RedisPool,
-    toggle_delay: Arc<Mutex<Vec<(i64,String,Status)>>>,//Timestamp, Key, Status
+    toggle_delay: Arc<Mutex<Vec<(i64, String, Status)>>>, //Timestamp, Key, Status
 }
 
 mod db;
@@ -348,7 +348,7 @@ async fn toggle_private(
     if !toggle_delay.iter().any(|(_, k, _)| k == &key) {
         tracing::debug!("Toggling status for key: {} to {:?}", key, status);
         toggle_delay.push((now + 60, key.clone(), status));
-    }    
+    }
 
     Ok(Json("true".to_string()))
 }
@@ -852,9 +852,12 @@ async fn calc_rating(
 async fn avatar(Path(player_id): Path<i64>, State(pools): State<AppState>) -> impl IntoResponse {
     //If token.txt does not exist, return 503
     if !std::fs::exists("token.txt").unwrap_or(false) {
-      return Err((StatusCode::SERVICE_UNAVAILABLE, "GGST is not connected, patch?".to_string()));
-  }
-    
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "GGST is not connected, patch?".to_string(),
+        ));
+    }
+
     let mut db = pools.db_pool.get().await.unwrap();
     let mut redis = pools.redis_pool.get().await.unwrap();
 
@@ -956,8 +959,7 @@ async fn process_background_tasks(state: &AppState) -> Result<(), Box<dyn std::e
         } else {
             i += 1;
         }
-    }   
-
+    }
 
     Ok(())
 }
@@ -1003,6 +1005,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         //This runs the timed jobs: grab replay, update ratings, update ranking, etc.
         Some("pull") => {
             let _guard = init_tracing("pull");
+
+            // We have these declared here too so that we can change the connection pool settings
+
+            // set up connection pool
+            let config = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(
+                std::env::var("DATABASE_URL").expect("DATABASE_URL"),
+            );
+
+            //Postgres - reduce max size to 4
+            let pool = bb8::Pool::builder().max_size(4).build(config).await?;
+
+            //Redis
+            let manager =
+                RedisConnectionManager::new(std::env::var("REDIS_URL").expect("REDIS_URL"))
+                    .unwrap();
+            let redis_pool = bb8::Pool::builder().build(manager).await.unwrap();
+
+            let state = AppState {
+                db_pool: pool,
+                redis_pool,
+                toggle_delay: Arc::new(Mutex::new(vec![])),
+            };
+
             pull::pull_and_update_continuous(state).await;
         }
         Some("hourly") => {
