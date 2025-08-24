@@ -1,7 +1,9 @@
 CREATE TABLE players  (
     id BIGINT NOT NULL PRIMARY KEY,
     name TEXT NOT NULL,
-    platform SMALLINT NOT NULL
+    platform SMALLINT NOT NULL,
+    api_key VARCHAR,
+    rcode_check_code VARCHAR
 );
 
 CREATE TABLE player_names (
@@ -13,16 +15,13 @@ CREATE TABLE player_names (
 CREATE TABLE player_ratings (
     id BIGINT NOT NULL REFERENCES players(id),
     char_id SMALLINT NOT NULL,
-    wins INTEGER NOT NULL,
-    losses INTEGER NOT NULL,
-    value REAL NOT NULL,
-    deviation REAL NOT NULL,
-    last_decay TIMESTAMP NOT NULL,
+    value BIGINT NOT NULL,
     PRIMARY KEY(id, char_id)
 );
 
 CREATE TABLE games (
     timestamp TIMESTAMP NOT NULL,
+    real_timestamp TIMESTAMP,
     id_a BIGINT NOT NULL REFERENCES players(id),
     name_a TEXT NOT NULL,
     char_a SMALLINT NOT NULL,
@@ -33,17 +32,13 @@ CREATE TABLE games (
     platform_b SMALLINT NOT NULL,
     winner SMALLINT NOT NULL,
     game_floor SMALLINT NOT NULL,
-    value_a REAL,
-    deviation_a REAL,
-    value_b REAL,
-    deviation_b REAL,
+    value_a BIGINT NOT NULL,
+    value_b BIGINT NOT NULL,
     PRIMARY KEY (timestamp, id_a, id_b)
 );
 CREATE INDEX games_id_char_a ON games(id_a, char_a);
 CREATE INDEX games_id_char_b ON games(id_b, char_b);
-
-CREATE INDEX games_value_deviation_a ON games(value_a, deviation_a);
-CREATE INDEX games_value_deviation_b ON games(value_b, deviation_b);
+CREATE INDEX games_timestamps ON games(timestamp, real_timestamp);
 
 CREATE TABLE global_ranks (
     rank INT NOT NULL PRIMARY KEY,
@@ -57,3 +52,14 @@ CREATE TABLE character_ranks (
     rank INT NOT NULL,
     PRIMARY KEY (rank, char_id)
 );
+
+CREATE TABLE tags (
+    id SERIAL NOT NULL,
+    player_id BIGINT NOT NULL,
+    tag TEXT NOT NULL,
+    style TEXT NOT NULL,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX tags_player_id ON tags (player_id);
+CREATE INDEX tags_tag ON tags (tag);

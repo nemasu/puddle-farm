@@ -93,7 +93,7 @@ const Search = () => {
                 <TableRow key={index}>
                   <TableCell><Button component={Link} to={`/player/${player.id}/${player.char_short}`}>{player.name}</Button></TableCell>
                   <TableCell>{player.char_short}</TableCell>
-                  <TableCell><Box component={'span'} title={player.rating.toString()}>{Number(player.rating).toFixed(0)}</Box> <Box component={'span'} title={player.deviation.toString()}>±{Number(player.deviation).toFixed(0)}</Box></TableCell>
+                  <TableCell><Box component={'span'} title={player.rating.toString()}>{Number(player.rating).toFixed(0)}</Box></TableCell>
                 </TableRow>
               ))}
             </TableBody>

@@ -3,6 +3,26 @@ import { StorageUtils } from "./Storage";
 import React from "react";
 
 const Utils = {
+  convertRating: (rating) => {
+    if(rating > 10000000) {
+      return Number(rating) - 10000000;
+    }
+    return Number(rating);
+  },
+  displaySimpleRating: (rating) => {
+    const convertedRating = Utils.convertRating(rating);
+    if (convertedRating > 10000000) {
+      return `${convertedRating} DR`;
+    }
+    return `${convertedRating} RP`;
+  },
+  displayRating: (rating) => {
+    const convertedRating = Utils.convertRating(rating);
+    if (convertedRating > 10000000) {
+      return <Typography variant={'span'}>{convertedRating} DR</Typography>;
+    }
+    return <Typography variant={'span'}>{convertedRating} RP</Typography>;
+  },
   formatUTCToLocal: (dateTimeString) => {
     if (dateTimeString === "Now") {
       return dateTimeString;

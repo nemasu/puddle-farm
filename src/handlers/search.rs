@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    models::{Player, PlayerRating},
-    CHAR_NAMES,
-};
+use crate::{models::{Player, PlayerRating}, CHAR_NAMES};
 
 #[derive(Serialize)]
 pub struct SearchResponse {
@@ -13,8 +10,7 @@ pub struct SearchResponse {
 struct PlayerSearchResponse {
     id: i64,
     name: String,
-    rating: f32,
-    deviation: f32,
+    rating: i64,
     char_short: String,
     char_long: String,
 }
@@ -31,7 +27,6 @@ pub async fn player_search(data: Vec<(Player, PlayerRating)>) -> Result<SearchRe
             id: p.0.id,
             name: p.0.name.clone(),
             rating: p.1.value,
-            deviation: p.1.deviation,
             char_short: CHAR_NAMES[p.1.char_id as usize].0.to_string(),
             char_long: CHAR_NAMES[p.1.char_id as usize].1.to_string(),
         })

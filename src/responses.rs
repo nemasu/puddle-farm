@@ -68,6 +68,7 @@ pub struct Player {
     _string2: String,
     pub platform: i64,
     _int1: i64,
+    pub rating: i64,
 }
 
 #[derive(Deserialize, Debug, Clone)]

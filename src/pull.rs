@@ -1,4 +1,4 @@
-use crate::{ggst_api, schema, CHAR_NAMES};
+use crate::{ggst_api, schema::{self, player_ratings}, CHAR_NAMES};
 
 use bb8_redis::redis;
 use diesel::prelude::*;
@@ -7,7 +7,7 @@ use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error, info};
 
-use crate::schema::{character_ranks, games, global_ranks, player_names, player_ratings, players};
+use crate::schema::{character_ranks, games, global_ranks, player_names, players};
 use chrono::{NaiveDateTime, Utc};
 use diesel::dsl::*;
 
@@ -38,21 +38,6 @@ pub async fn pull_and_update_continuous(state: crate::AppState) {
 
             let mut connection = processing_state.db_pool.get().await.unwrap();
             let mut redis_connection = processing_state.redis_pool.get().await.unwrap();
-
-            if let Err(e) = connection
-                .transaction::<_, diesel::result::Error, _>(|conn| {
-                    async move {
-                        if let Err(e) = update_ratings(conn).await {
-                            error!("Rating update failed: {e}");
-                        }
-                        Ok(())
-                    }
-                    .scope_boxed()
-                })
-                .await
-            {
-                error!("Rating update failed: {e}");
-            }
 
             //Get last_update_hourly from redis
             let last_update_hourly: Result<String, redis::RedisError> = redis::cmd("GET")
@@ -224,10 +209,6 @@ async fn do_hourly_update(
     conn: &mut crate::Connection<'_>,
     redis_connection: &mut crate::RedisConnection<'_>,
 ) -> Result<(), String> {
-    if let Err(e) = decay(conn).await {
-        error!("decay failed: {e}");
-    }
-
     if let Err(e) = update_ranks(conn).await {
         error!("update_ranks failed: {e}");
     }
@@ -322,7 +303,6 @@ async fn update_distribution(
                 count(t.value) AS bucket_count
             FROM player_ratings t
             LEFT JOIN buckets b ON t.value >= b.lower_bound AND t.value < b.upper_bound
-            WHERE t.deviation < 30.0
             GROUP BY b.lower_bound, b.upper_bound
         ),
         percentiles AS ( -- CTE to calculate cumulative percentage
@@ -417,8 +397,9 @@ async fn update_matchups(
                   FROM games
                   WHERE char_a = $1
                   AND timestamp > now() - interval '1 month'
-                  AND deviation_a < 30.0
-                  AND deviation_b < 30.0
+                  AND game_floor = 0  -- Only ranked matches
+                  AND value_a > 0
+                  AND value_b > 0
                   UNION ALL
                   SELECT 
                       char_a as opponent_char, 
@@ -427,8 +408,9 @@ async fn update_matchups(
                   FROM games
                   WHERE char_b = $1
                   AND timestamp > now() - interval '1 month'
-                  AND deviation_a < 30.0
-                  AND deviation_b < 30.0
+                  AND game_floor = 0  -- Only ranked matches
+                  AND value_a > 0
+                  AND value_b > 0
               ) as combined_results
               GROUP BY opponent_char
               ORDER BY opponent_char;
@@ -478,8 +460,7 @@ async fn update_matchups(
                 FROM games
                 WHERE char_a = $1
                 AND timestamp > now() - interval '1 month'
-                AND deviation_a < 30.0
-                AND deviation_b < 30.0
+                AND game_floor = 0  -- Only ranked matches
                 AND value_a > 1700
                 AND value_b > 1700
                 UNION ALL
@@ -490,8 +471,7 @@ async fn update_matchups(
                 FROM games
                 WHERE char_b = $1
                 AND timestamp > now() - interval '1 month'
-                AND deviation_a < 30.0
-                AND deviation_b < 30.0
+                AND game_floor = 0  -- Only ranked matches
                 AND value_a > 1700
                 AND value_b > 1700
             ) as combined_results
@@ -868,22 +848,7 @@ async fn update_stats(
     Ok(())
 }
 
-async fn decay(connection: &mut AsyncPgConnection) -> Result<(), String> {
-    info!("Decaying ratings");
-
-    diesel::update(player_ratings::table)
-        .set((
-            player_ratings::deviation.eq((player_ratings::deviation * 1.003) + 0.01),
-            player_ratings::last_decay.eq(Utc::now().naive_utc()),
-        ))
-        .filter(player_ratings::deviation.lt(40.0))
-        .execute(connection)
-        .await
-        .unwrap();
-
-    info!("Decaying ratings - Done");
-    Ok(())
-}
+// Decay function removed - no longer needed with game-provided ratings
 
 #[allow(dead_code)]
 #[derive(QueryableByName)]
@@ -917,19 +882,14 @@ async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> 
             id,
             char_id,
             value,
-            deviation,
             ROW_NUMBER() OVER (PARTITION BY id ORDER BY value DESC) as rn
           FROM
             player_ratings
-          WHERE
-            deviation < 30.0
         ) r
         LEFT JOIN
           players p ON p.id = r.id
         WHERE
           r.rn = 1
-          AND r.deviation < 30.0
-          AND p.status = 'public'
         ORDER BY
           r.value DESC
         LIMIT 1000
@@ -948,8 +908,7 @@ async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> 
             OVER (ORDER BY value DESC) as rank, r.id, char_id
             FROM player_ratings r, players p
             WHERE r.id = p.id
-            AND p.status = 'public'
-            AND deviation < 30.0 AND char_id = $1
+            AND char_id = $1
             ORDER BY value DESC
             LIMIT 1000
             RETURNING rank
@@ -982,7 +941,6 @@ async fn update_player_info(
             id: new_game.id_a,
             name: new_game.name_a.clone(),
             platform: new_game.platform_a,
-            status: Some(crate::models::Status::Public),
             api_key: None,
             rcode_check_code: None,
         })
@@ -1001,7 +959,6 @@ async fn update_player_info(
             id: new_game.id_b,
             name: new_game.name_b.clone(),
             platform: new_game.platform_b,
-            status: Some(crate::models::Status::Public),
             api_key: None,
             rcode_check_code: None,
         })
@@ -1035,6 +992,33 @@ async fn update_player_info(
         .execute(connection)
         .await
         .unwrap();
+
+      //Update player rating
+            insert_into(player_ratings::table)
+          .values(&PlayerRating {
+              id: new_game.id_a,
+              char_id: new_game.char_a,
+              value: new_game.value_a,
+          })
+          .on_conflict((player_ratings::id, player_ratings::char_id))
+          .do_update()
+          .set(player_ratings::value.eq(new_game.value_a))
+          .execute(connection)
+          .await
+          .unwrap();
+
+      insert_into(player_ratings::table)
+          .values(&PlayerRating {
+              id: new_game.id_b,
+              char_id: new_game.char_b,
+              value: new_game.value_b,
+          })
+          .on_conflict((player_ratings::id, player_ratings::char_id))
+          .do_update()
+          .set(player_ratings::value.eq(new_game.value_b))
+          .execute(connection)
+          .await
+          .unwrap();
 
     Ok(())
 }
@@ -1095,11 +1079,8 @@ async fn grab_games(
             platform_b: i16::try_from(r.player2.platform).ok().unwrap(),
             winner: i16::try_from(r.winner).ok().unwrap(),
             game_floor: i16::try_from(r.floor).ok().unwrap(),
-            value_a: None,
-            deviation_a: None,
-            value_b: None,
-            deviation_b: None,
-            win_chance: None,
+            value_a: r.player1.rating,
+            value_b: r.player2.rating,
         };
 
         if let Err(e) = update_player_info(connection, &new_game).await {
@@ -1140,170 +1121,4 @@ async fn grab_games(
 
     info!("Grabbing replays - Done");
     Ok(new_games)
-}
-
-async fn update_ratings(connection: &mut AsyncPgConnection) -> Result<(), String> {
-    info!("Updating ratings");
-
-    //Find all games for public players that are missing ratings
-    let players_b = diesel::alias!(players as players_b);
-
-    let new_games = games::table
-        .inner_join(players::table.on(games::id_a.eq(players::id)))
-        .inner_join(players_b.on(games::id_b.eq(players_b.field(players::id))))
-        .select((
-            games::all_columns,
-            players::status,
-            players_b.field(players::status),
-        ))
-        .filter(games::value_a.is_null())
-        .order(coalesce(games::real_timestamp, games::timestamp).asc())
-        .limit(5000)
-        .get_results::<(Game, Option<Status>, Option<Status>)>(connection)
-        .await
-        .unwrap();
-
-    info!("Found {} games without ratings", new_games.len());
-
-    for entry in new_games {
-        let g = entry.0;
-
-        //Get the player_rating a
-        let player_rating_a = match player_ratings::table
-            .filter(player_ratings::id.eq(g.id_a))
-            .filter(player_ratings::char_id.eq(g.char_a))
-            .get_result::<PlayerRating>(connection)
-            .await
-        {
-            Ok(r) => r,
-            Err(_) => {
-                //Insert the player rating if it's not found
-                let new_player_rating = PlayerRating {
-                    id: g.id_a,
-                    char_id: g.char_a,
-                    wins: 0,
-                    losses: 0,
-                    value: 1500.0,
-                    deviation: 250.0,
-                    last_decay: g.timestamp,
-                };
-
-                diesel::insert_into(player_ratings::table)
-                    .values(&new_player_rating)
-                    .execute(connection)
-                    .await
-                    .unwrap();
-
-                new_player_rating
-            }
-        };
-        //Get the player_rating b
-        let player_rating_b = match player_ratings::table
-            .filter(player_ratings::id.eq(g.id_b))
-            .filter(player_ratings::char_id.eq(g.char_b))
-            .get_result::<PlayerRating>(connection)
-            .await
-        {
-            Ok(r) => r,
-            Err(_) => {
-                //Insert the player rating if it's not found
-                let new_player_rating = PlayerRating {
-                    id: g.id_b,
-                    char_id: g.char_b,
-                    wins: 0,
-                    losses: 0,
-                    value: 1500.0,
-                    deviation: 250.0,
-                    last_decay: g.timestamp,
-                };
-
-                diesel::insert_into(player_ratings::table)
-                    .values(&new_player_rating)
-                    .execute(connection)
-                    .await
-                    .unwrap();
-
-                new_player_rating
-            }
-        };
-
-        if Some(Status::Public) == entry.1 && Some(Status::Public) == entry.2 {
-            //Calculate value and deviation
-            let (new_value_a, new_deviation_a, new_value_b, new_deviation_b, win_prob) =
-                crate::rating::update_mean_and_variance(
-                    player_rating_a.value as f64,
-                    player_rating_a.deviation as f64,
-                    player_rating_b.value as f64,
-                    player_rating_b.deviation as f64,
-                    g.winner == 1,
-                );
-
-            //Update game table with player ratings
-            diesel::update(games::table)
-                .filter(games::timestamp.eq(g.timestamp))
-                .filter(games::id_a.eq(g.id_a))
-                .filter(games::char_a.eq(g.char_a))
-                .filter(games::platform_a.eq(g.platform_a))
-                .filter(games::id_b.eq(g.id_b))
-                .filter(games::char_b.eq(g.char_b))
-                .filter(games::platform_b.eq(g.platform_b))
-                .set((
-                    games::value_a.eq(player_rating_a.value),
-                    games::deviation_a.eq(player_rating_a.deviation),
-                    games::value_b.eq(player_rating_b.value),
-                    games::deviation_b.eq(player_rating_b.deviation),
-                    games::win_chance.eq(win_prob as f32),
-                ))
-                .execute(connection)
-                .await
-                .unwrap();
-
-            //Update player_rating a
-            diesel::update(player_ratings::table)
-                .filter(player_ratings::id.eq(g.id_a))
-                .filter(player_ratings::char_id.eq(g.char_a))
-                .set((
-                    player_ratings::value.eq(new_value_a as f32),
-                    player_ratings::deviation.eq(new_deviation_a as f32),
-                ))
-                .execute(connection)
-                .await
-                .unwrap();
-
-            //Update player_rating b
-            diesel::update(player_ratings::table)
-                .filter(player_ratings::id.eq(g.id_b))
-                .filter(player_ratings::char_id.eq(g.char_b))
-                .set((
-                    player_ratings::value.eq(new_value_b as f32),
-                    player_ratings::deviation.eq(new_deviation_b as f32),
-                ))
-                .execute(connection)
-                .await
-                .unwrap();
-        } else {
-            tracing::debug!("Hidden game: {} - {}", g.name_a, g.name_b);
-            //Player is not public, so update game with 0s
-            diesel::update(games::table)
-                .filter(games::timestamp.eq(g.timestamp))
-                .filter(games::id_a.eq(g.id_a))
-                .filter(games::char_a.eq(g.char_a))
-                .filter(games::platform_a.eq(g.platform_a))
-                .filter(games::id_b.eq(g.id_b))
-                .filter(games::char_b.eq(g.char_b))
-                .filter(games::platform_b.eq(g.platform_b))
-                .set((
-                    games::value_a.eq(0.0),
-                    games::deviation_a.eq(0.0),
-                    games::value_b.eq(0.0),
-                    games::deviation_b.eq(0.0),
-                    games::win_chance.eq(0.0),
-                ))
-                .execute(connection)
-                .await
-                .unwrap();
-        }
-    }
-    info!("Updating ratings - Done");
-    Ok(())
 }

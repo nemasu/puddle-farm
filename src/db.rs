@@ -1,30 +1,12 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::models::{self, CharacterRank, Player, PlayerRating};
-use crate::models::{GlobalRank, Status};
+use crate::models::GlobalRank;
 use crate::pull::Matchup;
 use crate::{schema, CHAR_NAMES};
-use diesel::sql_types::{BigInt, Float, Integer, Nullable, Timestamp};
+use diesel::sql_types::{BigInt, Integer, Timestamp};
 use diesel::{prelude::*, update};
 use diesel_async::RunQueryDsl;
-
-pub async fn get_player_status(id: i64, db: &mut crate::Connection<'_>) -> Result<Status, String> {
-    match schema::players::table
-        .select(schema::players::status)
-        .filter(schema::players::id.eq(id))
-        .first::<Option<Status>>(db)
-        .await
-    {
-        Ok(status) => {
-            if let Some(status) = status {
-                Ok(status)
-            } else {
-                Err("Player not found".to_string())
-            }
-        }
-        Err(_) => Err("Error getting player status".to_string()),
-    }
-}
 
 async fn get_player_char_and_rating(
     id: i64,
@@ -34,7 +16,7 @@ async fn get_player_char_and_rating(
         .inner_join(schema::player_ratings::table)
         .filter(schema::players::id.eq(id))
         .select((Player::as_select(), PlayerRating::as_select()))
-        .order((schema::player_ratings::value - schema::player_ratings::deviation).desc())
+        .order(schema::player_ratings::value.desc())
         .load(db)
         .await
         .expect("Error loading player");
@@ -112,9 +94,7 @@ async fn get_top_defeated(
         i64,
         String,
         i16,
-        Option<f32>,
-        Option<f32>,
-        Option<f32>,
+        i64,
     )>,
     String,
 > {
@@ -125,17 +105,14 @@ async fn get_top_defeated(
             schema::games::name_b,
             schema::games::char_b,
             schema::games::value_b,
-            schema::games::deviation_b,
-            schema::games::value_b - schema::games::deviation_b,
         ))
         .filter(
             schema::games::id_a
                 .eq(id)
                 .and(schema::games::char_a.eq(char_id))
                 .and(schema::games::winner.eq(1))
-                .and(schema::games::deviation_b.lt(30.0)),
         )
-        .order((schema::games::value_b - schema::games::deviation_b).desc())
+        .order(schema::games::value_b.desc())
         .limit(1)
         .union(
             schema::games::table
@@ -145,17 +122,14 @@ async fn get_top_defeated(
                     schema::games::name_a,
                     schema::games::char_a,
                     schema::games::value_a,
-                    schema::games::deviation_a,
-                    schema::games::value_a - schema::games::deviation_a,
                 ))
-                .order((schema::games::value_a - schema::games::deviation_a).desc())
+                .order(schema::games::value_a.desc())
                 .limit(1)
                 .filter(
                     schema::games::id_b
                         .eq(id)
                         .and(schema::games::char_b.eq(char_id))
                         .and(schema::games::winner.eq(2))
-                        .and(schema::games::deviation_a.lt(30.0)),
                 ),
         )
         //TODO use this instead when positional_order_by + limit is released
@@ -166,9 +140,7 @@ async fn get_top_defeated(
             i64,
             String,
             i16,
-            Option<f32>,
-            Option<f32>,
-            Option<f32>,
+            i64,
         )>(db)
         .await
     {
@@ -181,43 +153,37 @@ async fn get_top_rating(
     id: i64,
     char_id: i16,
     db: &mut crate::Connection<'_>,
-) -> Result<Vec<(chrono::NaiveDateTime, Option<f32>, Option<f32>, Option<f32>)>, String> {
+) -> Result<Vec<(chrono::NaiveDateTime, i64)>, String> {
     match schema::games::table
         .select((
             schema::games::timestamp,
             schema::games::value_a,
-            schema::games::deviation_a,
-            schema::games::value_a - schema::games::deviation_a,
         ))
         .filter(
             schema::games::id_a
                 .eq(id)
                 .and(schema::games::char_a.eq(char_id))
-                .and(schema::games::deviation_a.lt(30.0)),
         )
-        .order((schema::games::value_a - schema::games::deviation_a).desc())
+        .order(schema::games::value_a.desc())
         .limit(1)
         .union(
             schema::games::table
                 .select((
                     schema::games::timestamp,
                     schema::games::value_b,
-                    schema::games::deviation_b,
-                    schema::games::value_b - schema::games::deviation_b,
                 ))
                 .filter(
                     schema::games::id_b
                         .eq(id)
                         .and(schema::games::char_b.eq(char_id))
-                        .and(schema::games::deviation_b.lt(30.0)),
                 )
-                .order((schema::games::value_b - schema::games::deviation_b).desc())
+                .order(schema::games::value_b.desc())
                 .limit(1),
         )
         //TODO use this instead when positional_order_by + limit is released
         //.positional_order_by(OrderColumn::from(6).desc())
         //.limit(1)
-        .load::<(chrono::NaiveDateTime, Option<f32>, Option<f32>, Option<f32>)>(db)
+        .load::<(chrono::NaiveDateTime, i64)>(db)
         .await
     {
         Ok(top_rating) => Ok(top_rating),
@@ -319,9 +285,7 @@ pub async fn get_player_response_data(
             i64,
             String,
             i16,
-            Option<f32>,
-            Option<f32>,
-            Option<f32>,
+            i64,
         )> = match get_top_defeated(id, rating.char_id, db).await {
             Ok(res) => res,
             Err(e) => return Err(e),
@@ -331,7 +295,7 @@ pub async fn get_player_response_data(
             let mut highest_index = 0;
 
             if top_defeated_res.len() > 1 {
-                if top_defeated_res[0].6.unwrap() < top_defeated_res[1].6.unwrap() {
+                if top_defeated_res[0].4 < top_defeated_res[1].4 {
                     highest_index = 1;
                 }
             }
@@ -345,13 +309,12 @@ pub async fn get_player_response_data(
                     char_short: CHAR_NAMES[top_defeated_res[highest_index].3 as usize]
                         .0
                         .to_string(),
-                    value: top_defeated_res[highest_index].4.unwrap_or(0.0),
-                    deviation: top_defeated_res[highest_index].5.unwrap_or(0.0),
+                    value: top_defeated_res[highest_index].4,
                 },
             );
         }
 
-        let top_rating_res: Vec<(chrono::NaiveDateTime, Option<f32>, Option<f32>, Option<f32>)> =
+        let top_rating_res: Vec<(chrono::NaiveDateTime, i64)> =
             match get_top_rating(id, rating.char_id, db).await {
                 Ok(res) => res,
                 Err(e) => return Err(e),
@@ -361,7 +324,7 @@ pub async fn get_player_response_data(
             let mut highest_index = 0;
 
             if top_rating_res.len() > 1 {
-                if top_rating_res[0].3.unwrap() <= top_rating_res[1].3.unwrap() {
+                if top_rating_res[0].1 <= top_rating_res[1].1 {
                     highest_index = 1;
                 }
             }
@@ -370,8 +333,7 @@ pub async fn get_player_response_data(
                 rating.char_id,
                 crate::handlers::player::TopRating {
                     timestamp: top_rating_res[highest_index].0.to_string(),
-                    value: top_rating_res[highest_index].1.unwrap(),
-                    deviation: top_rating_res[highest_index].2.unwrap(),
+                    value: top_rating_res[highest_index].1,
                 },
             );
         }
@@ -400,10 +362,6 @@ pub async fn get_games(
     offset: i64,
     db: &mut crate::Connection<'_>,
 ) -> Result<Vec<models::Game>, String> {
-    if get_player_status(id, db).await? != Status::Public {
-        return Err("Player not found".to_string());
-    }
-
     match schema::games::table
         .filter(
             (schema::games::id_a
@@ -413,7 +371,7 @@ pub async fn get_games(
                 .eq(id)
                 .and(schema::games::char_b.eq(char_id))),
         )
-        .filter(schema::games::value_a.is_not_null())
+        .select(models::Game::as_select())
         .order(
             crate::pull::coalesce(schema::games::real_timestamp, schema::games::timestamp).desc(),
         )
@@ -503,8 +461,7 @@ pub async fn find_player(
         )
         .select((Player::as_select(), PlayerRating::as_select()))
         .filter(schema::players::name.ilike(exact_like))
-        .filter(schema::players::status.eq(Status::Public))
-        .order((schema::player_ratings::value - schema::player_ratings::deviation).desc())
+        .order(schema::player_ratings::value.desc())
         .limit(count)
         .offset(offset)
         .load(db)
@@ -586,47 +543,6 @@ pub async fn get_player_api_key(id: i64, db: &mut crate::Connection<'_>) -> Resu
     .unwrap())
 }
 
-pub async fn get_player_status_using_key(
-    key: String,
-    db: &mut crate::Connection<'_>,
-) -> Result<Status, String> {
-    Ok(
-        match schema::players::table
-            .select(schema::players::status)
-            .filter(schema::players::api_key.eq(key.clone()))
-            .first::<Option<Status>>(db)
-            .await
-        {
-            Ok(status) => match status {
-                Some(status) => status,
-                None => return Err("Player not found".to_string()),
-            },
-            Err(_) => return Err("Error getting player status".to_string()),
-        },
-    )
-}
-
-pub async fn set_player_status_using_key(
-    key: String,
-    status: crate::models::Status,
-    db: &mut crate::Connection<'_>,
-) -> Result<bool, String> {
-    match update(schema::players::table.filter(schema::players::api_key.eq(key)))
-        .set(schema::players::status.eq(status))
-        .execute(db)
-        .await
-    {
-        Ok(updated) => {
-            if updated > 0 {
-                Ok(true)
-            } else {
-                Ok(false)
-            }
-        }
-        Err(_) => Err("Error setting player status".to_string()),
-    }
-}
-
 pub async fn get_player_id_and_name_using_key(
     key: String,
     db: &mut crate::Connection<'_>,
@@ -662,8 +578,8 @@ pub async fn get_aliases(id: i64, db: &mut crate::Connection<'_>) -> Result<Vec<
 pub struct RatingResult {
     #[diesel(sql_type = Timestamp)]
     pub timestamp: chrono::NaiveDateTime,
-    #[diesel(sql_type = Nullable<Float>)]
-    pub value: Option<f32>,
+    #[diesel(sql_type = BigInt)]
+    pub value: i64,
 }
 pub async fn get_ratings(
     id: i64,
@@ -672,7 +588,21 @@ pub async fn get_ratings(
     db: &mut crate::Connection<'_>,
 ) -> Result<Vec<RatingResult>, String> {
     //TODO when positional_order_by + limit is released, change this to ORM query.
-    let results = diesel::sql_query(
+
+    // Check if they're Vanq, if they are, only return DR
+    let is_vanq = match schema::player_ratings::table
+        .select(schema::player_ratings::value)
+        .filter(schema::player_ratings::id.eq(id))
+        .first::<i64>(db)
+        .await
+    {
+        Ok(latest_rating) => latest_rating > 10000000,
+        _ => false,
+    };
+
+    
+    let results = if !is_vanq { 
+      diesel::sql_query(
         "
         (SELECT timestamp, value_a value
         FROM games
@@ -680,17 +610,41 @@ pub async fn get_ratings(
         AND char_a = $2
         AND value_a != 0
         AND value_a IS NOT NULL
+        AND game_floor = 0
         UNION
         SELECT timestamp, value_b value
         FROM games
         WHERE id_b = $1
         AND char_b = $2
         AND value_b != 0
-        AND value_b IS NOT NULL)
+        AND value_b IS NOT NULL
+        AND game_floor = 0)
         ORDER BY timestamp desc
         LIMIT $3;
-    ",
-    );
+    ",) } else {
+      diesel::sql_query(
+        "
+        (SELECT timestamp, value_a value
+        FROM games
+        WHERE id_a = $1
+        AND char_a = $2
+        AND value_a != 0
+        AND value_a IS NOT NULL
+        AND game_floor = 0
+        AND value_a > 10000000
+        UNION
+        SELECT timestamp, value_b value
+        FROM games
+        WHERE id_b = $1
+        AND char_b = $2
+        AND value_b != 0
+        AND value_b IS NOT NULL
+        AND value_b > 10000000
+        AND game_floor = 0)
+        ORDER BY timestamp desc
+        LIMIT $3;
+      ")
+    };
     match results
         .bind::<diesel::sql_types::BigInt, _>(i64::try_from(id).unwrap())
         .bind::<diesel::sql_types::Integer, _>(i32::try_from(char_id).unwrap())

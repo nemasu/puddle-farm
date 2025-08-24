@@ -41,13 +41,22 @@ const Player = () => {
 
   const [showNext, setShowNext] = useState(true);
 
-  const [hideClaim, setHideClaim] = useState(false);
-
   const [tags, setTags] = useState<{ [key: string]: TagResponse[] }>();
 
   const [countdown, setCountdown] = useState<number | null>(null);
 
   const [avatar, setAvatar] = useState<string | null>();
+  
+  // Match type filter: 'all', 'ranked', 'tower'
+  const [matchFilter, setMatchFilter] = useState<'all' | 'ranked' | 'tower'>('all');
+
+  // Filter history based on match type
+  const filteredHistory = history.filter(item => {
+    if (matchFilter === 'all') return true;
+    if (matchFilter === 'ranked') return item.floor === '0';
+    if (matchFilter === 'tower') return item.floor !== '0';
+    return true;
+  });
 
   let player_id_checked: BigInt;
   if (player_id && player_id.match(/[a-zA-Z]/)) {
@@ -80,14 +89,11 @@ const Player = () => {
 
         for (var key in player_result.ratings) {
           player_result.ratings[key].rating = player_result.ratings[key].rating.toFixed(2);
-          player_result.ratings[key].deviation = player_result.ratings[key].deviation.toFixed(2);
         }
 
         setPlayer(player_result);
 
-        if (player_result.name === 'Player not found' && player_result.id === 0) {
-          setHideClaim(true);
-        } else if (player_result.id === 0) {
+        if (player_result.id === 0) {
           setHistory([]);
           setCurrentCharData(null);
           setAlias([]);
@@ -99,7 +105,7 @@ const Player = () => {
         //Redirect to the highest rated character
         if (char_short === undefined) {
 
-          let highest_rating = 0;
+          let highest_rating = -1;
           let highest_char = 'SO';
           for (var pkey in player_result.ratings) {
             if (Number(player_result.ratings[pkey].rating) > Number(highest_rating)) {
@@ -116,7 +122,7 @@ const Player = () => {
         for (var ckey in player_result.ratings) {
           if (player_result.ratings[ckey].char_short === char_short) {
 
-            document.title = player_result.name + ' (' + char_short + ') - ' + Number(player_result.ratings[ckey].rating).toFixed() + ' ±' + Number(player_result.ratings[ckey].deviation).toFixed() + ' | Puddle Farm';
+            document.title = player_result.name + ' (' + char_short + ') - ' + Utils.displaySimpleRating(Number(player_result.ratings[ckey].rating)) + ' | Puddle Farm';
 
             setCurrentCharData(player_result.ratings[ckey]);
             currentCharKey = ckey;
@@ -334,7 +340,7 @@ const Player = () => {
               {currentCharData ? (
                 <React.Fragment>
                   <Typography variant='h5' my={2}>
-                    {currentCharData.character} Rating: <Box title={currentCharData.rating.toString()} component={"span"}>{Math.round(currentCharData.rating)}</Box> ±<Box title={currentCharData.deviation.toString()} component={"span"}>{Math.round(currentCharData.deviation)}</Box> ({currentCharData.match_count} games)
+                    {currentCharData.character} Last Rating: <Box title={currentCharData.rating.toString()} component={"span"}>{Utils.displayRating(currentCharData.rating)}</Box>({currentCharData.match_count} games)
                     {currentCharData.top_char !== 0 ? (
                       <Typography variant="char_rank" onMouseDown={(event) => onLinkClick(event, `/top/${currentCharData.char_short}`)} sx={{ cursor: 'pointer' }}>
                         #{currentCharData.top_char} {currentCharData.character}
@@ -344,13 +350,13 @@ const Player = () => {
                   {currentCharData.top_rating.value !== 0 ? (
                     <React.Fragment>
                       <Typography>
-                        Top Rating: <Box title={currentCharData.top_rating.value.toString()} component={"span"}>{Math.round(currentCharData.top_rating.value)}</Box> ±<Box title={currentCharData.top_rating.deviation.toString()} component={"span"}>{Math.round(currentCharData.top_rating.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_rating.timestamp)})
+                        Top Rating: <Box title={currentCharData.top_rating.value.toString()} component={"span"}>{Math.round(currentCharData.top_rating.value)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_rating.timestamp)})
                       </Typography>
                     </React.Fragment>
                   ) : null}
                   {currentCharData.top_defeated.value !== 0.0 ? (
                     <Typography>
-                      Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} onMouseDown={(event) => onLinkClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
+                      Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} onMouseDown={(event) => onLinkClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
                     </Typography>
                   ) : null}
 
@@ -365,11 +371,37 @@ const Player = () => {
               ) : null}
               {history ? (
                 <React.Fragment>
-                  <Box mx={3}>
+                  <Box mx={3} mb={2}>
+                    <Typography variant="h6" gutterBottom>
+                      Match History
+                    </Typography>
+                    <Box sx={{ /*display: 'flex'*/ display: 'none', gap: 1, mb: 2 }}>
+                      <Button 
+                        variant={matchFilter === 'all' ? 'contained' : 'outlined'}
+                        onClick={() => setMatchFilter('all')}
+                        size="small"
+                      >
+                        All Matches
+                      </Button>
+                      <Button 
+                        variant={matchFilter === 'ranked' ? 'contained' : 'outlined'}
+                        onClick={() => setMatchFilter('ranked')}
+                        size="small"
+                      >
+                        Ranked Only
+                      </Button>
+                      <Button 
+                        variant={matchFilter === 'tower' ? 'contained' : 'outlined'}
+                        onClick={() => setMatchFilter('tower')}
+                        size="small"
+                      >
+                        Tower Only
+                      </Button>
+                    </Box>
                     <Button onClick={(event) => onPrev(event)}>Prev</Button>
                     <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
                   </Box>
-                  {tags && history.map((item, i) => (
+                  {tags && filteredHistory.map((item, i) => (
                     <Box py={0.3} key={i}>
                       <HistoryRow key={i} item={item} isMobile={true} tags={tags[item.opponent_id.toString()]} />
                     </Box>
@@ -382,7 +414,7 @@ const Player = () => {
               ) : null}
             </Box>
             {currentCharData ? (
-              <RatingChart player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} latest_rating={currentCharData.rating} />
+              <RatingChart player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} />
             ) : null}
             <Matchup player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} />
           </Box>
@@ -398,7 +430,7 @@ const Player = () => {
                   <Box key={i}>
                     <Button variant="text" onMouseDown={(event) => { onLinkClick(event, `/player/${player.id}/${item.char_short}`) }} sx={{ textAlign: 'left', color: 'white' }}>
                       <Typography fontSize={12.5} my={0.3}>
-                        {item.character} {item.rating} ±{item.deviation}<br />({item.match_count} games)
+                        {item.character} {Utils.displayRating(item.rating)} <br />({item.match_count} games)
                       </Typography>
                     </Button>
                     <br />
@@ -407,7 +439,6 @@ const Player = () => {
                 <hr style={{ marginTop: 10 }} />
               </React.Fragment>
             ) : null}
-            {hideClaim ? null : (<ClaimDialog playerId={player_id_checked} API_ENDPOINT={API_ENDPOINT} />)}
           </Box>
         </Box>
       ) : (
@@ -417,7 +448,7 @@ const Player = () => {
               {currentCharData ? (
                 <React.Fragment>
                   <Typography variant='h5' my={2}>
-                    {currentCharData.character} Rating: <Box title={currentCharData.rating.toString()} component={"span"}>{Math.round(currentCharData.rating)}</Box> ±<Box title={currentCharData.deviation.toString()} component={"span"}>{Math.round(currentCharData.deviation)}</Box> ({currentCharData.match_count} games)
+                    {currentCharData.character} Last Rating: <Box title={currentCharData.rating.toString()} component={"span"}>{Utils.displayRating(currentCharData.rating)}</Box> ({currentCharData.match_count} games)
                     {currentCharData.top_char !== 0 ? (
                       <Typography variant="char_rank" onMouseDown={(event) => onLinkClick(event, `/top/${currentCharData.char_short}`)} sx={{ cursor: 'pointer' }}>
                         #{currentCharData.top_char} {currentCharData.character}
@@ -428,14 +459,14 @@ const Player = () => {
                   {currentCharData.top_rating.value !== 0 ? (
                     <React.Fragment>
                       <Typography>
-                        Top Rating: <Box title={currentCharData.top_rating.value.toString()} component={"span"}>{Math.round(currentCharData.top_rating.value)}</Box> ±<Box title={currentCharData.top_rating.deviation.toString()} component={"span"}>{Math.round(currentCharData.top_rating.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_rating.timestamp)})
+                        Top Rating: <Box title={currentCharData.top_rating.value.toString()} component={"span"}>{Utils.displayRating(currentCharData.top_rating.value)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_rating.timestamp)})
                       </Typography>
                     </React.Fragment>
                   ) : null}
 
                   {currentCharData.top_defeated.value !== 0.0 ? (
                     <Typography>
-                      Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} onMouseDown={(event) => onLinkClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ±<Box title={currentCharData.top_defeated.deviation.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.deviation)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
+                      Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} onMouseDown={(event) => onLinkClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value.toString()} component={"span"}>{Utils.displayRating(currentCharData.top_defeated.value)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
                     </Typography>
                   ) : null}
 
@@ -450,7 +481,33 @@ const Player = () => {
               ) : null}
               {history ? (
                 <React.Fragment>
-                  <Box mx={3}>
+                  <Box sx={{ display: 'none' }} mx={3} mb={2}>
+                    <Typography variant="h6" gutterBottom>
+                      Match History
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                      <Button 
+                        variant={matchFilter === 'all' ? 'contained' : 'outlined'}
+                        onClick={() => setMatchFilter('all')}
+                        size="small"
+                      >
+                        All Matches
+                      </Button>
+                      <Button 
+                        variant={matchFilter === 'ranked' ? 'contained' : 'outlined'}
+                        onClick={() => setMatchFilter('ranked')}
+                        size="small"
+                      >
+                        Ranked Only
+                      </Button>
+                      <Button 
+                        variant={matchFilter === 'tower' ? 'contained' : 'outlined'}
+                        onClick={() => setMatchFilter('tower')}
+                        size="small"
+                      >
+                        Tower Only
+                      </Button>
+                    </Box>
                     <Button onClick={(event) => onPrev(event)}>Prev</Button>
                     <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
                   </Box>
@@ -466,12 +523,11 @@ const Player = () => {
                           <TableCell align="right">Character</TableCell>
                           <TableCell width="100px" align="right">Rating</TableCell>
                           <TableCell align="right">Result</TableCell>
-                          <TableCell align="right">Odds</TableCell>
                           <TableCell align="right">Change</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {tags && history.map((item, i) => (
+                        {tags && filteredHistory.map((item, i) => (
                           <HistoryRow key={i} item={item} tags={tags[item.opponent_id.toString()]} />
                         ))}
                       </TableBody>
@@ -485,7 +541,7 @@ const Player = () => {
               ) : null}
             </Box>
             {currentCharData ? (
-              <RatingChart player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} latest_rating={currentCharData.rating} />
+              <RatingChart player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short}/>
             ) : null}
             <Matchup player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} />
           </Box>
@@ -501,7 +557,7 @@ const Player = () => {
                   <Box key={i}>
                     <Button variant="text" onMouseDown={(event) => { onLinkClick(event, `/player/${player.id}/${item.char_short}`) }} sx={{ textAlign: 'left', color: 'white' }}>
                       <Typography fontSize={12.5} my={0.3}>
-                        {item.character} {item.rating} ±{item.deviation}<br />({item.match_count} games)
+                        {item.character} {Utils.displayRating(item.rating)}<br />({item.match_count} games)
                       </Typography>
                     </Button>
                     <br />
@@ -510,145 +566,11 @@ const Player = () => {
                 <hr style={{ marginTop: 10 }} />
               </React.Fragment>
             ) : null}
-            {hideClaim ? null : (<ClaimDialog playerId={player_id_checked} API_ENDPOINT={API_ENDPOINT} />)}
           </Box>
         </Box>
       )}
     </React.Fragment>
   );
 };
-
-const ClaimDialog: React.FC<ClaimDialogProps> = ({ playerId, API_ENDPOINT }) => {
-  const [open, setOpen] = useState(false);
-  const [code, setCode] = useState('');
-  const [isPolling, setIsPolling] = useState(false);
-  const [showConfirmButton, setShowConfirmButton] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const counter = useRef(0);
-
-  useEffect(() => {
-    if (isPolling) {
-      timerRef.current = setInterval(() => {
-        pollPlayer(playerId);
-      }, 2000);
-    } else if (timerRef && timerRef.current) {
-      clearInterval(timerRef.current);
-    }
-
-    return () => {
-      if (timerRef && timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    }
-  }, [code, isPolling]);
-
-  const handleClickOpen = async () => {
-
-    //If 'key' is set in localstorage, just redirect to settings
-    if (StorageUtils.getApiKey()) {
-      document.location.href = '/settings';
-      return;
-    }
-
-    if (code === '') {
-      const response = await fetch(API_ENDPOINT + '/claim/' + playerId);
-      if (response.status === 200) {
-        const result = await response.text().then(body => {
-          var parsed = JSONParse(body);
-          return parsed;
-        });
-
-        setCode(result);
-        setShowConfirmButton(true);
-      } else {
-        setCode("Error connecting to GGST, patch? Try again later.");
-      }
-    }
-
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-    setIsPolling(false);
-  };
-
-  function startPolling() {
-    setIsPolling(true);
-  }
-
-  function pollPlayer(playerId: BigInt) {
-    if (counter.current >= 10) {
-      if (timerRef && timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-
-      alert("Code is not matching, please try again.");
-      document.location.reload();
-    }
-
-    const req = new XMLHttpRequest();
-    req.open("GET", `${API_ENDPOINT}/claim/poll/${playerId}`);
-    req.send();
-
-    req.onreadystatechange = (e) => {
-
-      if (req.readyState === 4 && req.status === 200) {
-        const resp = JSON.parse(req.response);
-
-        if (resp !== 'false') {
-          if (timerRef && timerRef.current) {
-            clearInterval(timerRef.current);
-          }
-
-          setTimeout(() => {
-            StorageUtils.setApiKey(resp);
-            document.location.href = '/settings';
-          }, 2000);
-        }
-      } else if (req.readyState === 4 && req.status !== 200) {
-        if (timerRef && timerRef.current) {
-          clearInterval(timerRef.current);
-        }
-
-        alert("Error connecting to GGST, patch? Try again later.");
-        document.location.reload();
-      }
-    }
-
-    counter.current++;
-
-  }
-
-  return (
-    <React.Fragment>
-      <Button variant="outlined" onClick={handleClickOpen}>
-        Claim Profile
-      </Button>
-      <Dialog
-        open={open}
-        onClose={handleClose}
-      >
-        <DialogTitle>Claim profile</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {code}<br /><br /><br />
-            {showConfirmButton ? (
-              <React.Fragment>
-                To confirm that this is your profile, put the above code in your R-Code "free comment" section
-                and close the R-Code so that it saves.<br /><br />
-                Press <Button onClick={startPolling}>THIS</Button> once you've done this.<br /><br />
-                After the profile has been confirmed you can change your R-code comment back to whatever you want.
-              </React.Fragment>
-            ) : null}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-        </DialogActions>
-      </Dialog>
-    </React.Fragment>
-  );
-}
 
 export default Player;

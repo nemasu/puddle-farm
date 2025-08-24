@@ -15,6 +15,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Tag } from './../components/Tag';
 import { PlayerRankResponse } from '../interfaces/API';
 import { JSONParse } from '../utils/JSONParse';
+import { Utils } from '../utils/Utils';
 
 const TopPlayer = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
@@ -66,11 +67,6 @@ const TopPlayer = () => {
           setCharLong(parsed.ranks[0].char_long);
 
           document.title = 'Top ' + parsed.ranks[0].char_long + ' Players | Puddle Farm';
-
-          for (var key in parsed.ranks) {
-            parsed.ranks[key].rating = parsed.ranks[key].rating.toFixed(2);
-            parsed.ranks[key].deviation = parsed.ranks[key].deviation.toFixed(2);
-          }
 
           if (parsed.ranks.length < (count ? count : defaultCount) || parsed.ranks.length === 1000) {
             setShowNext(false);
@@ -160,7 +156,7 @@ const TopPlayer = () => {
                     ))}
                   </TableCell>
                   <TableCell>{player.char_short}</TableCell>
-                  <TableCell><Box component={'span'} title={player.rating.toString()}>{Number(player.rating).toFixed(0)}</Box> <Box component={'span'} title={player.deviation.toString()}>±{Number(player.deviation).toFixed(0)}</Box></TableCell>
+                  <TableCell><Box component={'span'} title={player.rating.toString()}>{Utils.displayRating(player.rating)}</Box></TableCell>
                 </TableRow>
               ))}
             </TableBody>

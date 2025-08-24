@@ -15,18 +15,15 @@ pub struct PlayerGamesResponse {
 #[derive(Serialize)]
 struct PlayerSet {
     timestamp: String,
-    own_rating_value: f32,
-    own_rating_deviation: f32,
+    own_rating_value: i64,
     floor: String,
     opponent_name: String,
     opponent_platform: &'static str,
     opponent_id: i64,
     opponent_character: &'static str,
     opponent_character_short: &'static str,
-    opponent_rating_value: f32,
-    opponent_rating_deviation: f32,
+    opponent_rating_value: i64,
     result_win: bool,
-    odds: f32,
 }
 
 pub async fn handle_get_player_history(
@@ -40,31 +37,19 @@ pub async fn handle_get_player_history(
     };
 
     for game in games {
-        let is_hidden = game.value_a == Some(0.0);
-
         let own_rating_value = if game.id_a == player_id {
-            game.value_a.unwrap()
+            game.value_a
         } else {
-            game.value_b.unwrap()
+            game.value_b
         };
 
-        let own_rating_deviation = if game.id_a == player_id {
-            game.deviation_a.unwrap()
-        } else {
-            game.deviation_b.unwrap()
-        };
-
-        let opponent_id = if is_hidden {
-            0
-        } else if game.id_a == player_id {
+        let opponent_id = if game.id_a == player_id {
             game.id_b
         } else {
             game.id_a
         };
 
-        let opponent_name = if is_hidden {
-            "Hidden".to_string()
-        } else if game.id_a == player_id {
+        let opponent_name = if game.id_a == player_id {
             game.name_b.clone()
         } else {
             game.name_a.clone()
@@ -89,15 +74,9 @@ pub async fn handle_get_player_history(
         };
 
         let opponent_rating_value = if game.id_a == player_id {
-            game.value_b.unwrap()
+            game.value_b
         } else {
-            game.value_a.unwrap()
-        };
-
-        let opponent_rating_deviation = if game.id_a == player_id {
-            game.deviation_b.unwrap()
-        } else {
-            game.deviation_a.unwrap()
+            game.value_a
         };
 
         let timestamp = match game.real_timestamp {
@@ -115,18 +94,9 @@ pub async fn handle_get_player_history(
             false
         };
 
-        let odds = if is_hidden {
-            0.0
-        } else if game.id_a == player_id {
-            game.win_chance.unwrap_or(0.0)
-        } else {
-            1.0 - game.win_chance.unwrap_or(0.0)
-        };
-
         response.history.push(PlayerSet {
             timestamp,
             own_rating_value: own_rating_value,
-            own_rating_deviation: own_rating_deviation,
             floor,
             opponent_name,
             opponent_platform: match opponent_platform {
@@ -139,9 +109,7 @@ pub async fn handle_get_player_history(
             opponent_character,
             opponent_character_short,
             opponent_rating_value: opponent_rating_value,
-            opponent_rating_deviation: opponent_rating_deviation,
             result_win,
-            odds,
         });
 
         if opponent_id != 0 && player_tags.contains_key(&opponent_id) {
@@ -226,7 +194,6 @@ mod tests {
       .await
       .unwrap();
 
-      assert_eq!(response.history[0].odds, 0.3);
       assert_eq!(response.history[0].result_win, true);
     }
 
@@ -240,7 +207,6 @@ mod tests {
       .await
       .unwrap();
 
-      assert_eq!(response.history[0].odds, 0.7);
       assert_eq!(response.history[0].result_win, false);
     }
 
@@ -257,21 +223,6 @@ mod tests {
       assert_eq!(response.history[1].result_win, true);
     }
 
-    #[tokio::test]
-    async fn get_player_history_hidden() {
-
-      let player_id = 1;
-      let (mut games, player_tags) = get_test_player_history_data();
-      games[0].value_a = Some(0.0);
-
-      let response = handle_get_player_history(player_id, games, player_tags)
-      .await
-      .unwrap();
-
-      assert_eq!(response.history[0].opponent_name, "Hidden");
-      assert_eq!(response.history[0].opponent_id, 0);
-    }
-
     fn get_test_player_history_data()
     -> (Vec<models::Game>, HashMap<i64, Vec<(String,String)>>) {
       let games = vec![
@@ -284,15 +235,12 @@ mod tests {
           platform_b: 1,
           char_a: 0,
           char_b: 0,
-          value_a: Some(1000.0),
-          value_b: Some(2000.0),
-          deviation_a: Some(60.0),
-          deviation_b: Some(40.0),
+          value_a: 1000,
+          value_b: 2000,
           timestamp: chrono::DateTime::from_timestamp(0, 0).unwrap().naive_utc(),
           real_timestamp: None,
           game_floor: 1,
           winner: 1,
-          win_chance: Some(0.3),
         },
         models::Game {
           id_a: 1,
@@ -303,15 +251,12 @@ mod tests {
           platform_b: 1,
           char_a: 0,
           char_b: 0,
-          value_a: Some(1500.0),
-          value_b: Some(2000.0),
-          deviation_a: Some(5.0),
-          deviation_b: Some(10.0),
+          value_a: 1500,
+          value_b: 2000,
           timestamp: chrono::DateTime::from_timestamp(0, 0).unwrap().naive_utc(),
           real_timestamp: None,
           game_floor: 1,
           winner: 2,
-          win_chance: Some(0.7),
         },
       ];
 

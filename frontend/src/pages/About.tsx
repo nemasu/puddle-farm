@@ -1,56 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, Checkbox, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, TextField, Typography } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import { Link } from 'react-router-dom';
 import { Tag } from './../components/Tag';
-import { RatingCalculationResponse, Supporter, TagResponse } from '../interfaces/API';
+import { Supporter, TagResponse } from '../interfaces/API';
 import { JSONParse } from '../utils/JSONParse';
 
 const About = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
   const [supporters, setSupporters] = React.useState<Supporter[]>([]);
-
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [ratingData, setRatingData] = useState<RatingCalculationResponse>();
-
-  const [ratingA, setRatingA] = useState(1500.0);
-  const [driftA, setDriftA] = useState(10.0);
-  const [ratingB, setRatingB] = useState(1500.0);
-  const [driftB, setDriftB] = useState(10.0);
-  const [aWins, setAWins] = useState(true);
-
-  const handleClickOpen = () => {
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
-  };
-
-  const fetchRatingData = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_ENDPOINT}/calc_rating?rating_a=${ratingA}&drift_a=${driftA}&rating_b=${ratingB}&drift_b=${driftB}&a_wins=${aWins}`);
-      if (response.status === 200) {
-        const data = await response.json();
-        setRatingData(data);
-      } else {
-        const data = await response.text();
-        alert(data);
-      }
-
-
-    } catch (error) {
-      console.error('Error fetching rating data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCalculate = () => {
-    fetchRatingData();
-  };
 
   useEffect(() => {
     document.title = 'About | Puddle Farm';
@@ -76,7 +34,7 @@ const About = () => {
             What is this?
           </Typography>
           <Typography variant="body1">
-            This website collects replay data for the game <Link to="https://www.guiltygear.com/ggst/en/" target='_blank'>Guilty Gear Strive</Link> and uses it to calculate player ratings and other statistics.<br />
+            This website collects replay data for the game <Link to="https://www.guiltygear.com/ggst/en/" target='_blank'>Guilty Gear Strive</Link> and provides statistics and rankings using the game's official rating system.<br />
             It is not affiliated with Arc System Works or any other company.
           </Typography>
         </Box>
@@ -85,108 +43,8 @@ const About = () => {
             What rating system is used?
           </Typography>
           <Typography variant="body1">
-            The new system used for rating is based on the <Link to="https://en.wikipedia.org/wiki/Bradley%E2%80%93Terry_model" target='_blank'>Bradley-Terry Model</Link>.
-            <Box component={'span'} sx={{ display: 'block' }}>
-              <Button variant="outlined" color="primary" onClick={handleClickOpen}>
-                Open Rating Calculator
-              </Button>
-            </Box>
+            As of recent game updates, this site now uses the official rating system provided by Guilty Gear Strive itself.<br />
           </Typography>
-          <Dialog open={open} onClose={handleClose}>
-            <DialogTitle>Rating Calculator</DialogTitle>
-            <DialogContent>
-              <TextField
-                label="Rating A"
-                type="number"
-                value={ratingA}
-                onChange={(e) => setRatingA(parseFloat(e.target.value))}
-                fullWidth
-                margin="normal"
-              />
-              <TextField
-                label="Drift A"
-                type="number"
-                value={driftA}
-                onChange={(e) => setDriftA(parseFloat(e.target.value))}
-                fullWidth
-                margin="normal"
-              />
-              <TextField
-                label="Rating B"
-                type="number"
-                value={ratingB}
-                onChange={(e) => setRatingB(parseFloat(e.target.value))}
-                fullWidth
-                margin="normal"
-              />
-              <TextField
-                label="Drift B"
-                type="number"
-                value={driftB}
-                onChange={(e) => setDriftB(parseFloat(e.target.value))}
-                fullWidth
-                margin="normal"
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={aWins}
-                    onChange={(e) => setAWins(e.target.checked)}
-                  />
-                }
-                label="A Wins?"
-              />
-              {loading ? (
-                <CircularProgress />
-              ) : (
-                ratingData && (
-                  <Box mt={2}>
-                    <Typography variant="body1">
-                      <strong>New Rating A:</strong> {ratingData.rating_a_new.toFixed(2)}
-                    </Typography>
-                    <Typography variant="body1">
-                      <strong>New Drift A:</strong> {ratingData.drift_a_new.toFixed(2)}
-                    </Typography>
-                    <Typography variant="body1">
-                      <strong>New Rating B:</strong> {ratingData.rating_b_new.toFixed(2)}
-                    </Typography>
-                    <Typography variant="body1">
-                      <strong>New Drift B:</strong> {ratingData.drift_b_new.toFixed(2)}
-                    </Typography>
-                    <Typography variant="body1">
-                      <strong>Win Probability:</strong> {(ratingData.win_prob * 100).toFixed(2)}%
-                    </Typography>
-                  </Box>
-                )
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleClose} color="primary">
-                Close
-              </Button>
-              <Button onClick={handleCalculate} color="primary" variant="outlined">
-                Calculate
-              </Button>
-            </DialogActions>
-          </Dialog>
-        </Box>
-        <Box mb={4}>
-          <Typography variant="h5" sx={{ fontWeight: 'bold', marginBottom: 1 }}>
-            I can't find my profile
-          </Typography>
-          <Typography variant="body1">
-            If you hid your profile on the old site, it is still hidden here, however you need to claim it again.
-            <br />
-            To do so, you can use the old link (or browser history).
-            <br />
-            If you don't have it, the format is:
-          </Typography>
-          <pre>https://puddle.farm/player/YOUR_PLAYER_ID</pre>
-          <Typography variant="body1">
-            Note: The ID does not have to be hexadecimal anymore, you can just use the ID in the bottom-left corner of your R-Code.
-          </Typography>
-          Example:<br />
-          <img style={{ marginTop: '15px' }} src='/r_code.png' alt='R-Code' />
         </Box>
         <Box mb={4}>
           <Typography variant="h5" sx={{ fontWeight: 'bold', marginBottom: 1 }}>

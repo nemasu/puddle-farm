@@ -1,11 +1,5 @@
 // @generated automatically by Diesel CLI.
 
-pub mod sql_types {
-    #[derive(diesel::query_builder::QueryId, Clone, diesel::sql_types::SqlType)]
-    #[diesel(postgres_type(name = "status"))]
-    pub struct Status;
-}
-
 diesel::table! {
     character_ranks (rank, char_id) {
         id -> Int8,
@@ -17,6 +11,7 @@ diesel::table! {
 diesel::table! {
     games (timestamp, id_a, id_b) {
         timestamp -> Timestamp,
+        real_timestamp -> Nullable<Timestamp>,
         id_a -> Int8,
         name_a -> Text,
         char_a -> Int2,
@@ -27,12 +22,8 @@ diesel::table! {
         platform_b -> Int2,
         winner -> Int2,
         game_floor -> Int2,
-        value_a -> Nullable<Float4>,
-        deviation_a -> Nullable<Float4>,
-        value_b -> Nullable<Float4>,
-        deviation_b -> Nullable<Float4>,
-        win_chance -> Nullable<Float4>,
-        real_timestamp -> Nullable<Timestamp>,
+        value_a -> Int8,
+        value_b -> Int8,
     }
 }
 
@@ -55,23 +46,15 @@ diesel::table! {
     player_ratings (id, char_id) {
         id -> Int8,
         char_id -> Int2,
-        wins -> Int4,
-        losses -> Int4,
-        value -> Float4,
-        deviation -> Float4,
-        last_decay -> Timestamp,
+        value -> Int8,
     }
 }
 
 diesel::table! {
-    use diesel::sql_types::*;
-    use super::sql_types::Status;
-
     players (id) {
         id -> Int8,
         name -> Text,
         platform -> Int2,
-        status -> Nullable<Status>,
         api_key -> Nullable<Varchar>,
         rcode_check_code -> Nullable<Varchar>,
     }

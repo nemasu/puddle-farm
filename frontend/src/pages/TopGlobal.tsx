@@ -14,6 +14,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Tag } from "./../components/Tag";
 import { JSONParse } from '../utils/JSONParse';
+import { Utils } from '../utils/Utils';
 
 const TopGlobal = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
@@ -28,7 +29,6 @@ const TopGlobal = () => {
     name: string;
     char_short: string;
     rating: number;
-    deviation: number;
     tags?: { style: React.CSSProperties; tag: string }[];
   }
 
@@ -71,8 +71,6 @@ const TopGlobal = () => {
           var parsed = JSONParse(body);
 
           for (var key in parsed.ranks) {
-            parsed.ranks[key].rating = parsed.ranks[key].rating.toFixed(2);
-            parsed.ranks[key].deviation = parsed.ranks[key].deviation.toFixed(2);
             if (parsed.ranks[key].tags) {
               for (var s in parsed.ranks[key].tags) {
                 parsed.ranks[key].tags[s].style = JSON.parse(parsed.ranks[key].tags[s].style);
@@ -168,7 +166,7 @@ const TopGlobal = () => {
                     ))}
                   </TableCell>
                   <TableCell>{player.char_short}</TableCell>
-                  <TableCell><Box component={'span'} title={String(player.rating)}>{Number(player.rating).toFixed(0)}</Box> <Box component={'span'} title={String(player.deviation)}>±{Number(player.deviation).toFixed(0)}</Box></TableCell>
+                  <TableCell><Box component={'span'} title={String(player.rating)}>{Utils.displayRating(player.rating)}</Box></TableCell>
                 </TableRow>
               ))}
             </TableBody>

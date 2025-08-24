@@ -19,8 +19,7 @@ struct PlayerRankResponse {
     rank: i32,
     id: i64,
     name: String,
-    rating: f32,
-    deviation: f32,
+    rating: i64,
     char_short: String,
     char_long: String,
     tags: Vec<TagResponse>,
@@ -37,7 +36,6 @@ pub async fn get_top(
             id: p.1.id,
             name: p.1.name.clone(),
             rating: p.2.value,
-            deviation: p.2.deviation,
             char_short: CHAR_NAMES[p.0.char_id as usize].0.to_string(),
             char_long: CHAR_NAMES[p.0.char_id as usize].1.to_string(),
             tags: tags
@@ -66,7 +64,6 @@ pub async fn get_top_char(
             id: p.1.id,
             name: p.1.name.clone(),
             rating: p.2.value,
-            deviation: p.2.deviation,
             char_short: CHAR_NAMES[p.0.char_id as usize].0.to_string(),
             char_long: CHAR_NAMES[p.0.char_id as usize].1.to_string(),
             tags: tags

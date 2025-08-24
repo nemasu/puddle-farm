@@ -1,7 +1,6 @@
 import { StorageOptions } from '../interfaces/Storage';
 
 const STORAGE_KEYS = {
-  API_KEY: 'key',
   THEME: 'theme',
   useLocalTime: 'useLocalTime',
   disableRatingColors: 'disableRatingColors',
@@ -46,21 +45,6 @@ const Storage = {
 
 // Utility functions
 const StorageUtils = {
-  // set API key
-  setApiKey: (apiKey: string) => {
-      return Storage.set(STORAGE_KEYS.API_KEY, apiKey);
-  },
-
-  // Get API key
-  getApiKey: () => {
-      return Storage.get(STORAGE_KEYS.API_KEY);
-  },
-
-  // Remove API key
-  removeApiKey: () => {
-      return Storage.remove(STORAGE_KEYS.API_KEY);
-  },
-
   // set theme
   setTheme: (theme: string) => {
       return Storage.set(STORAGE_KEYS.THEME, theme);

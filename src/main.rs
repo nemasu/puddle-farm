@@ -6,13 +6,11 @@ use axum::{extract::State, http::StatusCode, response::Json, routing::get, Route
 use bb8::PooledConnection;
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
 use handlers::common::{Pagination, TagResponse};
-use models::{CharacterRank, GlobalRank, Player, PlayerRating, Status};
-use serde::{Deserialize, Serialize};
+use models::{CharacterRank, GlobalRank, Player};
+use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
-use std::sync::Arc;
 use std::vec;
-use tokio::sync::Mutex;
 use tower_http::cors::{Any, CorsLayer};
 use tracing::{error, warn};
 use tracing_appender::non_blocking::WorkerGuard;
@@ -20,6 +18,8 @@ use tracing_subscriber::layer::SubscriberExt;
 //use diesel::query_dsl::positional_order_dsl::{OrderColumn, PositionalOrderDsl, IntoOrderColumn};
 
 use bb8_redis::{bb8, RedisConnectionManager};
+
+use crate::models::PlayerRating;
 
 type Pool = bb8::Pool<AsyncDieselConnectionManager<AsyncPgConnection>>;
 type RedisPool = bb8::Pool<RedisConnectionManager>;
@@ -31,7 +31,6 @@ type RedisConnection<'a> = PooledConnection<'a, RedisConnectionManager>;
 struct AppState {
     db_pool: Pool,
     redis_pool: RedisPool,
-    toggle_delay: Arc<Mutex<Vec<(i64, String, Status)>>>, //Timestamp, Key, Status
 }
 
 mod db;
@@ -40,7 +39,6 @@ mod handlers;
 mod imdb;
 mod models;
 mod pull;
-mod rating;
 mod requests;
 mod responses;
 mod schema;
@@ -77,6 +75,7 @@ pub const CHAR_NAMES: &[(&str, &str)] = &[
     ("DI", "Dizzy"),
     ("VE", "Venom"),
     ("UN", "Unika"),
+    ("LU", "Lucy"),
 ];
 
 async fn player(
@@ -326,56 +325,16 @@ async fn claim_poll(
     Ok(Json("false".to_string()))
 }
 
-async fn toggle_private(
-    State(pools): State<AppState>,
-    Path(key): Path<String>,
-) -> Result<Json<String>, (StatusCode, String)> {
-    let mut db = pools.db_pool.get().await.unwrap();
-
-    let status = match db::get_player_status_using_key(key.clone(), &mut db).await {
-        Ok(status) => match status {
-            Status::Public => Status::Private,
-            Status::Private => Status::Public,
-            Status::Cheater => Status::Cheater,
-        },
-        Err(_) => {
-            return Ok(Json("Invalid Key".to_string()));
-        }
-    };
-
-    //Add to toggle_delay, if it already exists, do nothing
-    let now = chrono::Utc::now().timestamp();
-    let mut toggle_delay = pools.toggle_delay.lock().await;
-    if !toggle_delay.iter().any(|(_, k, _)| k == &key) {
-        tracing::debug!("Toggling status for key: {} to {:?}", key, status);
-        toggle_delay.push((now + 60, key.clone(), status));
-    }
-
-    Ok(Json("true".to_string()))
-}
-
 #[derive(Serialize)]
 struct SettingsResponse {
     id: i64,
     name: String,
-    status: String,
 }
 async fn settings(
     State(pools): State<AppState>,
     Path(key): Path<String>,
 ) -> Result<Json<SettingsResponse>, (StatusCode, String)> {
     let mut db = pools.db_pool.get().await.unwrap();
-
-    let status = match db::get_player_status_using_key(key.clone(), &mut db).await {
-        Ok(status) => match status {
-            Status::Public => "Not Hidden",
-            Status::Private => "Hidden",
-            Status::Cheater => "Cheater! :O",
-        },
-        Err(_) => {
-            return Err((StatusCode::NOT_FOUND, "Player not found".to_string()));
-        }
-    };
 
     let player_rating = match db::get_player_id_and_name_using_key(key, &mut db).await {
         Ok(player_rating) => player_rating,
@@ -387,7 +346,6 @@ async fn settings(
     Ok(Json(SettingsResponse {
         id: player_rating.0,
         name: player_rating.1,
-        status: status.to_string(),
     }))
 }
 
@@ -396,14 +354,6 @@ async fn alias(
     Path(player_id): Path<i64>,
 ) -> Result<Json<Vec<String>>, (StatusCode, String)> {
     let mut db = pools.db_pool.get().await.unwrap();
-
-    //If player is not Public, return empty
-    match db::get_player_status(player_id, &mut db).await {
-        Ok(_) => {}
-        Err(_) => {
-            return Err((StatusCode::NOT_FOUND, "Player not found".to_string()));
-        }
-    };
 
     let alias: Vec<String> = match db::get_aliases(player_id, &mut db).await {
         Ok(alias) => alias,
@@ -418,7 +368,7 @@ async fn alias(
 #[derive(Serialize)]
 struct RatingsResponse {
     timestamp: String,
-    rating: f32,
+    rating: i64,
 }
 async fn ratings(
     State(pools): State<AppState>,
@@ -444,7 +394,7 @@ async fn ratings(
         .iter()
         .map(|p| RatingsResponse {
             timestamp: p.timestamp.to_string(),
-            rating: p.value.unwrap_or(0.0),
+            rating: p.value,
         })
         .collect();
 
@@ -463,22 +413,6 @@ async fn player_matchups(
     };
 
     let mut db = pools.db_pool.get().await.unwrap();
-
-    // Check if player is public first
-    match db::get_player_status(player_id, &mut db).await {
-        Ok(status) => {
-            if status != Status::Public {
-                return Ok(Json(MatchupCharResponse {
-                    char_short: String::new(),
-                    char_name: String::new(),
-                    matchups: vec![],
-                }));
-            }
-        }
-        Err(_) => {
-            return Err((StatusCode::NOT_FOUND, "Player not found".to_string()));
-        }
-    };
 
     let char_matchup = match db::get_matchups(player_id, char_id, duration, &mut db).await {
         Ok(char_matchup) => char_matchup,
@@ -805,50 +739,7 @@ async fn health(State(pools): State<AppState>) -> Result<String, (StatusCode, St
     Ok("OK".to_string())
 }
 
-#[derive(Deserialize)]
-struct CalcRatingRequest {
-    rating_a: f64,
-    drift_a: f64,
-    rating_b: f64,
-    drift_b: f64,
-    a_wins: bool,
-}
-
-#[derive(Serialize)]
-struct CalcRatingResponse {
-    rating_a_new: f64,
-    drift_a_new: f64,
-    rating_b_new: f64,
-    drift_b_new: f64,
-    win_prob: f64,
-}
-async fn calc_rating(
-    ratings: Query<CalcRatingRequest>,
-) -> Result<Json<CalcRatingResponse>, (StatusCode, String)> {
-    if ratings.drift_a < 1.0 || ratings.drift_b < 1.0 {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            "Drift must be greater than 1".to_string(),
-        ));
-    }
-
-    let (rating_a_new, drift_a_new, rating_b_new, drift_b_new, win_prob) =
-        crate::rating::update_mean_and_variance(
-            ratings.rating_a,
-            ratings.drift_a,
-            ratings.rating_b,
-            ratings.drift_b,
-            ratings.a_wins,
-        );
-
-    Ok(Json(CalcRatingResponse {
-        rating_a_new,
-        drift_a_new,
-        rating_b_new,
-        drift_b_new,
-        win_prob,
-    }))
-}
+// calc_rating endpoint removed - no longer needed with game-provided ratings
 
 async fn avatar(Path(player_id): Path<i64>, State(pools): State<AppState>) -> impl IntoResponse {
     //If token.txt does not exist, return 503
@@ -932,39 +823,6 @@ fn init_tracing(prefix: &str) -> WorkerGuard {
     guard
 }
 
-async fn process_background_tasks(state: &AppState) -> Result<(), Box<dyn std::error::Error>> {
-    // Get connections from the pools
-    let mut db = state.db_pool.get().await?;
-    let mut toggle_delay = state.toggle_delay.lock().await;
-
-    // Process the background tasks
-    let now = chrono::Utc::now().timestamp();
-
-    // Process toggle delay.
-    // Loop through toggle_delay and check if the timestamp has passed 1 minute
-    // If it has, update the player status
-    let mut i = 0;
-    while i < toggle_delay.len() {
-        let (timestamp, key, status) = &toggle_delay[i];
-        if now > *timestamp {
-            match db::set_player_status_using_key(key.clone(), status.clone(), &mut db).await {
-                Ok(_) => {
-                    tracing::debug!("Updated player status for key: {}", key);
-                    toggle_delay.remove(i);
-                }
-                Err(e) => {
-                    error!("Error updating player status: {}", e);
-                    i += 1;
-                }
-            }
-        } else {
-            i += 1;
-        }
-    }
-
-    Ok(())
-}
-
 #[tokio::main(flavor = "multi_thread", worker_threads = 5)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().expect("Failed to read .env file");
@@ -998,7 +856,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState {
         db_pool: pool,
         redis_pool,
-        toggle_delay: Arc::new(Mutex::new(vec![])),
     };
 
     let args = std::env::args().skip(1).collect::<Vec<_>>();
@@ -1026,7 +883,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let state = AppState {
                 db_pool: pool,
                 redis_pool,
-                toggle_delay: Arc::new(Mutex::new(vec![])),
             };
 
             pull::pull_and_update_continuous(state).await;
@@ -1047,26 +903,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // No args, run the web server
             let _guard = init_tracing("web");
 
-            // Clone state for the processing thread
-            let processing_state = state.clone();
-
-            // Spawn background processing thread
-            tokio::spawn(async move {
-                loop {
-                    // Add your processing tasks here
-                    tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
-
-                    match process_background_tasks(&processing_state).await {
-                        Ok(_) => {
-                            tracing::debug!("Background processing completed successfully");
-                        }
-                        Err(e) => {
-                            tracing::error!("Background processing failed: {}", e);
-                        }
-                    }
-                }
-            });
-
             let mut app = Router::new()
                 .route("/api/player/:id", get(player))
                 .route(
@@ -1080,7 +916,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/claim/:player_id", get(claim))
                 .route("/api/claim/poll/:player_id", get(claim_poll))
                 .route("/api/settings/:key", get(settings))
-                .route("/api/toggle_private/:key", get(toggle_private))
                 .route("/api/alias/:player_id", get(alias))
                 .route("/api/ratings/:player_id/:char_id/:duration", get(ratings))
                 .route("/api/stats", get(stats))
@@ -1093,7 +928,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/supporters", get(supporters))
                 .route("/api/distribution", get(distribution))
                 .route("/api/health", get(health))
-                .route("/api/calc_rating", get(calc_rating))
                 .route("/api/avatar/:player_id", get(avatar))
                 .with_state(state);
 
@@ -1103,7 +937,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 app = app.layer(cors);
             }
 
-            let listener = tokio::net::TcpListener::bind("0.0.0.0:8001").await?;
+            let listener = tokio::net::TcpListener::bind(std::env::var("LISTEN_ADDR").expect("LISTEN_ADDR")).await?;
             axum::serve(listener, app).await?;
         }
     }

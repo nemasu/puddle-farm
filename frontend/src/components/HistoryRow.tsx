@@ -71,8 +71,7 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
                     </IconButton>
                   </TableCell>
                   <TableCell sx={{ px: 0, mx: 0 }} width={90}>{formatTimestamp(item.timestamp)}</TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }} width={90}> {item.matches[item.matches.length - 1].own_rating_value.toFixed(0)} ±{item.matches[item.matches.length - 1].own_rating_deviation.toFixed(0)} </TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }}>{(item.odds === 1.0 || item.odds === 0.0) ? '' : (item.odds * 100).toFixed(1) + '%'}</TableCell>
+                  <TableCell sx={{ px: 0, mx: 0 }} width={90}> {Utils.displayRating(item.matches[item.matches.length - 1].own_rating_value)}</TableCell>
                   <TableCell sx={{ px: 0, mx: 0 }}>{item.wins} - {item.losses}</TableCell>
                 </TableRow>
                 <TableRow>
@@ -89,11 +88,11 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
                     </React.Fragment>
                   </TableCell>
                   <TableCell sx={{ px: 0, mx: 0 }}>
-                    {item.matches[item.matches.length - 1].opponent_rating_value.toFixed(0)} ±{item.matches[item.matches.length - 1].opponent_rating_deviation.toFixed(0)}
+                    {Utils.displayRating(item.matches[item.matches.length - 1].opponent_rating_value)}
                   </TableCell>
                   <TableCell sx={{ px: 0, mx: 0 }}>{item.matches[0].opponent_character_short}</TableCell>
                   <TableCell sx={{ px: 0, mx: 0 }}>
-                    {Utils.colorChangeForRating(item.ratingChange.toFixed(1))}
+                    {Utils.colorChangeForRating(item.ratingChange)}
                   </TableCell>
                 </TableRow>
               </React.Fragment>
@@ -125,8 +124,8 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
                           ) : (
                             <React.Fragment>
                               <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
-                              <TableCell align="right">{item.own_rating_value.toFixed(2)} ±{item.own_rating_deviation.toFixed(2)}</TableCell>
-                              <TableCell align="right">{item.opponent_rating_value.toFixed(2)} ±{item.opponent_rating_deviation.toFixed(2)}</TableCell>
+                              <TableCell align="right">{item.own_rating_value}</TableCell>
+                              <TableCell align="right">{item.opponent_rating_value}</TableCell>
                               <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
                               <TableCell align='right'>{item.ratingChange > 0 ? '+' : ''}{item.ratingChange}</TableCell>
                             </React.Fragment>
@@ -158,7 +157,7 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
           {item.opponent_id === BigInt("0") ? (
             <React.Fragment>
               <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
-              <TableCell align="right">{item.floor === '99' ? 'C' : item.floor}</TableCell>
+              <TableCell align="left">{item.floor === '99' ? 'C' : item.floor === '0' ? 'Ranked' : item.floor}</TableCell>
               <TableCell align="right"></TableCell>
               <TableCell><Button component={Link} to={``}>{item.opponent_name}</Button></TableCell>
               <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
@@ -170,8 +169,8 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
           ) : (
             <React.Fragment>
               <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
-              <TableCell align="right">{item.floor === '99' ? 'C' : item.floor}</TableCell>
-              <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].own_rating_value}>{item.matches[item.matches.length - 1].own_rating_value.toFixed(0)}</Box> <Box component={'span'} title={item.matches[item.matches.length - 1].own_rating_deviation}>±{item.matches[item.matches.length - 1].own_rating_deviation.toFixed(0)}</Box></TableCell>
+              <TableCell align="left">{item.floor === '99' ? 'C' : item.floor === '0' ? 'Ranked' : item.floor}</TableCell>
+              <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].own_rating_value}>{Utils.displayRating(item.matches[item.matches.length - 1].own_rating_value)}</Box></TableCell>
               <TableCell >
                 <Button component={Link} to={`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`}>{item.opponent_name}</Button>
                 <React.Fragment>
@@ -185,11 +184,10 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
                 </React.Fragment>
               </TableCell>
               <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
-              <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_value}>{item.matches[item.matches.length - 1].opponent_rating_value.toFixed(0)}</Box> <Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_deviation}>±{item.matches[item.matches.length - 1].opponent_rating_deviation.toFixed(0)}</Box></TableCell>
+              <TableCell align="right"><Box component={'span'} title={item.matches[item.matches.length - 1].opponent_rating_value}>{Utils.displayRating(item.matches[item.matches.length - 1].opponent_rating_value)}</Box></TableCell>
               <TableCell align="right">{item.wins} - {item.losses}</TableCell>
-              <TableCell align="right">{(item.odds === 1.0 || item.odds === 0.0) ? '' : (item.odds * 100).toFixed(1) + '%'}</TableCell>
               <TableCell align="right">
-                {Utils.colorChangeForRating(item.ratingChange.toFixed(1))}
+                {Utils.colorChangeForRating(item.ratingChange)}
               </TableCell>
             </React.Fragment>
           )}
@@ -221,8 +219,8 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
                       ) : (
                         <React.Fragment>
                           <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
-                          <TableCell align="right">{item.own_rating_value.toFixed(2)} ±{item.own_rating_deviation.toFixed(2)}</TableCell>
-                          <TableCell align="right">{item.opponent_rating_value.toFixed(2)} ±{item.opponent_rating_deviation.toFixed(2)}</TableCell>
+                          <TableCell align="right">{Utils.displayRating(item.own_rating_value)}</TableCell>
+                          <TableCell align="right">{Utils.displayRating(item.opponent_rating_value)}</TableCell>
                           <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
                           <TableCell align='right'>{item.ratingChange > 0 ? '+' : ''}{item.ratingChange}</TableCell>
                         </React.Fragment>
