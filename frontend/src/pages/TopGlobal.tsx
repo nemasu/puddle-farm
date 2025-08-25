@@ -166,7 +166,12 @@ const TopGlobal = () => {
                     ))}
                   </TableCell>
                   <TableCell>{player.char_short}</TableCell>
-                  <TableCell><Box component={'span'} title={String(player.rating)}>{Utils.displayRating(player.rating)}</Box></TableCell>
+                  <TableCell>
+                    <Box component={'span'} sx={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                      {Utils.displayRankIcon(player.rating, "32px")}
+                      <Box component={'span'} title={String(player.rating)}>{Utils.displayRating(player.rating)}</Box>
+                    </Box>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

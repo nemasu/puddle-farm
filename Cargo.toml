@@ -17,7 +17,7 @@ lazy_static = "1.5.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing-appender = "0.2.3"
-steamworks = { git = "https://github.com/Noxime/steamworks-rs.git"}
+steamworks = { git = "https://github.com/Noxime/steamworks-rs.git", rev="a0b0f97a"}
 serde = { version = "1", features = ["derive"] }
 serde_derive = "1"
 aes-gcm = "0.10"

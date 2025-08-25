@@ -1,6 +1,6 @@
 
 import { AppBar, Typography, CircularProgress, useTheme, useMediaQuery, Box, Button, Link, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, Fragment } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -261,6 +261,13 @@ const Player = () => {
                       </Tag>
                     )) : null}
                   </Box>
+                  
+                  { currentCharData ? (
+                    <React.Fragment>
+                      {Utils.displayRankIcon(currentCharData.rating, "64px")}
+                    </React.Fragment>
+                  ) : null}
+
                   <Typography variant="playerName">
                     {player.name}
                   </Typography>
@@ -302,6 +309,13 @@ const Player = () => {
                       </Tag>
                     )) : null}
                   </Box>
+
+                  { currentCharData ? (
+                    <React.Fragment>
+                      {Utils.displayRankIcon(currentCharData.rating, "64px")}
+                    </React.Fragment>
+                  ) : null}
+
                   <Typography variant="playerName">
                     {player.name}
                   </Typography>
@@ -340,7 +354,7 @@ const Player = () => {
               {currentCharData ? (
                 <React.Fragment>
                   <Typography variant='h5' my={2}>
-                    {currentCharData.character} Last Rating: <Box title={currentCharData.rating.toString()} component={"span"}>{Utils.displayRating(currentCharData.rating)}</Box>({currentCharData.match_count} games)
+                    {currentCharData.character} Last Rating: <Box title={currentCharData.rating.toString()} component={"span"}>{Utils.displayRating(currentCharData.rating)}</Box> ({currentCharData.match_count} games)
                     {currentCharData.top_char !== 0 ? (
                       <Typography variant="char_rank" onMouseDown={(event) => onLinkClick(event, `/top/${currentCharData.char_short}`)} sx={{ cursor: 'pointer' }}>
                         #{currentCharData.top_char} {currentCharData.character}
@@ -430,7 +444,7 @@ const Player = () => {
                   <Box key={i}>
                     <Button variant="text" onMouseDown={(event) => { onLinkClick(event, `/player/${player.id}/${item.char_short}`) }} sx={{ textAlign: 'left', color: 'white' }}>
                       <Typography fontSize={12.5} my={0.3}>
-                        {item.character} {Utils.displayRating(item.rating)} <br />({item.match_count} games)
+                        {item.character}<br />{Utils.displayRankIcon(item.rating, "32px")}<br />{Utils.displayRating(item.rating)}<br />({item.match_count} games)
                       </Typography>
                     </Button>
                     <br />
@@ -448,14 +462,13 @@ const Player = () => {
               {currentCharData ? (
                 <React.Fragment>
                   <Typography variant='h5' my={2}>
-                    {currentCharData.character} Last Rating: <Box title={currentCharData.rating.toString()} component={"span"}>{Utils.displayRating(currentCharData.rating)}</Box> ({currentCharData.match_count} games)
+                    {currentCharData.character} Rating: <Box title={currentCharData.rating.toString()} component={"span"}>{Utils.displayRating(currentCharData.rating)}</Box> ({currentCharData.match_count} games)
                     {currentCharData.top_char !== 0 ? (
                       <Typography variant="char_rank" onMouseDown={(event) => onLinkClick(event, `/top/${currentCharData.char_short}`)} sx={{ cursor: 'pointer' }}>
                         #{currentCharData.top_char} {currentCharData.character}
                       </Typography>
                     ) : null}
                   </Typography>
-
                   {currentCharData.top_rating.value !== 0 ? (
                     <React.Fragment>
                       <Typography>
@@ -557,7 +570,7 @@ const Player = () => {
                   <Box key={i}>
                     <Button variant="text" onMouseDown={(event) => { onLinkClick(event, `/player/${player.id}/${item.char_short}`) }} sx={{ textAlign: 'left', color: 'white' }}>
                       <Typography fontSize={12.5} my={0.3}>
-                        {item.character} {Utils.displayRating(item.rating)}<br />({item.match_count} games)
+                          {item.character} {Utils.displayRating(item.rating)} <Box sx={{ display: 'inline-flex', position: 'relative', top: '16px', marginLeft: '5px' }}>{Utils.displayRankIcon(item.rating, "32px")}</Box><br />({item.match_count} games)
                       </Typography>
                     </Button>
                     <br />

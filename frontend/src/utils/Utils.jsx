@@ -3,36 +3,36 @@ import { StorageUtils } from "./Storage";
 import React from "react";
 
 const rankThresholds = [
-  { rating: 45000, name: 'Vanquisher', imageName: 'vanq' },
-  { rating: 40800, name: 'Diamond 3', imageName: 'diamond' },
-  { rating: 36000, name: 'Diamond 2', imageName: 'diamond' },
-  { rating: 32400, name: 'Diamond 1', imageName: 'diamond' },
-  { rating: 28400, name: 'Platinum 3', imageName: 'platinum' },
-  { rating: 24400, name: 'Platinum 2', imageName: 'platinum' },
-  { rating: 20400, name: 'Platinum 1', imageName: 'platinum' },
-  { rating: 18000, name: 'Gold 3', imageName: 'gold' },
-  { rating: 15600, name: 'Gold 2', imageName: 'gold' },
-  { rating: 13200, name: 'Gold 1', imageName: 'gold' },
-  { rating: 11000, name: 'Silver 3', imageName: 'silver' },
-  { rating: 8800, name: 'Silver 2', imageName: 'silver' },
-  { rating: 6600, name: 'Silver 1', imageName: 'silver' },
-  { rating: 5400, name: 'Bronze 3', imageName: 'bronze' },
-  { rating: 4200, name: 'Bronze 2', imageName: 'bronze' },
-  { rating: 3000, name: 'Bronze 1', imageName: 'bronze' },
-  { rating: 2000, name: 'Iron 3', imageName: 'iron' },
-  { rating: 1000, name: 'Iron 2', imageName: 'iron' },
-  { rating: 0, name: 'Iron 1', imageName: 'iron' }
+  { rating: 45000, name: 'Vanquisher', spriteX: 3, spriteY: 4 },
+  { rating: 40800, name: 'Diamond 3', spriteX: 2, spriteY: 4 },
+  { rating: 36000, name: 'Diamond 2', spriteX: 1, spriteY: 4 },
+  { rating: 32400, name: 'Diamond 1', spriteX: 0, spriteY: 4 },
+  { rating: 28400, name: 'Platinum 3', spriteX: 3, spriteY: 3 },
+  { rating: 24400, name: 'Platinum 2', spriteX: 2, spriteY: 3 },
+  { rating: 20400, name: 'Platinum 1', spriteX: 1, spriteY: 3 },
+  { rating: 18000, name: 'Gold 3', spriteX: 0, spriteY: 3 },
+  { rating: 15600, name: 'Gold 2', spriteX: 3, spriteY: 2 },
+  { rating: 13200, name: 'Gold 1', spriteX: 2, spriteY: 2 },
+  { rating: 11000, name: 'Silver 3', spriteX: 1, spriteY: 2 },
+  { rating: 8800, name: 'Silver 2', spriteX: 0, spriteY: 2 },
+  { rating: 6600, name: 'Silver 1', spriteX: 3, spriteY: 1 },
+  { rating: 5400, name: 'Bronze 3', spriteX: 2, spriteY: 1 },
+  { rating: 4200, name: 'Bronze 2', spriteX: 1, spriteY: 1 },
+  { rating: 3000, name: 'Bronze 1', spriteX: 0, spriteY: 1 },
+  { rating: 2000, name: 'Iron 3', spriteX: 3, spriteY: 0 },
+  { rating: 1000, name: 'Iron 2', spriteX: 2, spriteY: 0 },
+  { rating: 0, name: 'Iron 1', spriteX: 1, spriteY: 0 }
 ];
 
 const Utils = {
   getRankThresholds: () => rankThresholds,
-  getRankName: (rating) => {
+  getRankSprite: (rating) => {
     for (const threshold of rankThresholds) {
       if (rating >= threshold.rating) {
-        return threshold.imageName;
+        return { x: threshold.spriteX, y: threshold.spriteY };
       }
     }
-    return "iron";
+    return { x: 0, y: 0 };
   },
   getRankDisplayName: (rating) => {
     for (const threshold of rankThresholds) {
@@ -41,6 +41,30 @@ const Utils = {
       }
     }
     return "Iron 1";
+  },
+  displayRankIcon: (rating, size = "50px") => {
+    const threshold = Utils.getRankThresholds().find(t => rating >= t.rating) || Utils.getRankThresholds()[Utils.getRankThresholds().length - 1];
+    const sizeValue = parseInt(size);
+    const scale = sizeValue / 256;
+    const scaledSpriteSheetWidth = 1024 * scale;
+    const scaledSpriteSheetHeight = 2048 * scale;
+    const scaledPositionX = threshold.spriteX * sizeValue;
+    const scaledPositionY = threshold.spriteY * sizeValue;
+    
+    return (
+      <div
+        style={{
+          display: "inline-flex",
+          width: size,
+          height: size,
+          backgroundImage: "url(/RatingIcon.png)",
+          backgroundSize: `${scaledSpriteSheetWidth}px ${scaledSpriteSheetHeight}px`,
+          backgroundPosition: `-${scaledPositionX}px -${scaledPositionY}px`,
+          backgroundRepeat: "no-repeat",
+        }}
+        title={threshold.name}
+      />
+    );
   },
   convertRating: (rating) => {
     if (rating > 10000000) {
@@ -57,8 +81,6 @@ const Utils = {
   },
   displayRating: (rating) => {
     const convertedRating = Utils.convertRating(rating);
-    const rankImageName = Utils.getRankName(rating);
-    const rankDisplayName = Utils.getRankDisplayName(rating);
     var suffix = " RP";
     if (rating > 10000000) {
       suffix = " DR";
@@ -70,12 +92,6 @@ const Utils = {
         sx={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
       >
         {convertedRating} {suffix}
-        <img
-          src={`/${rankImageName}.png`}
-          alt={`${rankDisplayName} rank`}
-          title={rankDisplayName}
-          style={{ width: "20px", height: "20px" }}
-        />
       </Typography>
     );
   },

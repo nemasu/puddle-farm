@@ -92,13 +92,8 @@ const Distribution = () => {
             {Utils.getRankThresholds().map((threshold, index) => (
               <TableRow key={index}>
                 <TableCell>
-                  <img 
-                    src={`/${threshold.imageName}.png`} 
-                    alt={`${threshold.name} rank`} 
-                    title={threshold.name}
-                    style={{ width: '50px', height: '50px' }} 
-                  />
-                  </TableCell>
+                  {Utils.displayRankIcon(threshold.rating, "64px")}
+                </TableCell>
                   <TableCell>{threshold.name}</TableCell>
                 <TableCell>{threshold.rating.toLocaleString()}</TableCell>
               </TableRow>
