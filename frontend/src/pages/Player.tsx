@@ -530,7 +530,6 @@ const Player = () => {
                         <TableRow>
                           <TableCell></TableCell>
                           <TableCell width="170px">Timestamp</TableCell>
-                          <TableCell>Floor</TableCell>
                           <TableCell width="120px" align="right">Rating</TableCell>
                           <TableCell>Opponent</TableCell>
                           <TableCell align="right">Character</TableCell>

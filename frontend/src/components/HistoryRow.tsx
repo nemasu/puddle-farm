@@ -160,7 +160,6 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
           {item.opponent_id === BigInt("0") ? (
             <React.Fragment>
               <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
-              <TableCell align="left">{item.floor === '99' ? 'C' : item.floor === '0' ? 'Ranked' : item.floor}</TableCell>
               <TableCell align="right"></TableCell>
               <TableCell><Button component={Link} to={``}>{item.opponent_name}</Button></TableCell>
               <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
@@ -172,7 +171,6 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
           ) : (
             <React.Fragment>
               <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
-              <TableCell align="left">{item.floor === '99' ? 'C' : item.floor === '0' ? 'Ranked' : item.floor}</TableCell>
               <TableCell align="right"><Box component={'span'}>{Utils.displayRating(item.matches[item.matches.length - 1].own_rating_value)}</Box></TableCell>
               <TableCell >
                 <Button component={Link} to={`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`}>{item.opponent_name}</Button>
