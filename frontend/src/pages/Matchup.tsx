@@ -191,10 +191,9 @@ const Matchup = () => {
           <Typography variant="body1">
             Timeframe is the past month.<br />
             Win rates are calculated by the number of wins divided by the total number of games played.<br />
-            Both characters need to have a deviation of under 30 for the matchup to be included.
           </Typography>
           {matchup && matchup.data_all && <MatchupTable data={matchup.data_all} title="All Players" />}
-          {matchup && matchup.data_1700 && <MatchupTable data={matchup.data_1700} title="1700+ Players" />}
+          {matchup && matchup.data_vanq && <MatchupTable data={matchup.data_vanq} title="Vanquisher Players" />}
         </Paper>
         <Typography marginTop={5}>Statistics are updated once a day.</Typography>
         {matchup ? (

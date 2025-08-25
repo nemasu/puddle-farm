@@ -4,6 +4,28 @@ import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 import { DistributionResponse, DistributionResult } from '../interfaces/API';
 import { Utils } from './../utils/Utils';
 
+const getRankName = (rating: number): string => {
+  if (rating >= 45000) return 'Vanquisher';
+  if (rating >= 40800) return 'Diamond 3';
+  if (rating >= 36000) return 'Diamond 2';
+  if (rating >= 32400) return 'Diamond 1';
+  if (rating >= 28400) return 'Platinum 3';
+  if (rating >= 24400) return 'Platinum 2';
+  if (rating >= 20400) return 'Platinum 1';
+  if (rating >= 18000) return 'Gold 3';
+  if (rating >= 15600) return 'Gold 2';
+  if (rating >= 13200) return 'Gold 1';
+  if (rating >= 11000) return 'Silver 3';
+  if (rating >= 8800) return 'Silver 2';
+  if (rating >= 6600) return 'Silver 1';
+  if (rating >= 5400) return 'Bronze 3';
+  if (rating >= 4200) return 'Bronze 2';
+  if (rating >= 3000) return 'Bronze 1';
+  if (rating >= 2000) return 'Iron 3';
+  if (rating >= 1000) return 'Iron 2';
+  return 'Iron 1';
+};
+
 const Distribution = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
@@ -34,45 +56,19 @@ const Distribution = () => {
         />
         : null
       }
-      <Typography variant="h6" gutterBottom>
-        Floor
-      </Typography>
-      <Typography variant="body1" sx={{mb: 4}}>
-        This table shows the distribution of games across different floors for the past month.
-      </Typography>
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Floor</TableCell>
-              <TableCell>Game Count</TableCell>
-              <TableCell>Percentage</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {distribution && distribution.data.distribution_floor.map((row: number[], index: number) => (
-              <TableRow key={index}>
-                <TableCell>{row[0] == 99 ? 'Celestial' : row[0]}</TableCell>
-                <TableCell>{row[1]}</TableCell>
-                <TableCell>{(row[1] / distribution.data.one_month_players).toFixed(2)}%</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      
 
       <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-        Rating
+        Rank
       </Typography>
       <Typography variant="body1" sx={{mb: 4}}>
-        This table shows the current distribution of active players (&lt;30 drift) across different ratings.
+        This table shows the current distribution of players across different ranks.
       </Typography>
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>From</TableCell>
-              <TableCell>To</TableCell>
+              <TableCell>Rank</TableCell>
               <TableCell>Count</TableCell>
               <TableCell>Percentage</TableCell>
               <TableCell>Percentile</TableCell>
@@ -81,8 +77,7 @@ const Distribution = () => {
           <TableBody>
             {distribution && distribution.data.distribution_rating.map((row: DistributionResult, index: number) => (
               <TableRow key={index}>
-                <TableCell>{row.lower_bound}</TableCell>
-                <TableCell>{row.upper_bound}</TableCell>
+                <TableCell>{getRankName(row.lower_bound)}</TableCell>
                 <TableCell>{row.count}</TableCell>
                 <TableCell>{row.percentage.toFixed(2)}%</TableCell>
                 <TableCell>{row.percentile.toFixed(2)}%</TableCell>

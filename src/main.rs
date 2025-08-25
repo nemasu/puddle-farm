@@ -541,7 +541,7 @@ async fn popularity(
 struct MatchupResponse {
     last_update: String,
     data_all: Vec<MatchupCharResponse>,
-    data_1700: Vec<MatchupCharResponse>,
+    data_vanq: Vec<MatchupCharResponse>,
 }
 #[derive(Serialize)]
 struct MatchupCharResponse {
@@ -577,10 +577,10 @@ async fn matchups(
         }
     };
 
-    let data_1700 = match matchups.matchups.get("matchup_1700") {
+    let data_vanq = match matchups.matchups.get("matchup_vanq") {
         Some(data) => data,
         None => {
-            return Err((StatusCode::NOT_FOUND, "Matchup 1700 not found".to_string()));
+            return Err((StatusCode::NOT_FOUND, "Matchup vanq not found".to_string()));
         }
     };
 
@@ -604,7 +604,7 @@ async fn matchups(
         })
         .collect();
 
-    let data_1700: Vec<MatchupCharResponse> = data_1700
+    let data_vanq: Vec<MatchupCharResponse> = data_vanq
         .iter()
         .map(|m| MatchupCharResponse {
             char_name: m.char_name.clone(),
@@ -625,7 +625,7 @@ async fn matchups(
     Ok(Json(MatchupResponse {
         last_update,
         data_all,
-        data_1700,
+        data_vanq,
     }))
 }
 
@@ -684,7 +684,6 @@ struct DistributionResponse {
 }
 #[derive(Serialize)]
 struct DistributionEntry {
-    distribution_floor: Vec<Vec<i64>>,
     one_month_players: i64,
     distribution_rating: Vec<crate::pull::DistributionResult>,
 }

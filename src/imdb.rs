@@ -167,7 +167,7 @@ pub struct Matchups {
     pub matchups: HashMap<String, Vec<MatchupChar>>,
 }
 pub async fn get_matchups(redis: &mut crate::RedisConnection<'_>) -> Result<Matchups, String> {
-    let prefixes = vec!["matchup", "matchup_1700"];
+    let prefixes = vec!["matchup", "matchup_vanq"];
     let mut matchups: HashMap<String, Vec<MatchupChar>> = HashMap::new();
 
     for prefix in prefixes {
@@ -186,17 +186,7 @@ pub async fn get_matchups(redis: &mut crate::RedisConnection<'_>) -> Result<Matc
 pub async fn get_distribution(
     redis: &mut crate::RedisConnection<'_>,
 ) -> Result<(String, DistributionEntry), String> {
-    let distribution_floor = match get_string("distribution_floor", redis).await {
-        Ok(df) => df,
-        Err(_) => {
-            return Err("Distribution not found".to_string());
-        }
-    };
-
     let distribution_rating = get_string("distribution_rating", redis).await?;
-
-    //Deserialize distribution_floor
-    let distribution_floor: Vec<Vec<i64>> = serde_json::from_str(&distribution_floor).unwrap();
 
     //Deserialize distribution_rating
     let distribution_rating: Vec<crate::pull::DistributionResult> =
@@ -210,7 +200,6 @@ pub async fn get_distribution(
     Ok((
         timestamp,
         DistributionEntry {
-            distribution_floor,
             distribution_rating,
             one_month_players,
         },

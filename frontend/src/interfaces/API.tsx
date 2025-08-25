@@ -129,7 +129,7 @@ export interface PopularityResultChar {
 export interface MatchupResponse {
   last_update: string; // Timestamp of the last update
   data_all: MatchupCharResponse[]; // Matchup data for all ranks
-  data_1700: MatchupCharResponse[]; // Matchup data for ranks 1700 and above
+  data_vanq: MatchupCharResponse[]; // Matchup data for Vanquisher players
 }
 
 export interface MatchupCharResponse {
@@ -170,8 +170,6 @@ export interface DistributionResult {
 }
 
 export interface DistributionEntry {
-  /** Distribution floor data */
-  distribution_floor: number[][];
   /** Player count for past month */
   one_month_players: number;
   /** Distribution rating data */

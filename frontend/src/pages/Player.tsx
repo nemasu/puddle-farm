@@ -350,13 +350,13 @@ const Player = () => {
                   {currentCharData.top_rating.value !== 0 ? (
                     <React.Fragment>
                       <Typography>
-                        Top Rating: <Box title={currentCharData.top_rating.value.toString()} component={"span"}>{Math.round(currentCharData.top_rating.value)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_rating.timestamp)})
+                        Top Rating: <Box title={currentCharData.top_rating.value.toString()} component={"span"}>{Utils.displayRating(currentCharData.top_rating.value)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_rating.timestamp)})
                       </Typography>
                     </React.Fragment>
                   ) : null}
                   {currentCharData.top_defeated.value !== 0.0 ? (
                     <Typography>
-                      Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} onMouseDown={(event) => onLinkClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value.toString()} component={"span"}>{Math.round(currentCharData.top_defeated.value)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
+                      Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} onMouseDown={(event) => onLinkClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box title={currentCharData.top_defeated.value.toString()} component={"span"}>{Utils.displayRating(currentCharData.top_defeated.value)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
                     </Typography>
                   ) : null}
 

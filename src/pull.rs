@@ -293,8 +293,9 @@ async fn update_distribution(
     let distribution_results = diesel::sql_query(
         "
         WITH buckets AS (
-            SELECT generate_series(-500, 2500, 100) AS lower_bound,
-                  generate_series(-400, 2600, 100) AS upper_bound
+            SELECT
+              unnest(ARRAY[0,    1000, 2000, 3000, 4200, 5400, 6600, 8800,  11000, 13200, 15600, 18000, 20400, 24400, 28400, 32400, 36600, 40800, 45000]) AS lower_bound,
+              unnest(ARRAY[1000, 2000, 3000, 4200, 5400, 6600, 8800, 11000, 13200, 15600, 18000, 20400, 24400, 28400, 32400, 36600, 40800, 45000, 200000000]) AS upper_bound
         ),
         bucket_counts AS (  -- CTE to count values in each bucket
             SELECT 
@@ -336,24 +337,6 @@ async fn update_distribution(
         .query_async::<String>(&mut **redis_connection)
         .await
         .expect("Error setting distribution");
-
-    let floor_distribution = schema::games::table
-        .filter(
-            schema::games::timestamp
-                .gt(chrono::Utc::now().naive_utc() - chrono::Duration::days(30)),
-        )
-        .group_by(schema::games::game_floor)
-        .select((schema::games::game_floor, count_star()))
-        .get_results::<(i16, i64)>(conn)
-        .await
-        .expect("Error loading games");
-
-    redis::cmd("SET")
-        .arg("distribution_floor")
-        .arg(serde_json::to_string(&floor_distribution).unwrap())
-        .query_async::<String>(&mut **redis_connection)
-        .await
-        .expect("Error setting floor_distribution");
 
     info!("Updating distribution - Done");
     Ok(())
@@ -461,8 +444,8 @@ async fn update_matchups(
                 WHERE char_a = $1
                 AND timestamp > now() - interval '1 month'
                 AND game_floor = 0  -- Only ranked matches
-                AND value_a > 1700
-                AND value_b > 1700
+                AND value_a > 10000000
+                AND value_b > 10000000
                 UNION ALL
                 SELECT 
                     char_a as opponent_char, 
@@ -472,8 +455,8 @@ async fn update_matchups(
                 WHERE char_b = $1
                 AND timestamp > now() - interval '1 month'
                 AND game_floor = 0  -- Only ranked matches
-                AND value_a > 1700
-                AND value_b > 1700
+                AND value_a > 10000000
+                AND value_b > 10000000
             ) as combined_results
             GROUP BY opponent_char
             ORDER BY opponent_char;
@@ -492,7 +475,7 @@ async fn update_matchups(
             let char_id = char_id as usize;
 
             redis::cmd("SET")
-                .arg(format!("matchup_1700_{}", char_id))
+                .arg(format!("matchup_vanq_{}", char_id))
                 .arg(serde_json::to_string(&matchups).unwrap())
                 .query_async::<String>(&mut **redis_connection)
                 .await

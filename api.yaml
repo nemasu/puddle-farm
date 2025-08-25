@@ -796,7 +796,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MatchupCharResponse'
-        data_1700:
+        data_vanq:
           type: array
           items:
             $ref: '#/components/schemas/MatchupCharResponse'
