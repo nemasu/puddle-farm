@@ -13,6 +13,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { PlayerSearchResponse } from '../interfaces/API';
 import { JSONParse } from '../utils/JSONParse';
+import { Utils } from '../utils/Utils';
 
 const Search = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
@@ -93,7 +94,7 @@ const Search = () => {
                 <TableRow key={index}>
                   <TableCell><Button component={Link} to={`/player/${player.id}/${player.char_short}`}>{player.name}</Button></TableCell>
                   <TableCell>{player.char_short}</TableCell>
-                  <TableCell><Box component={'span'} title={player.rating.toString()}>{Number(player.rating).toFixed(0)}</Box></TableCell>
+                  <TableCell><Box component={'span'} title={player.rating.toString()}>{Utils.displayRating(player.rating)}</Box></TableCell>
                 </TableRow>
               ))}
             </TableBody>

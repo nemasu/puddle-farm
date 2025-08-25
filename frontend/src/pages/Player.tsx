@@ -518,10 +518,10 @@ const Player = () => {
                           <TableCell></TableCell>
                           <TableCell width="170px">Timestamp</TableCell>
                           <TableCell>Floor</TableCell>
-                          <TableCell width="100px" align="right">Rating</TableCell>
+                          <TableCell width="120px" align="right">Rating</TableCell>
                           <TableCell>Opponent</TableCell>
                           <TableCell align="right">Character</TableCell>
-                          <TableCell width="100px" align="right">Rating</TableCell>
+                          <TableCell width="120px" align="right">Rating</TableCell>
                           <TableCell align="right">Result</TableCell>
                           <TableCell align="right">Change</TableCell>
                         </TableRow>

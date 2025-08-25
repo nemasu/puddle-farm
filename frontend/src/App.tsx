@@ -81,6 +81,10 @@ const App = () => {
       <Box sx={{ minHeight: 100, textAlign: 'center' }}>
         <Button component={Link} href="/terms">Terms & Privacy</Button>
       </Box>
+
+      <Box sx={{ textAlign: 'center', pb: 2, fontSize: '0.75rem', color: 'text.secondary' }}>
+        This site is not endorsed by or affiliated with Arc System Works.
+      </Box>
     </ThemeManager>
   );
 };
