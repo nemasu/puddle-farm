@@ -21,7 +21,8 @@ const rankThresholds = [
   { rating: 3000, name: 'Bronze 1', spriteX: 0, spriteY: 1 },
   { rating: 2000, name: 'Iron 3', spriteX: 3, spriteY: 0 },
   { rating: 1000, name: 'Iron 2', spriteX: 2, spriteY: 0 },
-  { rating: 0, name: 'Iron 1', spriteX: 1, spriteY: 0 }
+  { rating: 1, name: 'Iron 1', spriteX: 1, spriteY: 0 },
+  { rating: 0, name: 'Placement', spriteX: 0, spriteY: 0 }
 ];
 
 const Utils = {
@@ -56,6 +57,7 @@ const Utils = {
         style={{
           display: "inline-flex",
           width: size,
+          minWidth: size,
           height: size,
           backgroundImage: "url(/RatingIcon.png)",
           backgroundSize: `${scaledSpriteSheetWidth}px ${scaledSpriteSheetHeight}px`,

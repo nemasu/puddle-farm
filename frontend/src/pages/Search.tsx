@@ -94,7 +94,10 @@ const Search = () => {
                 <TableRow key={index}>
                   <TableCell><Button component={Link} to={`/player/${player.id}/${player.char_short}`}>{player.name}</Button></TableCell>
                   <TableCell>{player.char_short}</TableCell>
-                  <TableCell><Box component={'span'} title={player.rating.toString()}>{Utils.displayRating(player.rating)}</Box></TableCell>
+                  <TableCell>
+                    {Utils.displayRankIcon(player.rating, "32px")}
+                    <Box component={'span'}>{Utils.displayRating(player.rating)}</Box>
+                    </TableCell>
                 </TableRow>
               ))}
             </TableBody>
