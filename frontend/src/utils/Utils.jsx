@@ -41,7 +41,7 @@ const Utils = {
         return threshold.name;
       }
     }
-    return "Iron 1";
+    return "Placement";
   },
   displayRankIcon: (rating, size = "50px") => {
     const threshold = Utils.getRankThresholds().find(t => rating >= t.rating) || Utils.getRankThresholds()[Utils.getRankThresholds().length - 1];
