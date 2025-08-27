@@ -17,7 +17,7 @@ It is currently being hosted at [Puddle.farm](https://puddle.farm)
 - Rocket 0.5 => Axum
 - Sqlite3 => Postgres with Diesel ORM
 - Handlebars (the templated frontend) => React
-- Rating algorithm
+- Tracks official rating.
 - Redis for temporary data.
 
 
