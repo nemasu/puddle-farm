@@ -146,14 +146,29 @@ async fn get_matchup(
         let matchup = MatchupChar {
             char_name,
             char_short,
-            matchups: matchups_data
+            matchups: CHAR_NAMES
                 .iter()
                 .enumerate()
-                .map(|(i, m)| MatchupEntry {
-                    char_name: CHAR_NAMES[i].1.to_string(),
-                    char_short: CHAR_NAMES[i].0.to_string(),
-                    wins: m.wins,
-                    total_games: m.total_games,
+                .map(|(i, char_info)| {
+                    // Look for an entry in matchups_data for this character index
+                    let matchup_entry = matchups_data
+                        .iter()
+                        .find(|m| m.opponent_char as usize == i);
+                    
+                    match matchup_entry {
+                        Some(m) => MatchupEntry {
+                            char_name: char_info.1.to_string(),
+                            char_short: char_info.0.to_string(),
+                            wins: m.wins,
+                            total_games: m.total_games,
+                        },
+                        None => MatchupEntry {
+                            char_name: char_info.1.to_string(),
+                            char_short: char_info.0.to_string(),
+                            wins: 0,
+                            total_games: 0,
+                        },
+                    }
                 })
                 .collect(),
         };

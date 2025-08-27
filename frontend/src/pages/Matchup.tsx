@@ -123,7 +123,7 @@ const MatchupTable = ({ data, title }: { data: MatchupCharResponse[], title: str
                       backgroundColor: hoveredRow === rowIndex && hoveredCol === colIndex ? 'grey' : 'inherit'
                     }}
                   >
-                    {Utils.colorChangeForPercent(((matchup.wins / matchup.total_games) * 100).toFixed(2))}
+                    {matchup.total_games > 0 ? Utils.colorChangeForPercent(((matchup.wins / matchup.total_games) * 100).toFixed(2)) : 'N/A'}
                   </TableCell>
                 ))}
               </TableRow>
