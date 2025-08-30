@@ -36,9 +36,11 @@ const Distribution = () => {
 
   const [distribution, setDistribution] = React.useState<DistributionResponse>();
   const [chartData, setChartData] = React.useState<any>(null);
+  const chartRef = React.useRef<any>(null);
 
   const chartOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
         display: false,
@@ -109,6 +111,17 @@ const Distribution = () => {
 
   }, [API_ENDPOINT]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (chartRef.current) {
+        chartRef.current.resize();
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <Box m={5} sx={{maxWidth: '700px'}}>
       {loading ?
@@ -130,8 +143,8 @@ const Distribution = () => {
       </Typography>
       
       {chartData && Bar && (
-        <Box sx={{ mb: 4, maxHeight: '400px' }}>
-          <Bar options={chartOptions} data={chartData} />
+        <Box sx={{ mb: 4, height: '350px', minWidth: '300px', width: '100%' }}>
+          <Bar ref={chartRef} options={chartOptions} data={chartData} />
         </Box>
       )}
 
