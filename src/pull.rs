@@ -306,21 +306,29 @@ async fn update_distribution(
             LEFT JOIN buckets b ON t.value >= b.lower_bound AND t.value < b.upper_bound
             GROUP BY b.lower_bound, b.upper_bound
         ),
-        percentiles AS ( -- CTE to calculate cumulative percentage
+        percentiles AS ( -- CTE to calculate cumulative percentage (excluding placement from percentile)
             SELECT 
                 lower_bound,
                 upper_bound,
                 bucket_count,
                 SUM(bucket_count) OVER (ORDER BY lower_bound) as cumulative_sum,
-                SUM(bucket_count) OVER () as total_count
+                SUM(bucket_count) OVER () as total_count,
+                SUM(CASE WHEN upper_bound != 1 THEN bucket_count ELSE 0 END) OVER (ORDER BY lower_bound) as cumulative_sum_ranked_only,
+                SUM(bucket_count) FILTER (WHERE upper_bound != 1) OVER () as total_count_excluding_placement
             FROM bucket_counts        
         )
         SELECT 
             p.lower_bound,
             p.upper_bound,
             p.bucket_count AS count,
-            CAST(ROUND((p.bucket_count * 100.0 / sum(p.bucket_count) OVER ()), 2) AS FLOAT) AS percentage,
-            CAST(ROUND((p.cumulative_sum * 100.0 / p.total_count), 2) AS FLOAT) AS percentile
+            CASE 
+                WHEN p.upper_bound = 1 THEN CAST(ROUND((p.bucket_count * 100.0 / p.total_count), 2) AS FLOAT)  -- Placement percentage includes all players
+                ELSE CAST(ROUND((p.bucket_count * 100.0 / p.total_count_excluding_placement), 2) AS FLOAT)  -- Ranked percentage excludes placement
+            END AS percentage,
+            CASE 
+                WHEN p.upper_bound = 1 THEN 0.0  -- Set percentile to 0 for placement
+                ELSE CAST(ROUND((p.cumulative_sum_ranked_only * 100.0 / p.total_count_excluding_placement), 2) AS FLOAT)
+            END AS percentile
         FROM percentiles p
         ORDER BY p.lower_bound;
         ",
