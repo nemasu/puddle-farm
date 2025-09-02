@@ -48,6 +48,17 @@ const About = () => {
         </Box>
         <Box mb={4}>
           <Typography variant="h5" sx={{ fontWeight: 'bold', marginBottom: 1 }}>
+            Rating Sync
+          </Typography>
+          <Typography variant="body1">
+            Because we can't predict the new rating after a match result, a rating sync feature was added.<br />
+            Look for the refresh icon (🔄) next to your rating on your player page.<br />
+            It's recommended to use this feature after you're done for the day to ensure your rating is up to date.<br />
+            <strong>Note:</strong> Rating sync is limited to once per minute.
+          </Typography>
+        </Box>
+        <Box mb={4}>
+          <Typography variant="h5" sx={{ fontWeight: 'bold', marginBottom: 1 }}>
             I have a suggestion/question.
           </Typography>
           <Typography variant="body1">

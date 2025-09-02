@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use bb8_redis::redis;
 use chrono::NaiveDateTime;
+use tracing::warn;
 
 use crate::{DistributionEntry, CHAR_NAMES};
 
@@ -305,5 +306,45 @@ pub async fn set_avatar(
     {
         Ok(_) => Ok(()),
         Err(_) => Err("Failed to set avatar".to_string()),
+    }
+}
+
+pub async fn check_rating_sync_rate_limit(
+    player_id: i64,
+    redis: &mut crate::RedisConnection<'_>,
+) -> Result<bool, String> {
+    let rate_limit_key = format!("rating_sync:{}", player_id);
+
+    match redis::cmd("EXISTS")
+        .arg(&rate_limit_key)
+        .query_async::<i32>(&mut **redis)
+        .await
+    {
+        Ok(exists) => Ok(exists == 1),
+        Err(_) => {
+            warn!("Failed to check rate limit for player {}", player_id);
+            Ok(false) // Allow on Redis error
+        }
+    }
+}
+
+pub async fn set_rating_sync_rate_limit(
+    player_id: i64,
+    redis: &mut crate::RedisConnection<'_>,
+) -> Result<(), String> {
+    let rate_limit_key = format!("rating_sync:{}", player_id);
+
+    match redis::cmd("SETEX")
+        .arg(&rate_limit_key)
+        .arg(60)
+        .arg("1")
+        .query_async::<()>(&mut **redis)
+        .await
+    {
+        Ok(_) => Ok(()),
+        Err(_) => {
+            warn!("Failed to set rate limit for player {}", player_id);
+            Err("Failed to set rate limit".to_string())
+        }
     }
 }

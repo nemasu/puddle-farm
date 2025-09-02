@@ -12,7 +12,7 @@ use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
 use std::vec;
 use tower_http::cors::{Any, CorsLayer};
-use tracing::{error, warn};
+use tracing::warn;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::layer::SubscriberExt;
 //use diesel::query_dsl::positional_order_dsl::{OrderColumn, PositionalOrderDsl, IntoOrderColumn};
@@ -239,22 +239,7 @@ async fn player_search(
     }
 }
 
-fn generate_code() -> String {
-    use rand::Rng;
-    const CHARSET: &[u8] = b"ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz0123456789";
-    const STR_LEN: usize = 8;
-    let mut rng = rand::thread_rng();
-
-    let password: String = (0..STR_LEN)
-        .map(|_| {
-            let idx = rng.gen_range(0..CHARSET.len());
-            CHARSET[idx] as char
-        })
-        .collect();
-    password
-}
-
-async fn claim(
+async fn rating_sync (
     State(pools): State<AppState>,
     Path(player_id): Path<i64>,
 ) -> Result<Json<String>, (StatusCode, String)> {
@@ -265,64 +250,51 @@ async fn claim(
         ));
     }
 
-    let mut db = pools.db_pool.get().await.unwrap();
+    let mut redis = pools.redis_pool.get().await.unwrap();
 
-    let rcode_check_code = generate_code();
-
-    let updated_row_count = match db::set_claim_code(player_id, &rcode_check_code, &mut db).await {
-        Ok(updated_row_count) => updated_row_count,
-        Err(e) => return Err((StatusCode::NOT_FOUND, e)),
-    };
-
-    if !updated_row_count {
-        return Err((StatusCode::NOT_FOUND, "Player not found".to_string()));
-    }
-
-    Ok(Json(rcode_check_code))
-}
-
-async fn claim_poll(
-    State(pools): State<AppState>,
-    Path(player_id): Path<i64>,
-) -> Result<Json<String>, (StatusCode, String)> {
-    if !std::fs::exists("token.txt").unwrap_or(false) {
-        return Err((
-            StatusCode::NOT_FOUND,
-            "GGST is not connected, patch?".to_string(),
-        ));
-    }
-
-    let mut db = pools.db_pool.get().await.unwrap();
-
-    let code = match db::get_claim_code(player_id, &mut db).await {
-        Ok(code) => code,
+    // Check if player has synced in the last 60 seconds
+    match imdb::check_rating_sync_rate_limit(player_id, &mut redis).await {
+        Ok(true) => {
+            return Err((
+                StatusCode::TOO_MANY_REQUESTS,
+                "Rating sync is limited to once per minute".to_string(),
+            ));
+        },
+        Ok(false) => {}, // Not rate limited, proceed
         Err(_) => {
-            return Err((StatusCode::NOT_FOUND, "Error looking up code".to_string()));
+            // Allow on error (logged in imdb function)
         }
-    };
-
-    let json = ggst_api::get_player_stats(player_id.to_string()).await;
-    let lookup = format!("PublicComment\":\"{code}");
-
-    let found = match json {
-        Ok(json) => json.contains(&lookup),
-        Err(er) => {
-            error!("error {}", er);
-            false
-        }
-    };
-
-    if found {
-        let player_api_key = match db::get_player_api_key(player_id, &mut db).await {
-            Ok(key) => key,
-            Err(e) => {
-                return Err((StatusCode::NOT_FOUND, e));
-            }
-        };
-        return Ok(Json(player_api_key));
     }
 
-    Ok(Json("false".to_string()))
+    // Set rate limit key with 60 second expiry
+    let _ = imdb::set_rating_sync_rate_limit(player_id, &mut redis).await;
+
+    let mut db = pools.db_pool.get().await.unwrap();
+
+    let json_response = match ggst_api::get_player_stats(player_id.to_string()).await {
+        Ok(json) => json,
+        Err(e) => {
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to get player stats: {}", e),
+            ));
+        }
+    };
+
+    match handlers::rating_sync::parse_player_stats_and_update_ratings(player_id, &json_response, &mut db).await {
+        Ok(updated_ratings) => {
+            if updated_ratings.is_empty() {
+                Ok(Json("No ratings to update".to_string()))
+            } else {
+                let count = updated_ratings.len();
+                Ok(Json(format!("Updated {} character ratings", count)))
+            }
+        },
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to update ratings: {}", e),
+        )),
+    }
 }
 
 #[derive(Serialize)]
@@ -912,8 +884,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/top_char/:char_id", get(top_char))
                 .route("/api/characters", get(characters))
                 .route("/api/player/search", get(player_search))
-                .route("/api/claim/:player_id", get(claim))
-                .route("/api/claim/poll/:player_id", get(claim_poll))
+                .route("/api/rating_sync/:player_id", get(rating_sync))
                 .route("/api/settings/:key", get(settings))
                 .route("/api/alias/:player_id", get(alias))
                 .route("/api/ratings/:player_id/:char_id/:duration", get(ratings))

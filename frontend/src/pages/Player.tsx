@@ -1,5 +1,6 @@
 
-import { AppBar, Typography, CircularProgress, useTheme, useMediaQuery, Box, Button, Link, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
+import { AppBar, Typography, CircularProgress, useTheme, useMediaQuery, Box, Button, Link, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Tooltip } from '@mui/material';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import React, { useEffect, useState, useRef, Fragment } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Dialog from '@mui/material/Dialog';
@@ -47,6 +48,11 @@ const Player = () => {
 
   const [avatar, setAvatar] = useState<string | null>();
   
+  // Rating sync state
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  
   // Match type filter: 'all', 'ranked', 'tower'
   const [matchFilter, setMatchFilter] = useState<'all' | 'ranked' | 'tower'>('all');
 
@@ -74,6 +80,44 @@ const Player = () => {
       navigate(url);
     }
   }
+
+  const fetchHistoryData = async (player_result: PlayerResponse, char_short: string) => {
+    const has_offset = offset ? true : false;
+    const history_url = API_ENDPOINT
+      + '/player/'
+      + player_id_checked
+      + '/' + char_short
+      + '/history?count=' + ((has_offset && offset !== '0') ? Number(count) + 1 : '100')
+      + '&offset=' + (has_offset && offset !== '0' ? Number(offset) - 1 : '0');
+    
+    const history_response = await fetch(history_url);
+    if (history_response.status === 200) {
+      const history_result = await history_response.text().then(body => {
+        var parsed = JSONParse(body);
+        return parsed;
+      });
+
+      if (history_result.history.length < (count ? count : defaultCount)) {
+        setShowNext(false);
+      } else {
+        setShowNext(true);
+      }
+
+      if (history_result.history.length !== 0) {
+        const groupedData = groupMatches(history_result.history, player_result, char_short, has_offset);
+        setHistory(groupedData);
+
+        let tags: { [key: string]: TagResponse[] } = {};
+        Object.entries(history_result.tags).forEach(([playerId, tagArray]) => {
+          tags[playerId] = (tagArray as TagResponse[]).map(tagObj => ({
+            tag: tagObj.tag,
+            style: tagObj.style
+          }));
+        });
+        setTags(tags);
+      }
+    }
+  };
 
   useEffect(() => {
 
@@ -129,42 +173,8 @@ const Player = () => {
           }
         }
 
-        const has_offset = offset ? true : false;
-
-        const url = API_ENDPOINT
-          + '/player/'
-          + player_id_checked
-          + '/' + char_short
-          + '/history?count=' + ((has_offset && offset !== '0') ? Number(count) + 1 : '100')
-          + '&offset=' + (has_offset && offset !== '0' ? Number(offset) - 1 : '0');
-        const history_response = await fetch(url);
-        if (history_response.status === 200) {
-
-          const history_result = await history_response.text().then(body => {
-            var parsed = JSONParse(body);
-            return parsed;
-          });
-
-          if (history_result.history.length < (count ? count : defaultCount)) {
-            setShowNext(false);
-          } else {
-            setShowNext(true);
-          }
-
-          if (history_result.history.length !== 0) {
-            const groupedData = groupMatches(history_result.history, player_result, char_short, has_offset);
-
-            let tags: { [key: string]: TagResponse[] } = {};
-            Object.entries(history_result.tags).forEach(([playerId, tagArray]) => {
-              tags[playerId] = (tagArray as TagResponse[]).map(tagObj => ({
-                tag: tagObj.tag,
-                style: tagObj.style
-              }));
-            });
-            setTags(tags);
-            setHistory(groupedData);
-          }
-        }
+        // Fetch history data
+        await fetchHistoryData(player_result, char_short);
 
         const alias_response = await fetch(API_ENDPOINT + '/alias/' + player_id_checked);
 
@@ -233,6 +243,68 @@ const Player = () => {
     let nav_offset = offset ? parseInt(offset) + nav_count : nav_count;
     navigate(`/player/${player_id_checked}/${char_short}/${nav_count}/${nav_offset}`);
   }
+
+  const handleRatingSync = async () => {
+    if (!player_id_checked || syncLoading) return;
+    
+    setSyncLoading(true);
+    setSyncError(null);
+    
+    try {
+      const response = await fetch(`${API_ENDPOINT}/rating_sync/${player_id_checked}`);
+      const result = await response.text();
+      
+      if (response.ok) {
+        // Fetch updated player data instead of reloading page
+        const player_response = await fetch(API_ENDPOINT + '/player/' + player_id_checked);
+        const player_result = await player_response.text().then(body => {
+          var parsed = JSONParse(body);
+          return parsed;
+        });
+
+        // Format ratings
+        for (var key in player_result.ratings) {
+          player_result.ratings[key].rating = player_result.ratings[key].rating.toFixed(2);
+        }
+
+        setPlayer(player_result);
+
+        // Update current character data if it exists
+        if (char_short) {
+          for (var ckey in player_result.ratings) {
+            if (player_result.ratings[ckey].char_short === char_short) {
+              setCurrentCharData(player_result.ratings[ckey]);
+              // Update page title with new rating
+              document.title = player_result.name + ' (' + char_short + ') - ' + Utils.displaySimpleRating(Number(player_result.ratings[ckey].rating)) + ' | Puddle Farm';
+              break;
+            }
+          }
+
+          // Refetch history with updated player ratings
+          try {
+            await fetchHistoryData(player_result, char_short);
+          } catch (historyError) {
+            console.warn('Failed to update history after rating sync:', historyError);
+          }
+        }
+      } else {
+        // Show error in popup dialog
+        setSyncError(result);
+        setShowErrorDialog(true);
+      }
+    } catch (error) {
+      setSyncError('Failed to connect to server');
+      setShowErrorDialog(true);
+      console.error('Rating sync error:', error);
+    } finally {
+      setSyncLoading(false);
+    }
+  };
+
+  const handleCloseErrorDialog = () => {
+    setShowErrorDialog(false);
+    setSyncError(null);
+  };
 
   return (
     <React.Fragment>
@@ -355,6 +427,16 @@ const Player = () => {
                 <React.Fragment>
                   <Typography variant='h5' my={2}>
                     {currentCharData.character} Rating: <Box component={"span"}>{Utils.displayRating(currentCharData.rating)}</Box> ({currentCharData.match_count} games)
+                    <Tooltip title="Sync ratings from game">
+                      <IconButton 
+                        onClick={handleRatingSync} 
+                        disabled={syncLoading}
+                        size="small"
+                        sx={{ ml: 1, color: 'primary.main' }}
+                      >
+                        <RefreshIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     {currentCharData.top_char !== 0 ? (
                       <Typography variant="char_rank" onMouseDown={(event) => onLinkClick(event, `/top/${currentCharData.char_short}`)} sx={{ cursor: 'pointer' }}>
                         #{currentCharData.top_char} {currentCharData.character}
@@ -463,6 +545,16 @@ const Player = () => {
                 <React.Fragment>
                   <Typography variant='h5' my={2}>
                     {currentCharData.character} Rating: <Box component={"span"}>{Utils.displayRating(currentCharData.rating)}</Box> ({currentCharData.match_count} games)
+                    <Tooltip title="Sync ratings from game">
+                      <IconButton 
+                        onClick={handleRatingSync} 
+                        disabled={syncLoading}
+                        size="small"
+                        sx={{ ml: 1, color: 'primary.main' }}
+                      >
+                        <RefreshIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     {currentCharData.top_char !== 0 ? (
                       <Typography variant="char_rank" onMouseDown={(event) => onLinkClick(event, `/top/${currentCharData.char_short}`)} sx={{ cursor: 'pointer' }}>
                         #{currentCharData.top_char} {currentCharData.character}
@@ -581,6 +673,28 @@ const Player = () => {
           </Box>
         </Box>
       )}
+
+      {/* Error Dialog */}
+      <Dialog
+        open={showErrorDialog}
+        onClose={handleCloseErrorDialog}
+        aria-labelledby="sync-error-dialog-title"
+        aria-describedby="sync-error-dialog-description"
+      >
+        <DialogTitle id="sync-error-dialog-title">
+          Rating Sync Error
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="sync-error-dialog-description">
+            {syncError}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseErrorDialog} autoFocus>
+            OK
+          </Button>
+        </DialogActions>
+      </Dialog>
     </React.Fragment>
   );
 };

@@ -8,6 +8,24 @@ use diesel::sql_types::{BigInt, Integer, Timestamp};
 use diesel::{prelude::*, update};
 use diesel_async::RunQueryDsl;
 
+pub async fn set_player_rating(
+    id: i64,
+    char_id: i16,
+    value: i64,
+    db: &mut crate::Connection<'_>,
+) -> Result<(), String> {
+    match diesel::update(schema::player_ratings::table)
+        .filter(schema::player_ratings::id.eq(id))
+        .filter(schema::player_ratings::char_id.eq(char_id))
+        .set(schema::player_ratings::value.eq(value))
+        .execute(db)
+        .await
+    {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("Error setting player rating: {}", e)),
+    }
+}
+
 async fn get_player_char_and_rating(
     id: i64,
     db: &mut crate::Connection<'_>,
