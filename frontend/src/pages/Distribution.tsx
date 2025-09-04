@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box, CircularProgress, Typography, Button } from '@mui/material';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
 import { DistributionResponse, DistributionResult } from '../interfaces/API';
 import { Utils } from './../utils/Utils';
@@ -36,7 +36,65 @@ const Distribution = () => {
 
   const [distribution, setDistribution] = React.useState<DistributionResponse>();
   const [chartData, setChartData] = React.useState<any>(null);
+  const [combinedMode, setCombinedMode] = React.useState(false);
   const chartRef = React.useRef<any>(null);
+
+  const getRankColor = (rankName: string): string => {
+    const lowerRankName = rankName.toLowerCase();
+    if (lowerRankName.includes('iron')) return '#838fa4';
+    if (lowerRankName.includes('bronze')) return '#cc8c4e';
+    if (lowerRankName.includes('silver')) return '#b8cde6';
+    if (lowerRankName.includes('gold')) return '#f0db3b';
+    if (lowerRankName.includes('platinum')) return '#56e4bc';
+    if (lowerRankName.includes('diamond')) return '#cfbfeb';
+    if (lowerRankName.includes('vanquisher')) return '#ae71f8';
+    return 'rgba(54, 162, 235, 0.6)';
+  };
+
+  const getBorderColor = (rankName: string): string => {
+    const baseColor = getRankColor(rankName);
+    return baseColor;
+  };
+
+  const combineRankData = (data: DistributionResult[]) => {
+    const combined: { [key: string]: { count: number, percentage: number, percentile: number, lower_bound: number } } = {};
+    
+    data.forEach(entry => {
+      const rankName = Utils.getRankDisplayName(entry.lower_bound);
+      const baseRank = rankName.split(' ')[0]; // Get 'Gold' from 'Gold 1'
+      
+      if (!combined[baseRank]) {
+        combined[baseRank] = {
+          count: 0,
+          percentage: 0,
+          percentile: 0,
+          lower_bound: entry.lower_bound
+        };
+      }
+      
+      combined[baseRank].count += entry.count;
+      combined[baseRank].percentage += entry.percentage;
+    });
+    
+    // Calculate percentiles for combined data
+    const combinedArray = Object.entries(combined).map(([name, data]) => ({
+      name,
+      count: data.count,
+      percentage: data.percentage,
+      lower_bound: data.lower_bound
+    }));
+    
+    // Sort by lower_bound to calculate cumulative percentiles
+    combinedArray.sort((a, b) => a.lower_bound - b.lower_bound);
+    
+    let cumulativePercentage = 0;
+    combinedArray.forEach(item => {
+      cumulativePercentage += item.percentage;
+      (combined[item.name] as any).percentile = 100 - cumulativePercentage;
+    });
+    
+    return combined;
+  };
 
   const chartOptions = {
     responsive: true,
@@ -89,27 +147,57 @@ const Distribution = () => {
       .then((data) => {
         setDistribution(data);
         
-        const distributionData = data.data.distribution_rating.filter((entry: DistributionResult) => entry.upper_bound !== 1);
-        
-        const chartData = {
-          labels: distributionData.map((entry: DistributionResult) => Utils.getRankDisplayName(entry.lower_bound)),
-          datasets: [
-            {
-              label: 'Players',
-              data: distributionData.map((entry: DistributionResult) => entry.count),
-              backgroundColor: 'rgba(54, 162, 235, 0.6)',
-              borderColor: 'rgba(54, 162, 235, 1)',
-              borderWidth: 1,
-            },
-          ],
-        };
-        
-        setChartData(chartData);
+        updateChartData(data);
       });
 
       setLoading(false);
 
   }, [API_ENDPOINT]);
+
+  const updateChartData = (data: DistributionResponse) => {
+    const distributionData = data.data.distribution_rating.filter((entry: DistributionResult) => entry.upper_bound !== 1);
+    
+    let chartLabels: string[];
+    let chartDataValues: number[];
+    let chartColors: string[];
+    let chartBorderColors: string[];
+    
+    if (combinedMode) {
+      const combined = combineRankData(distributionData);
+      const sortedCombined = Object.entries(combined).sort(([, a], [, b]) => a.lower_bound - b.lower_bound);
+      
+      chartLabels = sortedCombined.map(([name]) => name);
+      chartDataValues = sortedCombined.map(([, data]) => data.count);
+      chartColors = chartLabels.map(label => getRankColor(label));
+      chartBorderColors = chartLabels.map(label => getBorderColor(label));
+    } else {
+      chartLabels = distributionData.map((entry: DistributionResult) => Utils.getRankDisplayName(entry.lower_bound));
+      chartDataValues = distributionData.map((entry: DistributionResult) => entry.count);
+      chartColors = chartLabels.map(label => getRankColor(label));
+      chartBorderColors = chartLabels.map(label => getBorderColor(label));
+    }
+    
+    const newChartData = {
+      labels: chartLabels,
+      datasets: [
+        {
+          label: 'Players',
+          data: chartDataValues,
+          backgroundColor: chartColors,
+          borderColor: chartBorderColors,
+          borderWidth: 1,
+        },
+      ],
+    };
+    
+    setChartData(newChartData);
+  };
+
+  React.useEffect(() => {
+    if (distribution) {
+      updateChartData(distribution);
+    }
+  }, [combinedMode, distribution]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -138,9 +226,17 @@ const Distribution = () => {
       <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
         Rank Distribution
       </Typography>
-      <Typography variant="body1" sx={{mb: 4}}>
+      <Typography variant="body1" sx={{mb: 2}}>
         This table shows the current distribution of players across different ranks.
       </Typography>
+      
+      <Button 
+        variant="outlined" 
+        onClick={() => setCombinedMode(!combinedMode)}
+        sx={{ mb: 4 }}
+      >
+        {combinedMode ? 'Show Subdivisions' : 'Combine Ranks'}
+      </Button>
       
       {chartData && Bar && (
         <Box sx={{ mb: 4, height: '350px', minWidth: '300px', width: '100%' }}>
