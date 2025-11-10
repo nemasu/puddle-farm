@@ -6,7 +6,7 @@ import { Supporter, TagResponse } from '../interfaces/API';
 import { JSONParse } from '../utils/JSONParse';
 
 const About = () => {
-  const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
+  const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
 
   const [supporters, setSupporters] = React.useState<Supporter[]>([]);
 

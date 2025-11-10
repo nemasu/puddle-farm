@@ -327,7 +327,7 @@ async fn update_distribution(
             END AS percentage,
             CASE 
                 WHEN p.upper_bound = 1 THEN 0.0  -- Set percentile to 0 for placement
-                ELSE CAST(ROUND((p.cumulative_sum_ranked_only * 100.0 / p.total_count_excluding_placement), 2) AS FLOAT)
+                ELSE CAST(ROUND((100.0 - (p.cumulative_sum_ranked_only * 100.0 / p.total_count_excluding_placement)), 2) AS FLOAT)
             END AS percentile
         FROM percentiles p
         ORDER BY p.lower_bound;

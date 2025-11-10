@@ -9,7 +9,7 @@ import { JSONParse } from '../utils/JSONParse';
 const themes = Array.from(Themes.keys());
 
 const Settings = () => {
-  const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
+  const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
 
   //Server settings
   const [settings, setSettings] = useState<SettingsResponse>();

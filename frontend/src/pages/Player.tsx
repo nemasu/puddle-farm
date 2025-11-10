@@ -24,8 +24,8 @@ const Player = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   let API_ENDPOINT = '/api';
-  if (process.env.REACT_APP_API_ENDPOINT !== undefined) {
-    API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
+  if (import.meta.env.VITE_API_ENDPOINT !== undefined) {
+    API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
   }
 
   const defaultCount = 100;

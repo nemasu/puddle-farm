@@ -5,9 +5,9 @@ import '@fontsource/roboto/700.css';
 
 import { Box, CssBaseline, useMediaQuery, useTheme, Button, Link, Typography } from '@mui/material';
 import { Routes, Route } from 'react-router-dom';
-import { ReactComponent as DiscordIcon } from './images/discord-mark-white.svg';
-import { ReactComponent as GitHubIcon } from './images/github-mark-white.svg';
-import { ReactComponent as PatreonIcon } from './images/patreon-mark-white.svg';
+import DiscordIcon from './images/discord-mark-white.svg?react';
+import GitHubIcon from './images/github-mark-white.svg?react';
+import PatreonIcon from './images/patreon-mark-white.svg?react';
 
 import NavBar from './components/NavBar';
 import Player from './pages/Player';
@@ -74,9 +74,15 @@ const App = () => {
         </Typography>
       </Box>
       <Box sx={{ minHeight: 100, textAlign: 'center' }}>
-        <Button component={Link} target="_blank" href="https://github.com/nemasu/puddle-farm"><GitHubIcon style={{ transform: 'scale(0.65)' }} /></Button>
-        <Button component={Link} target="_blank" href="https://discord.gg/vY4mE8exXB"><DiscordIcon style={{ transform: 'scale(0.65)' }} /></Button>
-        <Button component={Link} target="_blank" href="https://patreon.com/nemasu"><PatreonIcon style={{ transform: 'scale(0.55)' }} /></Button>
+        <Button component={Link} target="_blank" href="https://github.com/nemasu/puddle-farm">
+          <GitHubIcon style={{ width: 24, height: 24, transform: 'scale(1.3)' }} />
+        </Button>
+        <Button component={Link} target="_blank" href="https://discord.gg/vY4mE8exXB">
+          <DiscordIcon style={{ width: 24, height: 24, transform: 'scale(1.3)' }} />
+        </Button>
+        <Button component={Link} target="_blank" href="https://patreon.com/nemasu">
+          <PatreonIcon style={{ width: 24, height: 24, transform: 'scale(1.1)' }} />
+        </Button>
       </Box>
       <Box sx={{ minHeight: 100, textAlign: 'center' }}>
         <Button component={Link} href="/terms">Terms & Privacy</Button>

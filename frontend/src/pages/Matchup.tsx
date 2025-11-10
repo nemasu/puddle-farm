@@ -156,7 +156,7 @@ const MatchupTable = ({ data, title }: { data: MatchupCharResponse[], title: str
 }
 
 const Matchup = () => {
-  const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
+  const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
 
   const [loading, setLoading] = React.useState(true);
   const [matchup, setMatchup] = React.useState<MatchupResponse>();

@@ -5,7 +5,7 @@ import { Utils } from './../utils/Utils';
 import { PopularityResult } from '../interfaces/API';
 
 const Popularity = () => {
-  const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
+  const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
 
   const [loading, setLoading] = React.useState(true);
   const [popularity, setPopularity] = React.useState<PopularityResult>();

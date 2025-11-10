@@ -12,7 +12,6 @@ use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
 use std::vec;
 use tower_http::cors::{Any, CorsLayer};
-use tracing::warn;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::layer::SubscriberExt;
 //use diesel::query_dsl::positional_order_dsl::{OrderColumn, PositionalOrderDsl, IntoOrderColumn};
@@ -874,7 +873,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // No args, run the web server
             let _guard = init_tracing("web");
 
-            let mut app = Router::new()
+            let app = Router::new()
                 .route("/api/player/:id", get(player))
                 .route(
                     "/api/player/:player_id/:char_id/history",
@@ -899,13 +898,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/distribution", get(distribution))
                 .route("/api/health", get(health))
                 .route("/api/avatar/:player_id", get(avatar))
-                .with_state(state);
-
-            if cfg!(debug_assertions) {
-                //Cors only used for development
-                warn!("CORS enabled.");
-                app = app.layer(cors);
-            }
+                .with_state(state)
+                .layer(cors);
 
             let listener = tokio::net::TcpListener::bind(std::env::var("LISTEN_ADDR").expect("LISTEN_ADDR")).await?;
             axum::serve(listener, app).await?;

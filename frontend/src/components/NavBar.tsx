@@ -39,7 +39,7 @@ function NavBar() {
 
   const [searchString, setSearchString] = useState('');
 
-  const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
+  const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
 
   // eslint-disable-next-line
   const [characters, setCharacters] = useState([]);

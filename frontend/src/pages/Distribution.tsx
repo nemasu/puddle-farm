@@ -30,7 +30,7 @@ import('react-chartjs-2').then(module => {
 });
 
 const Distribution = () => {
-  const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
+  const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
 
   const [loading, setLoading] = React.useState(true);
 

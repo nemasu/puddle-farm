@@ -86,7 +86,7 @@ npm install
 npm run build
 ```
 
-Then copy `frontend/build/*` to your web server's root.
+Then copy `frontend/dist/*` to your web server's root.
 
 There is an nginx configuration example available: `nginx.conf.example`.
 
