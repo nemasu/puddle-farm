@@ -39,20 +39,8 @@ const Distribution = () => {
   const [combinedMode, setCombinedMode] = React.useState(false);
   const chartRef = React.useRef<any>(null);
 
-  const getRankColor = (rankName: string): string => {
-    const lowerRankName = rankName.toLowerCase();
-    if (lowerRankName.includes('iron')) return '#838fa4';
-    if (lowerRankName.includes('bronze')) return '#cc8c4e';
-    if (lowerRankName.includes('silver')) return '#b8cde6';
-    if (lowerRankName.includes('gold')) return '#f0db3b';
-    if (lowerRankName.includes('platinum')) return '#56e4bc';
-    if (lowerRankName.includes('diamond')) return '#cfbfeb';
-    if (lowerRankName.includes('vanquisher')) return '#ae71f8';
-    return 'rgba(54, 162, 235, 0.6)';
-  };
-
   const getBorderColor = (rankName: string): string => {
-    const baseColor = getRankColor(rankName);
+    const baseColor = Utils.getRankColor(rankName);
     return baseColor;
   };
 
@@ -168,12 +156,12 @@ const Distribution = () => {
       
       chartLabels = sortedCombined.map(([name]) => name);
       chartDataValues = sortedCombined.map(([, data]) => data.count);
-      chartColors = chartLabels.map(label => getRankColor(label));
+      chartColors = chartLabels.map(label => Utils.getRankColor(label));
       chartBorderColors = chartLabels.map(label => getBorderColor(label));
     } else {
       chartLabels = distributionData.map((entry: DistributionResult) => Utils.getRankDisplayName(entry.lower_bound));
       chartDataValues = distributionData.map((entry: DistributionResult) => entry.count);
-      chartColors = chartLabels.map(label => getRankColor(label));
+      chartColors = chartLabels.map(label => Utils.getRankColor(label));
       chartBorderColors = chartLabels.map(label => getBorderColor(label));
     }
     

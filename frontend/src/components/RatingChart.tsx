@@ -98,18 +98,6 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
 
         if (rating_history_result !== null && char_short !== null) {
 
-            const getRankColor = (rankName: string): string => { // stole that from Distribution.tsx
-                const lowerRankName = rankName.toLowerCase();
-                if (lowerRankName.includes('iron')) return '#838fa4';
-                if (lowerRankName.includes('bronze')) return '#cc8c4e';
-                if (lowerRankName.includes('silver')) return '#b8cde6';
-                if (lowerRankName.includes('gold')) return '#f0db3b';
-                if (lowerRankName.includes('platinum')) return '#56e4bc';
-                if (lowerRankName.includes('diamond')) return '#cfbfeb';
-                if (lowerRankName.includes('vanquisher')) return '#ae71f8';
-                return 'rgba(54, 162, 235, 0.6)';
-            };
-
           rating_history_result.reverse();
 
           const lineChartData = {
@@ -128,8 +116,8 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
                     ({
                         label: rank.name,
                         data: rating_history_result.map((item: RatingsResponse) => rank.rating),
-                        borderColor: `${getRankColor(rank.name)}`,
-                        backgroundColor: `${getRankColor(rank.name)}`,
+                        borderColor: rank.color,
+                        backgroundColor: rank.color,
                         pointRadius: 0,
                         borderWidth: 1,
                     })

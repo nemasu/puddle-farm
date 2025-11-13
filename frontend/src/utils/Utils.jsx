@@ -3,26 +3,26 @@ import { StorageUtils } from "./Storage";
 import React from "react";
 
 const rankThresholds = [
-  { rating: 45000, name: 'Vanquisher', spriteX: 3, spriteY: 4 },
-  { rating: 40800, name: 'Diamond 3', spriteX: 2, spriteY: 4 },
-  { rating: 36000, name: 'Diamond 2', spriteX: 1, spriteY: 4 },
-  { rating: 32400, name: 'Diamond 1', spriteX: 0, spriteY: 4 },
-  { rating: 28400, name: 'Platinum 3', spriteX: 3, spriteY: 3 },
-  { rating: 24400, name: 'Platinum 2', spriteX: 2, spriteY: 3 },
-  { rating: 20400, name: 'Platinum 1', spriteX: 1, spriteY: 3 },
-  { rating: 18000, name: 'Gold 3', spriteX: 0, spriteY: 3 },
-  { rating: 15600, name: 'Gold 2', spriteX: 3, spriteY: 2 },
-  { rating: 13200, name: 'Gold 1', spriteX: 2, spriteY: 2 },
-  { rating: 11000, name: 'Silver 3', spriteX: 1, spriteY: 2 },
-  { rating: 8800, name: 'Silver 2', spriteX: 0, spriteY: 2 },
-  { rating: 6600, name: 'Silver 1', spriteX: 3, spriteY: 1 },
-  { rating: 5400, name: 'Bronze 3', spriteX: 2, spriteY: 1 },
-  { rating: 4200, name: 'Bronze 2', spriteX: 1, spriteY: 1 },
-  { rating: 3000, name: 'Bronze 1', spriteX: 0, spriteY: 1 },
-  { rating: 2000, name: 'Iron 3', spriteX: 3, spriteY: 0 },
-  { rating: 1000, name: 'Iron 2', spriteX: 2, spriteY: 0 },
-  { rating: 1, name: 'Iron 1', spriteX: 1, spriteY: 0 },
-  { rating: 0, name: 'Placement', spriteX: 0, spriteY: 0 }
+    { rating: 45000, name: 'Vanquisher', spriteX: 3, spriteY: 4 , color: '#ae71f8'},
+    { rating: 40800, name: 'Diamond 3', spriteX: 2, spriteY: 4, color: '#cfbfeb' },
+    { rating: 36000, name: 'Diamond 2', spriteX: 1, spriteY: 4, color: '#cfbfeb' },
+    { rating: 32400, name: 'Diamond 1', spriteX: 0, spriteY: 4, color: '#cfbfeb' },
+    { rating: 28400, name: 'Platinum 3', spriteX: 3, spriteY: 3, color: '#56e4bc' },
+    { rating: 24400, name: 'Platinum 2', spriteX: 2, spriteY: 3, color: '#56e4bc' },
+    { rating: 20400, name: 'Platinum 1', spriteX: 1, spriteY: 3, color: '#56e4bc' },
+    { rating: 18000, name: 'Gold 3', spriteX: 0, spriteY: 3, color: '#f0db3b' },
+    { rating: 15600, name: 'Gold 2', spriteX: 3, spriteY: 2, color: '#f0db3b' },
+    { rating: 13200, name: 'Gold 1', spriteX: 2, spriteY: 2, color: '#f0db3b' },
+    { rating: 11000, name: 'Silver 3', spriteX: 1, spriteY: 2, color: '#b8cde6' },
+    { rating: 8800, name: 'Silver 2', spriteX: 0, spriteY: 2, color: '#b8cde6' },
+    { rating: 6600, name: 'Silver 1', spriteX: 3, spriteY: 1, color: '#b8cde6' },
+    { rating: 5400, name: 'Bronze 3', spriteX: 2, spriteY: 1, color: '#cc8c4e' },
+    { rating: 4200, name: 'Bronze 2', spriteX: 1, spriteY: 1, color: '#cc8c4e' },
+    { rating: 3000, name: 'Bronze 1', spriteX: 0, spriteY: 1, color: '#cc8c4e' },
+    { rating: 2000, name: 'Iron 3', spriteX: 3, spriteY: 0, color: '#838fa4' },
+    { rating: 1000, name: 'Iron 2', spriteX: 2, spriteY: 0, color: '#838fa4' },
+    { rating: 1, name: 'Iron 1', spriteX: 1, spriteY: 0, color: '#838fa4' },
+    { rating: 0, name: 'Placement', spriteX: 0, spriteY: 0, color: 'rgba(54, 162, 235, 0.6)' }
 ];
 
 const Utils = {
@@ -43,6 +43,7 @@ const Utils = {
     }
     return "Placement";
   },
+  getRankColor: (name) => rankThresholds.find((r) => r.name.includes(name)).color ?? rankThresholds[rankThresholds.length - 1].color,
   displayRankIcon: (rating, size = "50px") => {
     const threshold = Utils.getRankThresholds().find(t => rating >= t.rating) || Utils.getRankThresholds()[Utils.getRankThresholds().length - 1];
     const sizeValue = parseInt(size);
