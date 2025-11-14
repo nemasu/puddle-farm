@@ -109,7 +109,20 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
                 borderColor: 'rgb(75, 192, 192)',
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
               },
-            ],
+            ].concat(Utils.getRankThresholds()
+                .filter(
+                    (rank)=> rank.rating <= Math.max(...rating_history_result.map((item: RatingsResponse) => item.rating)) && rank.rating >= Math.min(...rating_history_result.map((item: RatingsResponse) => item.rating)))
+                .map((rank) =>
+                    ({
+                        label: rank.name,
+                        data: rating_history_result.map((item: RatingsResponse) => rank.rating),
+                        borderColor: rank.color,
+                        backgroundColor: rank.color,
+                        pointRadius: 0,
+                        borderWidth: 1,
+                    })
+                ),
+            ),
           };
 
           setLineChartData(lineChartData);
