@@ -709,7 +709,40 @@ async fn health(State(pools): State<AppState>) -> Result<String, (StatusCode, St
     Ok("OK".to_string())
 }
 
-// calc_rating endpoint removed - no longer needed with game-provided ratings
+async fn comment(Path(player_id): Path<i64>, State(pools): State<AppState>) -> impl IntoResponse {
+    //If token.txt does not exist, return 503
+    if !std::fs::exists("token.txt").unwrap_or(false) {
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            "GGST is not connected, patch?".to_string(),
+        ));
+    }
+
+    let mut db = pools.db_pool.get().await.unwrap();
+    let mut redis = pools.redis_pool.get().await.unwrap();
+
+    let exists = match crate::db::player_exists(&mut db, player_id).await {
+        Ok(e) => e,
+        Err(e) => return Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
+    };
+
+    if !exists {
+        return Err((StatusCode::NOT_FOUND, "Player not found".to_string()));
+    }
+
+    let comment = match crate::imdb::get_free_comment(player_id, &mut redis).await {
+        Ok(comment) => comment,
+        Err(_) => match crate::ggst_api::get_player_comment(player_id.to_string()).await {
+            Ok(comment) => {
+                let _ = crate::imdb::set_free_comment(player_id, &comment, &mut redis).await;
+                comment
+            }
+            Err(e) => return Err((StatusCode::SERVICE_UNAVAILABLE, e)),
+        },
+    };
+
+    Ok(comment)
+}
 
 async fn avatar(Path(player_id): Path<i64>, State(pools): State<AppState>) -> impl IntoResponse {
     //If token.txt does not exist, return 503
@@ -898,6 +931,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/distribution", get(distribution))
                 .route("/api/health", get(health))
                 .route("/api/avatar/:player_id", get(avatar))
+                .route("/api/comment/:player_id", get(comment))
                 .with_state(state)
                 .layer(cors);
 

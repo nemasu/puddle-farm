@@ -280,6 +280,35 @@ pub async fn get_last_update_daily(
     Ok(last_update_daily)
 }
 
+pub async fn get_free_comment(id: i64, redis: &mut crate::RedisConnection<'_>) -> Result<String, String> {
+    let key = format!("comment_{}", id);
+
+    match get_string(&key, redis).await {
+        Ok(comment) => Ok(comment),
+        Err(_) => Err("Failed to get comment".to_string()),
+    }
+}
+
+pub async fn set_free_comment(
+    id: i64,
+    comment: &str,
+    redis: &mut crate::RedisConnection<'_>,
+) -> Result<(), String> {
+    let key = format!("comment_{}", id);
+
+    match redis::cmd("SET")
+        .arg(&key)
+        .arg(comment)
+        .arg("EX")
+        .arg("86400")
+        .query_async::<String>(&mut **redis)
+        .await
+    {
+        Ok(_) => Ok(()),
+        Err(_) => Err("Failed to set comment".to_string()),
+    }
+}
+
 pub async fn get_avatar(id: i64, redis: &mut crate::RedisConnection<'_>) -> Result<String, String> {
     let key = format!("avatar_{}", id);
 

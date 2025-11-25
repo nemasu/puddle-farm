@@ -47,7 +47,8 @@ const Player = () => {
   const [countdown, setCountdown] = useState<number | null>(null);
 
   const [avatar, setAvatar] = useState<string | null>();
-  
+  const [comment, setComment] = useState<string | null>(null);
+
   // Rating sync state
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -196,6 +197,12 @@ const Player = () => {
         if (avatar_response.status === 200) {
           const avatar_result = await avatar_response.blob();
           setAvatar(URL.createObjectURL(avatar_result));
+        }
+
+        const comment_response = await fetch(API_ENDPOINT + '/comment/' + player_id_checked);
+        if (comment_response.status === 200) {
+          const comment_result = await comment_response.text();
+          setComment(comment_result);
         }
 
         setLoading(false);
@@ -515,6 +522,33 @@ const Player = () => {
             <Matchup player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} />
           </Box>
           <Box marginLeft={10} marginTop={13} sx={{ width: .18, maxWidth: '235px' }}>
+            {comment && (
+              <Box
+                sx={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  padding: '12px',
+                  marginBottom: '3px',
+                  position: 'relative',
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    bottom: '-8px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 0,
+                    height: 0,
+                    borderLeft: '8px solid transparent',
+                    borderRight: '8px solid transparent',
+                    borderTop: '8px solid rgba(255, 255, 255, 0.1)',
+                  }
+                }}
+              >
+                <Typography fontSize={13} sx={{ wordWrap: 'break-word' }}>
+                  {comment}
+                </Typography>
+              </Box>
+            )}
             {avatar && <img src={avatar} alt="Player Avatar" style={{ transform: 'scale(0.5)' }} />}
             {player && player.id !== BigInt(0) ? (
               <React.Fragment>
@@ -650,6 +684,36 @@ const Player = () => {
             <Matchup player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} />
           </Box>
           <Box sx={{ width: 300, overflowY: 'auto', minWidth: '200px' }}>
+            {comment && (
+              <Box
+                sx={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  padding: '12px',
+                  marginTop: '50px',
+                  marginBottom: '3px',
+                  marginLeft: '10px',
+                  marginRight: '10px',
+                  position: 'relative',
+                  '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    bottom: '-8px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 0,
+                    height: 0,
+                    borderLeft: '8px solid transparent',
+                    borderRight: '8px solid transparent',
+                    borderTop: '8px solid rgba(255, 255, 255, 0.1)',
+                  }
+                }}
+              >
+                <Typography fontSize={13} sx={{ wordWrap: 'break-word' }}>
+                  {comment}
+                </Typography>
+              </Box>
+            )}
             {avatar && <img src={avatar} alt="Player Avatar" style={{ transform: 'scale(0.5)' }} />}
             {player && player.id !== BigInt(0) ? (
               <React.Fragment>
