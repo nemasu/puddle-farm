@@ -611,6 +611,7 @@ pub async fn get_ratings(
     let is_vanq = match schema::player_ratings::table
         .select(schema::player_ratings::value)
         .filter(schema::player_ratings::id.eq(id))
+        .filter(schema::player_ratings::char_id.eq(char_id))
         .first::<i64>(db)
         .await
     {
