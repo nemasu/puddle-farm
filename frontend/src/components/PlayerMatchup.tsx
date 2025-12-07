@@ -131,7 +131,7 @@ const Matchup: React.FC<MatchupProps> = ({ API_ENDPOINT, char_short, player_id }
 
   return (
     <React.Fragment>
-      {matchups && matchups.matchups.length !== 0 ? (
+      {matchups ? (
         <React.Fragment>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 10, marginBottom: 2 }}>
             <Typography variant="h6">Matchup Table</Typography>
@@ -180,7 +180,13 @@ const Matchup: React.FC<MatchupProps> = ({ API_ENDPOINT, char_short, player_id }
           </Typography>
           <Box component={Paper} sx={{ maxWidth: 350 }}>
             <Typography p={2} variant='body1'>
-              {Utils.colorChangeForPercent(((matchups.total_wins / matchups.total_games) * 100).toFixed(2))} ( {matchups.total_wins} / {matchups.total_games} )
+              {matchups.total_games === 0
+                ? 'No games played during this period.'
+                : <React.Fragment>
+                    {Utils.colorChangeForPercent(((matchups.total_wins / matchups.total_games) * 100).toFixed(2))}
+                    {` ( ${matchups.total_wins} / ${matchups.total_games} )`}
+                  </React.Fragment>
+              }
             </Typography>
           </Box>
           <TableContainer component={Paper} sx={{ maxWidth: 400 }}>
