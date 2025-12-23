@@ -5,7 +5,7 @@ import React from "react";
 const rankThresholds = [
     { rating: 45000, name: 'Vanquisher', spriteX: 3, spriteY: 4 , color: '#ae71f8'},
     { rating: 40800, name: 'Diamond 3', spriteX: 2, spriteY: 4, color: '#cfbfeb' },
-    { rating: 36000, name: 'Diamond 2', spriteX: 1, spriteY: 4, color: '#cfbfeb' },
+    { rating: 36600, name: 'Diamond 2', spriteX: 1, spriteY: 4, color: '#cfbfeb' },
     { rating: 32400, name: 'Diamond 1', spriteX: 0, spriteY: 4, color: '#cfbfeb' },
     { rating: 28400, name: 'Platinum 3', spriteX: 3, spriteY: 3, color: '#56e4bc' },
     { rating: 24400, name: 'Platinum 2', spriteX: 2, spriteY: 3, color: '#56e4bc' },
