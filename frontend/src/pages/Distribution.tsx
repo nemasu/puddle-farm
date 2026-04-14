@@ -156,8 +156,8 @@ const Distribution = () => {
       
       chartLabels = sortedCombined.map(([name]) => name);
       chartDataValues = sortedCombined.map(([, data]) => data.count);
-      chartColors = chartLabels.map(label => Utils.getRankColor(label));
-      chartBorderColors = chartLabels.map(label => getBorderColor(label));
+      chartColors = chartLabels.map(label => Utils.getRankColor(label === 'Vanquisher' ? 'Vanquisher III Vindex' : `${label} 3`));
+      chartBorderColors = chartLabels.map(label => getBorderColor(label === 'Vanquisher' ? 'Vanquisher III Vindex' : `${label} 3`));
     } else {
       chartLabels = distributionData.map((entry: DistributionResult) => Utils.getRankDisplayName(entry.lower_bound));
       chartDataValues = distributionData.map((entry: DistributionResult) => entry.count);
