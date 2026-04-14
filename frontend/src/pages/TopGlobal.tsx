@@ -30,6 +30,7 @@ const TopGlobal = () => {
     char_short: string;
     rating: number;
     tags?: { style: React.CSSProperties; tag: string }[];
+    is_global_top_100: boolean;
   }
 
   const [ranking, setRanking] = useState<Player[]>([]);
@@ -137,7 +138,7 @@ const TopGlobal = () => {
           </Typography>
         </Box>
       </AppBar>
-      <Box m={4}>
+      <Box m={3}>
         <Box sx={{ display: 'inline-block' }}>
           <Button onClick={(event) => onPrev(event)}>Prev</Button>
           <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
@@ -168,7 +169,7 @@ const TopGlobal = () => {
                   <TableCell>{player.char_short}</TableCell>
                   <TableCell>
                     <Box component={'span'} sx={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                      {Utils.displayRankIcon(player.rating, "32px")}
+                      {Utils.displayRankIcon(player.rating, "32px", player.is_global_top_100)}
                       <Box component={'span'} title={String(player.rating)}>{Utils.displayRating(player.rating)}</Box>
                     </Box>
                   </TableCell>
@@ -182,7 +183,6 @@ const TopGlobal = () => {
           <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
           <Button onClick={() => navigate(`/top_global/1000/0`)}>View All</Button>
         </Box>
-
       </Box>
     </React.Fragment>
   );

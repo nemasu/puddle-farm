@@ -100,22 +100,28 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
 
           rating_history_result.reverse();
 
+          const convertedRatings = rating_history_result.map((item: RatingsResponse) => Utils.convertRating(item.rating));
+          const minRating = Math.min(...convertedRatings);
+          const maxRating = Math.max(...convertedRatings);
+
           const lineChartData = {
             labels: rating_history_result.map((item: RatingsResponse) => Utils.formatUTCToLocal(item.timestamp)),
             datasets: [
               {
                 label: 'Rating',
-                data: rating_history_result.map((item: RatingsResponse) => Utils.convertRating(item.rating)),
+                data: convertedRatings,
                 borderColor: 'rgb(75, 192, 192)',
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
               },
             ].concat(Utils.getRankThresholds()
-                .filter(
-                    (rank)=> rank.rating <= Math.max(...rating_history_result.map((item: RatingsResponse) => item.rating)) && rank.rating >= Math.min(...rating_history_result.map((item: RatingsResponse) => item.rating)))
+                .filter((rank) => {
+                    const cr = Utils.convertRating(rank.rating);
+                    return cr <= maxRating && cr >= minRating;
+                })
                 .map((rank) =>
                     ({
                         label: rank.name,
-                        data: rating_history_result.map((item: RatingsResponse) => rank.rating),
+                        data: rating_history_result.map(() => Utils.convertRating(rank.rating)),
                         borderColor: rank.color,
                         backgroundColor: rank.color,
                         pointRadius: 0,

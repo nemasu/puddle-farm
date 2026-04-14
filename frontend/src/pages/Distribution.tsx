@@ -209,9 +209,7 @@ const Distribution = () => {
         />
         : null
       }
-      
-
-      <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+      <Typography variant="h4" gutterBottom sx={{ mt: 4 }}>
         Rank Distribution
       </Typography>
       <Typography variant="body1" sx={{mb: 2}}>
@@ -283,13 +281,22 @@ const Distribution = () => {
             </TableRow>
           </TableHead>
           <TableBody>
+            <TableRow>
+              <TableCell>{Utils.displayRankIcon(0, "64px", true)}</TableCell>
+              <TableCell>Imperius</TableCell>
+              <TableCell>Top 100</TableCell>
+            </TableRow>
             {Utils.getRankThresholds().map((threshold, index) => (
               <TableRow key={index}>
                 <TableCell>
                   {Utils.displayRankIcon(threshold.rating, "64px")}
                 </TableCell>
                   <TableCell>{threshold.name}</TableCell>
-                <TableCell>{threshold.rating.toLocaleString()}</TableCell>
+                <TableCell>
+                  {threshold.rating >= 10000000
+                    ? `${(threshold.rating - 10000000).toLocaleString()} DR`
+                    : `${threshold.rating.toLocaleString()} RP`}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

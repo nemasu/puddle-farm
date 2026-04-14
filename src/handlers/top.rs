@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 
@@ -23,6 +23,7 @@ struct PlayerRankResponse {
     char_short: String,
     char_long: String,
     tags: Vec<TagResponse>,
+    is_global_top_100: bool,
 }
 
 pub async fn get_top(
@@ -47,6 +48,7 @@ pub async fn get_top(
                     style: style.clone(),
                 })
                 .collect(),
+            is_global_top_100: p.0.rank <= 100,
         })
         .collect();
 
@@ -56,6 +58,7 @@ pub async fn get_top(
 pub async fn get_top_char(
     data: Vec<(CharacterRank, Player, PlayerRating)>,
     tags: HashMap<i64, Vec<(String, String)>>,
+    global_top100_ids: HashSet<(i64, i16)>,
 ) -> Result<RankResponse, String> {
     let ranks = data
         .iter()
@@ -75,6 +78,7 @@ pub async fn get_top_char(
                     style: style.clone(),
                 })
                 .collect(),
+            is_global_top_100: global_top100_ids.contains(&(p.1.id, p.0.char_id)),
         })
         .collect();
 

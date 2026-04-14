@@ -158,7 +158,7 @@ const TopPlayer = () => {
                   <TableCell>{player.char_short}</TableCell>
                   <TableCell>
                     <Box component={'span'} sx={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                      {Utils.displayRankIcon(player.rating, "32px")}
+                      {Utils.displayRankIcon(player.rating, "32px", player.is_global_top_100)}
                       <Box component={'span'} title={player.rating.toString()}>{Utils.displayRating(player.rating)}</Box>
                     </Box>
                   </TableCell>

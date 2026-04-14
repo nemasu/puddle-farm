@@ -460,6 +460,20 @@ pub async fn get_top_for_char(
     }
 }
 
+pub async fn get_global_top100_ids(
+    db: &mut crate::Connection<'_>,
+) -> Result<HashSet<(i64, i16)>, String> {
+    match schema::global_ranks::table
+        .select((schema::global_ranks::id, schema::global_ranks::char_id))
+        .filter(schema::global_ranks::rank.le(100))
+        .load::<(i64, i16)>(db)
+        .await
+    {
+        Ok(rows) => Ok(rows.into_iter().collect()),
+        Err(e) => Err(format!("Error fetching global top 100: {}", e)),
+    }
+}
+
 pub async fn find_player(
     search_params: crate::handlers::search::SearchParams,
     db: &mut crate::Connection<'_>,

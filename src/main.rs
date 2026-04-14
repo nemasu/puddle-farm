@@ -75,6 +75,7 @@ pub const CHAR_NAMES: &[(&str, &str)] = &[
     ("VE", "Venom"),
     ("UN", "Unika"),
     ("LU", "Lucy"),
+    ("JA", "Jam"),
 ];
 
 async fn player(
@@ -89,6 +90,8 @@ async fn player(
             Err(e) => return Err((StatusCode::NOT_FOUND, e)),
         };
 
+    let global_top100_ids = db::get_global_top100_ids(&mut db).await.unwrap_or_default();
+
     match handlers::player::handle_get_player(
         player_char,
         match_counts,
@@ -97,6 +100,7 @@ async fn player(
         top_rating,
         top_global,
         tags,
+        global_top100_ids,
     )
     .await
     {
@@ -139,7 +143,9 @@ async fn player_history(
         Err(_) => HashMap::new(),
     };
 
-    match handlers::player_history::handle_get_player_history(player_id, games, player_tags).await {
+    let global_top100_ids = db::get_global_top100_ids(&mut db).await.unwrap_or_default();
+
+    match handlers::player_history::handle_get_player_history(player_id, games, player_tags, global_top100_ids).await {
         Ok(response) => Ok(Json(response)),
         Err(e) => Err((StatusCode::NOT_FOUND, e)),
     }
@@ -209,7 +215,9 @@ async fn top_char(
         Err(_) => HashMap::new(),
     };
 
-    match handlers::top::get_top_char(data, player_tags).await {
+    let global_top100_ids = db::get_global_top100_ids(&mut db).await.unwrap_or_default();
+
+    match handlers::top::get_top_char(data, player_tags, global_top100_ids).await {
         Ok(response) => Ok(Json(response)),
         Err(e) => Err((StatusCode::NOT_FOUND, e)),
     }
@@ -678,18 +686,29 @@ async fn distribution(
 
 async fn health(State(pools): State<AppState>) -> Result<String, (StatusCode, String)> {
     let mut redis = pools.redis_pool.get().await.unwrap();
+    let now = chrono::Utc::now().timestamp();
+
+    let last_update_daily = imdb::get_last_update_daily(&mut redis).await.unwrap();
+
+    // If the daily task ran very recently (within 10 min), latest_game_time may be
+    // temporarily absent — treat as graceful/running state, not an error.
+    let daily_ran_recently = now - last_update_daily.and_utc().timestamp() < 600;
 
     let latest_game_time = match imdb::get_latest_game_time(&mut redis).await {
-        Ok(latest_game_time) => Some(latest_game_time),
+        Ok(t) => Some(t),
         Err(_) => {
+            if daily_ran_recently || now - 86400 > last_update_daily.and_utc().timestamp() {
+                return Ok(
+                    "Daily Update Running. Replays are still being collected and will show up shortly."
+                        .to_string(),
+                );
+            }
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "latest_game_time does not exist!".to_string(),
-            ))
+            ));
         }
     };
-
-    let now = chrono::Utc::now().timestamp();
 
     if now - 120 > latest_game_time.unwrap().and_utc().timestamp() {
         return Err((
@@ -698,7 +717,6 @@ async fn health(State(pools): State<AppState>) -> Result<String, (StatusCode, St
         ));
     }
 
-    let last_update_daily = imdb::get_last_update_daily(&mut redis).await.unwrap();
     if now - 86400 > last_update_daily.and_utc().timestamp() {
         return Ok(
             "Daily Update Running. Replays are still being collected and will show up shortly."
@@ -932,8 +950,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/health", get(health))
                 .route("/api/avatar/:player_id", get(avatar))
                 .route("/api/comment/:player_id", get(comment))
-                .with_state(state)
-                .layer(cors);
+                .with_state(state);
+
+            let app = if cfg!(debug_assertions) {
+                app.layer(cors)
+            } else {
+                app
+            };
 
             let listener = tokio::net::TcpListener::bind(std::env::var("LISTEN_ADDR").expect("LISTEN_ADDR")).await?;
             axum::serve(listener, app).await?;

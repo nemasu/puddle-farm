@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 
@@ -25,6 +25,7 @@ struct PlayerResponsePlayer {
     top_char: i32,
     top_defeated: TopDefeated,
     top_rating: TopRating,
+    is_global_top_100: bool,
 }
 
 #[derive(Serialize, Clone)]
@@ -50,6 +51,7 @@ pub async fn handle_get_player(
     top_rating: HashMap<i16, TopRating>,
     top_global: i32,
     tags: Vec<(String, String)>,
+    global_top100_ids: HashSet<(i64, i16)>,
 ) -> Result<PlayerResponse, String> {
     let ratings: Vec<PlayerResponsePlayer> = player_char
         .iter()
@@ -76,6 +78,7 @@ pub async fn handle_get_player(
                     value: 0,
                 })
                 .clone(),
+            is_global_top_100: global_top100_ids.contains(&(p.0.id, p.1.char_id)),
         })
         .collect();
 
@@ -119,6 +122,7 @@ mod tests {
             top_rating,
             top_global,
             tags,
+            HashSet::new(),
         )
         .await
         .unwrap();
@@ -142,6 +146,7 @@ mod tests {
             top_rating,
             top_global,
             tags,
+            HashSet::new(),
         )
         .await
         .unwrap();
@@ -165,6 +170,7 @@ mod tests {
             top_rating,
             top_global,
             tags,
+            HashSet::new(),
         )
         .await
         .unwrap();
@@ -187,6 +193,7 @@ mod tests {
             top_rating,
             top_global,
             tags,
+            HashSet::new(),
         )
         .await
         .unwrap();
@@ -209,6 +216,7 @@ mod tests {
             top_rating,
             top_global,
             tags,
+            HashSet::new(),
         )
         .await
         .unwrap();

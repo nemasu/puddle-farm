@@ -14,28 +14,35 @@ use tokio::sync::Mutex;
 
 lazy_static! {
     pub static ref TOKEN: Mutex<Option<String>> = Mutex::new(None);
+    
+    /// Reusing a single client maintains a connection pool and 
+    /// ensures stable SNI/TLS handling across requests.
+    pub static ref HTTP_CLIENT: reqwest::Client = reqwest::Client::builder()
+        .user_agent("GGST/Steam")
+        .build()
+        .expect("Failed to create reqwest client");
 }
 
 pub async fn get_player_stats(player_id: String) -> Result<String, String> {
     let request_data = requests::generate_player_stats_request(player_id);
     let request_data = encrypt_data(&request_data);
 
-    let client = reqwest::Client::new();
-    let form = client
+    let response = HTTP_CLIENT
         .post("https://ggst-game.guiltygear.com/api/statistics/get")
-        .header(header::USER_AGENT, "GGST/Steam")
         .header(header::CACHE_CONTROL, "no-store")
         .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header("x-client-version", "1")
-        .form(&[("data", request_data)]);
+        .form(&[("data", request_data)])
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
 
-    let response = form.send().await.unwrap();
-    let response_bytes = response.bytes().await.unwrap();
+    let response_bytes = response.bytes().await.map_err(|e| e.to_string())?;
 
     if let Ok(r) = decrypt_response::<responses::PlayerStats>(&response_bytes) {
         Ok(r.body.json)
     } else {
-        return Err("Couldn't get player stats".to_owned());
+        Err("Couldn't get player stats".to_owned())
     }
 }
 
@@ -43,58 +50,52 @@ pub async fn get_player_comment(player_id: String) -> Result<String, String> {
     let request_data = requests::generate_player_stats_request(player_id);
     let request_data = encrypt_data(&request_data);
 
-    let client = reqwest::Client::new();
-    let form = client
+    let response = HTTP_CLIENT
         .post("https://ggst-game.guiltygear.com/api/statistics/get")
-        .header(header::USER_AGENT, "GGST/Steam")
         .header(header::CACHE_CONTROL, "no-store")
         .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header("x-client-version", "1")
-        .form(&[("data", request_data)]);
+        .form(&[("data", request_data)])
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
 
-    let response = form.send().await.unwrap();
-    let response_bytes = response.bytes().await.unwrap();
+    let response_bytes = response.bytes().await.map_err(|e| e.to_string())?;
 
     if let Ok(r) = decrypt_response::<responses::PlayerStats>(&response_bytes) {
+        let parsed: Value = serde_json::from_str(&r.body.json)
+            .map_err(|e| format!("Failed to parse JSON: {}", e))?;
 
-      let parsed: Value = match serde_json::from_str(&r.body.json) {
-          Ok(parsed) => parsed,
-          Err(e) => return Err(format!("Failed to parse JSON: {}", e)),
-      };
-
-      if let Some(comment_value) = parsed.get("PublicComment") {
-          if let Some(comment) = comment_value.as_str() {
-              return Ok(comment.to_owned());
-          }
-      }
-
-      Err("Comment not found".to_owned())
+        if let Some(comment) = parsed.get("PublicComment").and_then(|v| v.as_str()) {
+            return Ok(comment.to_owned());
+        }
+        Err("Comment not found".to_owned())
     } else {
-        return Err("Couldn't get player stats".to_owned());
+        Err("Couldn't get player stats".to_owned())
     }
 }
 
 pub async fn get_player_avatar(player_id: String) -> Result<String, String> {
-  let request_data = requests::generate_player_avatar_request(player_id);
-  let request_data = encrypt_data(&request_data);
+    let request_data = requests::generate_player_avatar_request(player_id);
+    let request_data = encrypt_data(&request_data);
 
-  let client = reqwest::Client::new();
-  let form = client
-      .post("https://ggst-game.guiltygear.com/api/tus/read")
-      .header(header::USER_AGENT, "GGST/Steam")
-      .header(header::CACHE_CONTROL, "no-store")
-      .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-      .header("x-client-version", "1")
-      .form(&[("data", request_data)]);
+    let response = HTTP_CLIENT
+        .post("https://ggst-game.guiltygear.com/api/tus/read")
+        .header(header::CACHE_CONTROL, "no-store")
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .header("x-client-version", "1")
+        .form(&[("data", request_data)])
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
 
-  let response = form.send().await.unwrap();
-  let response_bytes = response.bytes().await.unwrap();
+    let response_bytes = response.bytes().await.map_err(|e| e.to_string())?;
 
-  if let Ok(r) = decrypt_response::<responses::PlayerAvatar>(&response_bytes) {
-      Ok(r.body.png)
-  } else {
-      return Err("Couldn't get player avatar".to_owned());
-  }
+    if let Ok(r) = decrypt_response::<responses::PlayerAvatar>(&response_bytes) {
+        Ok(r.body.png)
+    } else {
+        Err("Couldn't get player avatar".to_owned())
+    }
 }
 
 pub async fn get_token() -> Result<String, String> {
@@ -110,86 +111,63 @@ pub async fn get_token() -> Result<String, String> {
     let request_data = requests::generate_login_request().await;
     let request_data = encrypt_data(&request_data);
 
-    let client = reqwest::Client::new();
-    let form = client
+    let response = HTTP_CLIENT
         .post("https://ggst-game.guiltygear.com/api/user/login")
-        .header(header::USER_AGENT, "GGST/Steam")
         .header(header::CACHE_CONTROL, "no-store")
         .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header("x-client-version", "1")
-        .form(&[("data", request_data)]);
-
-    //Add logging before panic.
-    let response = match form.send().await {
-        Ok(resp) => resp,
-        Err(err) => {
+        .form(&[("data", request_data)])
+        .send()
+        .await
+        .unwrap_or_else(|err| {
             error!("get_token send() error: {}", err);
-            panic!(); //force crash to restart server
-        }
-    };
+            panic!("Critical TLS or Network failure: {}", err);
+        });
 
-    let response_bytes = match response.bytes().await {
-        Ok(resp_bytes) => resp_bytes,
-        Err(err) => {
-            error!("get_token bytes() error: {}", err);
-            panic!(); //force crash to restart server
-        }
-    };
+    let response_bytes = response.bytes().await.unwrap();
     
     info!("Waiting for strive token");
-
     let mut t = TOKEN.lock().await;
 
     if let Ok(r) = decrypt_response::<responses::Login>(&response_bytes) {
         info!("Got token: {}", r.header.token);
         *t = Some(r.header.token.to_owned());
-
-        // save off token
         let _ = std::fs::write("token.txt", r.header.token.clone());
-
         Ok(r.header.token)
     } else {
-        return Err("Couldn't get strive token".to_owned());
+        Err("Couldn't get strive token".to_owned())
     }
 }
 
 pub async fn get_replays() -> Result<Vec<responses::Replay>, String> {
     let token = get_token().await?;
     let mut replays = Vec::new();
+
     for i in 0..5 {
         debug!("Grabbing replays (page {i})");
         let request_data = requests::generate_replay_request(i, 127, &token);
         let request_data = encrypt_data(&request_data);
-        let client = reqwest::Client::new();
-        let form = client
+
+        let response = HTTP_CLIENT
             .post("https://ggst-game.guiltygear.com/api/catalog/get_replay")
-            .header(header::USER_AGENT, "GGST/Steam")
             .header(header::CACHE_CONTROL, "no-store")
             .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
             .header("x-client-version", "1")
-            .form(&[("data", request_data)]);
+            .form(&[("data", request_data)])
+            .send()
+            .await
+            .map_err(|err| {
+                error!("get_replay (page {}) send() error: {}", i, err);
+                err.to_string()
+            })?;
 
-        let response = match form.send().await {
-            Ok(resp) => resp,
-            Err(err) => {
-                error!("get_replay send() error: {}", err);
-                panic!("get_replay send() error: {}", err); //force crash to restart server
-            }
-        };
-
-        let response_bytes = match response.bytes().await {
-            Ok(resp_bytes) => resp_bytes,
-            Err(err) => {
-                error!("get_replay bytes() error: {}", err);
-                panic!("get_replay bytes() error: {}", err); //force crash to restart server
-            }
-        };
+        let response_bytes = response.bytes().await.map_err(|e| e.to_string())?;
 
         match decrypt_response::<responses::Replays>(&response_bytes) {
             Ok(r) => replays.extend_from_slice(&r.body.replays),
             Err(err) => {
                 error!("get_replay decrypt_response() error: {}", err);
-                panic!("get_replay decrypt_response() error: {}", err); //force crash to restart server
+                return Err("Failed to decrypt replay data".to_owned());
             }
         };
     }
@@ -245,12 +223,14 @@ fn decrypt_response<T: for<'a> Deserialize<'a>>(
         Ok(r) => Ok(r),
         Err(e) => {
             error!("Error in received msgpack!");
+            error!("Deserialization error: {:?}", e);
             let mut owned_string: String = "".to_owned();
 
             for b in &decrypted {
                 owned_string.push_str(&format!("{:02X}", b));
             }
-            error!("{:?}", owned_string);
+            error!("Raw msgpack hex: {}", owned_string);
+            error!("Decrypted length: {} bytes", decrypted.len());
 
             Err(Box::new(e))
         }

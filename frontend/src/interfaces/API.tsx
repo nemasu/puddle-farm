@@ -17,6 +17,7 @@ export interface PlayerResponsePlayer {
   top_char: number;
   top_defeated: TopDefeated;
   top_rating: TopRating;
+  is_global_top_100: boolean;
 }
 
 export interface TopDefeated {
@@ -58,6 +59,7 @@ export interface PlayerSet {
   opponent_rating_deviation: number;
   result_win: boolean;
   odds: number;
+  opponent_is_global_top_100: boolean;
 }
 
 export interface RankResponse {
@@ -73,6 +75,7 @@ export interface PlayerRankResponse {
   char_short: string; // Short name of the character
   char_long: string; // Full name of the character
   tags: TagResponse[];
+  is_global_top_100: boolean;
 }
 
 export interface SearchResponse {

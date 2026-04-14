@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 
@@ -24,12 +24,14 @@ struct PlayerSet {
     opponent_character_short: &'static str,
     opponent_rating_value: i64,
     result_win: bool,
+    opponent_is_global_top_100: bool,
 }
 
 pub async fn handle_get_player_history(
     player_id: i64,
     games: Vec<models::Game>,
     player_tags: HashMap<i64, Vec<(String, String)>>,
+    global_top100_ids: HashSet<(i64, i16)>,
 ) -> Result<PlayerGamesResponse, String> {
     let mut response: PlayerGamesResponse = PlayerGamesResponse {
         history: vec![],
@@ -79,6 +81,12 @@ pub async fn handle_get_player_history(
             game.value_a
         };
 
+        let opponent_char_id = if game.id_a == player_id {
+            game.char_b
+        } else {
+            game.char_a
+        };
+
         let timestamp = match game.real_timestamp {
             Some(ts) => ts.to_string(),
             None => game.timestamp.to_string(),
@@ -110,6 +118,7 @@ pub async fn handle_get_player_history(
             opponent_character_short,
             opponent_rating_value: opponent_rating_value,
             result_win,
+            opponent_is_global_top_100: global_top100_ids.contains(&(opponent_id, opponent_char_id)),
         });
 
         if opponent_id != 0 && player_tags.contains_key(&opponent_id) {
@@ -149,7 +158,7 @@ mod tests {
       let (mut games, player_tags) = get_test_player_history_data();
       games[0].platform_b = 3;
 
-      let response = handle_get_player_history(player_id, games, player_tags)
+      let response = handle_get_player_history(player_id, games, player_tags, HashSet::new())
       .await
       .unwrap();
 
@@ -163,7 +172,7 @@ mod tests {
       let (mut games, player_tags) = get_test_player_history_data();
       games[0].platform_b = 2;
 
-      let response = handle_get_player_history(player_id, games, player_tags)
+      let response = handle_get_player_history(player_id, games, player_tags, HashSet::new())
       .await
       .unwrap();
 
@@ -177,7 +186,7 @@ mod tests {
       let (mut games, player_tags) = get_test_player_history_data();
       games[0].platform_b = 1;
 
-      let response = handle_get_player_history(player_id, games, player_tags)
+      let response = handle_get_player_history(player_id, games, player_tags, HashSet::new())
       .await
       .unwrap();
 
@@ -190,7 +199,7 @@ mod tests {
       let player_id = 1;
       let (games, player_tags) = get_test_player_history_data();
 
-      let response = handle_get_player_history(player_id, games, player_tags)
+      let response = handle_get_player_history(player_id, games, player_tags, HashSet::new())
       .await
       .unwrap();
 
@@ -203,7 +212,7 @@ mod tests {
       let player_id = 2;
       let (games, player_tags) = get_test_player_history_data();
 
-      let response = handle_get_player_history(player_id, games, player_tags)
+      let response = handle_get_player_history(player_id, games, player_tags, HashSet::new())
       .await
       .unwrap();
 
@@ -216,7 +225,7 @@ mod tests {
       let player_id = 2;
       let (games, player_tags) = get_test_player_history_data();
 
-      let response = handle_get_player_history(player_id, games, player_tags)
+      let response = handle_get_player_history(player_id, games, player_tags, HashSet::new())
       .await
       .unwrap();
 

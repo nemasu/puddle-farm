@@ -5,7 +5,7 @@ use diesel::prelude::*;
 use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
 use std::time::Duration;
 use tokio::time;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 use crate::schema::{character_ranks, games, global_ranks, player_names, players};
 use chrono::{NaiveDateTime, Utc};
@@ -26,6 +26,19 @@ pub const ONE_MINUTE: u64 = 1 * 60;
 //TODO move the db stuff from this file into db.rs and imdb.rs
 
 pub async fn pull_and_update_continuous(state: crate::AppState) {
+
+    //check for token.txt and set TOKEN if it exists
+    {
+        use std::fs;
+        if let Ok(token) = fs::read_to_string("token.txt") {
+            let mut token_lock = ggst_api::TOKEN.lock().await;
+            *token_lock = Some(token.trim().to_string());
+            info!("Loaded API token from token.txt");
+        } else {
+            warn!("token.txt not found, trying to initialize with steam authentication");
+        }
+    }
+    
     // Processing loop
     let processing_state = state.clone();
     let processing_task = tokio::spawn(async move {
@@ -263,7 +276,7 @@ async fn do_daily_update(
         .await
         .expect("Error setting last_update_daily");
 
-    //Clear this so that health check doesn't fail
+    //Clear latest_game_time; health check handles the brief absence via the daily_ran_recently window
     crate::imdb::clear_latest_game_time(redis_connection)
         .await
         .unwrap();
@@ -294,8 +307,8 @@ async fn update_distribution(
         "
         WITH buckets AS (
             SELECT
-              unnest(ARRAY[-10000000, 1,    1000, 2000, 3000, 4200, 5400, 6600, 8800,  11000, 13200, 15600, 18000, 20400, 24400, 28400, 32400, 36600, 40800, 45000]) AS lower_bound,
-              unnest(ARRAY[1, 1000, 2000, 3000, 4200, 5400, 6600, 8800, 11000, 13200, 15600, 18000, 20400, 24400, 28400, 32400, 36600, 40800, 45000, 200000000]) AS upper_bound
+              unnest(ARRAY[-10000000, 1,    1000, 2000, 3000, 4200, 5400, 6600, 8800,  11000, 13200, 15600, 18000, 20400, 24400, 28400, 32400, 36600, 40800, 10000000, 10001600, 10001700, 10001800]) AS lower_bound,
+              unnest(ARRAY[1, 1000, 2000, 3000, 4200, 5400, 6600, 8800, 11000, 13200, 15600, 18000, 20400, 24400, 28400, 32400, 36600, 40800, 10000000, 10001600, 10001700, 10001800, 200000000]) AS upper_bound
         ),
         bucket_counts AS (  -- CTE to count values in each bucket
             SELECT 

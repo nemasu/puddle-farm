@@ -88,7 +88,7 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
                     </React.Fragment>
                   </TableCell>
                   <TableCell>
-                    {Utils.displayRankIcon(item.matches[item.matches.length - 1].opponent_rating_value, '32px')}
+                    {Utils.displayRankIcon(item.matches[item.matches.length - 1].opponent_rating_value, '32px', item.matches[item.matches.length - 1].opponent_is_global_top_100)}
                   </TableCell>
                   <TableCell sx={{ px: 0, mx: 0 }}>
                     {Utils.displayRating(item.matches[item.matches.length - 1].opponent_rating_value)}
@@ -185,7 +185,7 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
                 </React.Fragment>
               </TableCell>
               <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
-              <TableCell align="right"><Box component={'span'}>{Utils.displayRankIcon(item.matches[item.matches.length - 1].opponent_rating_value, '32px')} {Utils.displayRating(item.matches[item.matches.length - 1].opponent_rating_value)}</Box></TableCell>
+              <TableCell align="right"><Box component={'span'}>{Utils.displayRankIcon(item.matches[item.matches.length - 1].opponent_rating_value, '32px', item.matches[item.matches.length - 1].opponent_is_global_top_100)} {Utils.displayRating(item.matches[item.matches.length - 1].opponent_rating_value)}</Box></TableCell>
               <TableCell align="right">{item.wins} - {item.losses}</TableCell>
               <TableCell align="right">
                 {Utils.colorChangeForRating(item.ratingChange)}

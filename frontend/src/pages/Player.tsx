@@ -1,7 +1,7 @@
 
 import { AppBar, Typography, CircularProgress, useTheme, useMediaQuery, Box, Button, Link, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, IconButton, Tooltip } from '@mui/material';
 import RefreshIcon from '@mui/icons-material/Refresh';
-import React, { useEffect, useState, useRef, Fragment } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -21,7 +21,7 @@ import RatingChart from '../components/RatingChart';
 
 const Player = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
 
   let API_ENDPOINT = '/api';
   if (import.meta.env.VITE_API_ENDPOINT !== undefined) {
@@ -329,7 +329,7 @@ const Player = () => {
         sx={{ backgroundColor: "secondary.main" }}
       >
         {isMobile ? (
-          <Box sx={{ minHeight: 50, display: { xs: 'block', md: 'none' } }}> {/* Mobile View */}
+          <Box sx={{ minHeight: 50, display: { xs: 'block', lg: 'none' } }}> {/* Mobile View */}
             {player ? (
               <React.Fragment>
                 <Typography textAlign={'center'} variant="pageHeader" fontSize={30} marginTop={2}>
@@ -343,7 +343,7 @@ const Player = () => {
                   
                   { currentCharData ? (
                     <React.Fragment>
-                      {Utils.displayRankIcon(currentCharData.rating, "64px")}
+                      {Utils.displayRankIcon(currentCharData.rating, "64px", player.top_global > 0 && player.top_global <= 100)}
                     </React.Fragment>
                   ) : null}
 
@@ -377,7 +377,7 @@ const Player = () => {
             ) : null}
           </Box>
         ) : (
-          <Box sx={{ minHeight: 100, paddingTop: '30px', display: { xs: 'none', md: 'block' } }}> {/* Desktop View */}
+          <Box sx={{ minHeight: 100, paddingTop: '30px', display: { xs: 'none', lg: 'block' } }}> {/* Desktop View */}
             {player ? (
               <React.Fragment>
                 <Typography align='center' variant="pageHeader" fontSize={30}>
@@ -391,7 +391,7 @@ const Player = () => {
 
                   { currentCharData ? (
                     <React.Fragment>
-                      {Utils.displayRankIcon(currentCharData.rating, "64px")}
+                      {Utils.displayRankIcon(currentCharData.rating, "64px", player.top_global > 0 && player.top_global <= 100)}
                     </React.Fragment>
                   ) : null}
 
@@ -426,230 +426,79 @@ const Player = () => {
           </Box>
         )}
       </AppBar>
-      {isMobile ? (
-        <Box sx={{ display: { xs: 'block', md: 'none' } }}> {/* Mobile View */}
-          <Box m={1}>
-            <Box>
-              {currentCharData ? (
-                <React.Fragment>
-                  <Typography variant='h5' my={2}>
-                    {currentCharData.character} Rating: <Box component={"span"}>{Utils.displayRating(currentCharData.rating)}</Box> ({currentCharData.match_count} games)
-                    <Tooltip title="Sync ratings from game">
-                      <IconButton 
-                        onClick={handleRatingSync} 
-                        disabled={syncLoading}
-                        size="small"
-                        sx={{ ml: 1, color: 'primary.main' }}
-                      >
-                        <RefreshIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    {currentCharData.top_char !== 0 ? (
-                      <Typography variant="char_rank" onMouseDown={(event) => onLinkClick(event, `/top/${currentCharData.char_short}`)} sx={{ cursor: 'pointer' }}>
-                        #{currentCharData.top_char} {currentCharData.character}
-                      </Typography>
-                    ) : null}
-                  </Typography>
-                  {currentCharData.top_rating.value !== 0 ? (
-                    <React.Fragment>
-                      <Typography>
-                        Top Rating: <Box component={"span"}>{Utils.displayRating(currentCharData.top_rating.value)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_rating.timestamp)})
-                      </Typography>
-                    </React.Fragment>
-                  ) : null}
-                  {currentCharData.top_defeated.value !== 0.0 ? (
-                    <Typography>
-                      Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} onMouseDown={(event) => onLinkClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box component={"span"}>{Utils.displayRating(currentCharData.top_defeated.value)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
-                    </Typography>
-                  ) : null}
 
-                </React.Fragment>
-              ) : null}
-              {countdown !== null ? (
-                <Box>
-                  <Typography variant="h6" gutterBottom>
-                    Auto-update in: {countdown} seconds
-                  </Typography>
-                </Box>
-              ) : null}
-              {history ? (
-                <React.Fragment>
-                  <Box mx={3} mb={2}>
-                    <Typography variant="h6" gutterBottom>
-                      Match History
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateAreas: {
+            xs: '"main" "avatar" "sidebar"',
+            lg: '"main sidebar"'
+          },
+          gridTemplateColumns: { xs: '1fr', lg: '1fr 300px' },
+          gridTemplateRows: { xs: 'auto auto auto', lg: '1fr' },
+          gap: { xs: 1, lg: 2 },
+          p: { xs: 1, lg: 2 },
+          overflow: 'hidden'
+        }}
+      >
+        {/* Main Content Area */}
+        <Box sx={{ gridArea: 'main', overflow: 'auto', minWidth: 0 }}>
+          <Box>
+            {currentCharData ? (
+              <React.Fragment>
+                <Typography variant='h5' my={2}>
+                  {currentCharData.character} Rating: <Box component={"span"}>{Utils.displayRating(currentCharData.rating)}</Box> ({currentCharData.match_count} games)
+                  <Tooltip title="Sync ratings from game">
+                    <IconButton
+                      onClick={handleRatingSync}
+                      disabled={syncLoading}
+                      size="small"
+                      sx={{ ml: 1, color: 'primary.main' }}
+                    >
+                      <RefreshIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  {currentCharData.top_char !== 0 ? (
+                    <Typography variant="char_rank" onMouseDown={(event) => onLinkClick(event, `/top/${currentCharData.char_short}`)} sx={{ cursor: 'pointer' }}>
+                      #{currentCharData.top_char} {currentCharData.character}
                     </Typography>
-                    <Box sx={{ /*display: 'flex'*/ display: 'none', gap: 1, mb: 2 }}>
-                      <Button 
-                        variant={matchFilter === 'all' ? 'contained' : 'outlined'}
-                        onClick={() => setMatchFilter('all')}
-                        size="small"
-                      >
-                        All Matches
-                      </Button>
-                      <Button 
-                        variant={matchFilter === 'ranked' ? 'contained' : 'outlined'}
-                        onClick={() => setMatchFilter('ranked')}
-                        size="small"
-                      >
-                        Ranked Only
-                      </Button>
-                      <Button 
-                        variant={matchFilter === 'tower' ? 'contained' : 'outlined'}
-                        onClick={() => setMatchFilter('tower')}
-                        size="small"
-                      >
-                        Tower Only
-                      </Button>
-                    </Box>
-                    <Button onClick={(event) => onPrev(event)}>Prev</Button>
-                    <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
-                  </Box>
+                  ) : null}
+                </Typography>
+                {currentCharData.top_rating.value !== 0 ? (
+                  <Typography>
+                    Top Rating: <Box component={"span"}>{Utils.displayRating(currentCharData.top_rating.value)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_rating.timestamp)})
+                  </Typography>
+                ) : null}
+                {currentCharData.top_defeated.value !== 0.0 ? (
+                  <Typography>
+                    Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} onMouseDown={(event) => onLinkClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box component={"span"}>{Utils.displayRating(currentCharData.top_defeated.value)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
+                  </Typography>
+                ) : null}
+              </React.Fragment>
+            ) : null}
+            {countdown !== null ? (
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  Auto-update in: {countdown} seconds
+                </Typography>
+              </Box>
+            ) : null}
+            {history ? (
+              <React.Fragment>
+                <Box mx={{ xs: 1, lg: 3 }} mb={2}>
+                  <Button onClick={(event) => onPrev(event)}>Prev</Button>
+                  <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
+                </Box>
+                {/* Mobile history view */}
+                <Box sx={{ display: { xs: 'block', lg: 'none' } }}>
                   {tags && filteredHistory.map((item, i) => (
                     <Box py={0.3} key={i}>
                       <HistoryRow key={i} item={item} isMobile={true} tags={tags[item.opponent_id.toString()]} />
                     </Box>
                   ))}
-                  <Box mx={3}>
-                    <Button onClick={(event) => onPrev(event)}>Prev</Button>
-                    <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
-                  </Box>
-                </React.Fragment>
-              ) : null}
-            </Box>
-            {currentCharData ? (
-              <RatingChart player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} />
-            ) : null}
-            <Matchup player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} />
-          </Box>
-          <Box marginLeft={10} marginTop={13} sx={{ width: .18, maxWidth: '235px' }}>
-            {comment && (
-              <Box
-                sx={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  borderRadius: '12px',
-                  padding: '12px',
-                  marginBottom: '3px',
-                  position: 'relative',
-                  '&::after': {
-                    content: '""',
-                    position: 'absolute',
-                    bottom: '-8px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: 0,
-                    height: 0,
-                    borderLeft: '8px solid transparent',
-                    borderRight: '8px solid transparent',
-                    borderTop: '8px solid rgba(255, 255, 255, 0.1)',
-                  }
-                }}
-              >
-                <Typography fontSize={13} sx={{ wordWrap: 'break-word' }}>
-                  {comment}
-                </Typography>
-              </Box>
-            )}
-            {avatar && <img src={avatar} alt="Player Avatar" style={{ transform: 'scale(0.5)' }} />}
-            {player && player.id !== BigInt(0) ? (
-              <React.Fragment>
-                <hr />
-                <Typography fontSize={14}>
-                  Characters:
-                </Typography>
-                {player.ratings && player.ratings.map((item, i) => (
-                  <Box key={i}>
-                    <Button variant="text" onMouseDown={(event) => { onLinkClick(event, `/player/${player.id}/${item.char_short}`) }} sx={{ textAlign: 'left', color: 'white' }}>
-                      <Typography fontSize={12.5} my={0.3}>
-                        {item.character}<br />{Utils.displayRankIcon(item.rating, "32px")}<br />{Utils.displayRating(item.rating)}<br />({item.match_count} games)
-                      </Typography>
-                    </Button>
-                    <br />
-                  </Box>
-                ))}
-                <hr style={{ marginTop: 10 }} />
-              </React.Fragment>
-            ) : null}
-          </Box>
-        </Box>
-      ) : (
-        <Box sx={{ display: { xs: 'none', md: 'flex', overflow: 'hidden' } }}> {/* Desktop View */}
-          <Box m={4} sx={{ flex: 1, overflowY: 'auto', minWidth: '840px' }}>
-            <Box>
-              {currentCharData ? (
-                <React.Fragment>
-                  <Typography variant='h5' my={2}>
-                    {currentCharData.character} Rating: <Box component={"span"}>{Utils.displayRating(currentCharData.rating)}</Box> ({currentCharData.match_count} games)
-                    <Tooltip title="Sync ratings from game">
-                      <IconButton 
-                        onClick={handleRatingSync} 
-                        disabled={syncLoading}
-                        size="small"
-                        sx={{ ml: 1, color: 'primary.main' }}
-                      >
-                        <RefreshIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    {currentCharData.top_char !== 0 ? (
-                      <Typography variant="char_rank" onMouseDown={(event) => onLinkClick(event, `/top/${currentCharData.char_short}`)} sx={{ cursor: 'pointer' }}>
-                        #{currentCharData.top_char} {currentCharData.character}
-                      </Typography>
-                    ) : null}
-                  </Typography>
-                  {currentCharData.top_rating.value !== 0 ? (
-                    <React.Fragment>
-                      <Typography>
-                        Top Rating: <Box component={"span"}>{Utils.displayRating(currentCharData.top_rating.value)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_rating.timestamp)})
-                      </Typography>
-                    </React.Fragment>
-                  ) : null}
-
-                  {currentCharData.top_defeated.value !== 0.0 ? (
-                    <Typography>
-                      Top Defeated: <Button sx={{ fontSize: '16px' }} component={Link} onMouseDown={(event) => onLinkClick(event, `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`)}>{currentCharData.top_defeated.name} ({currentCharData.top_defeated.char_short})</Button> <Box component={"span"}>{Utils.displayRating(currentCharData.top_defeated.value)}</Box> ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
-                    </Typography>
-                  ) : null}
-
-                </React.Fragment>
-              ) : null}
-              {countdown !== null ? (
-                <Box>
-                  <Typography variant="h6" gutterBottom>
-                    Auto-update in: {countdown} seconds
-                  </Typography>
                 </Box>
-              ) : null}
-              {history ? (
-                <React.Fragment>
-                  <Box sx={{ display: 'none' }} mx={3} mb={2}>
-                    <Typography variant="h6" gutterBottom>
-                      Match History
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                      <Button 
-                        variant={matchFilter === 'all' ? 'contained' : 'outlined'}
-                        onClick={() => setMatchFilter('all')}
-                        size="small"
-                      >
-                        All Matches
-                      </Button>
-                      <Button 
-                        variant={matchFilter === 'ranked' ? 'contained' : 'outlined'}
-                        onClick={() => setMatchFilter('ranked')}
-                        size="small"
-                      >
-                        Ranked Only
-                      </Button>
-                      <Button 
-                        variant={matchFilter === 'tower' ? 'contained' : 'outlined'}
-                        onClick={() => setMatchFilter('tower')}
-                        size="small"
-                      >
-                        Tower Only
-                      </Button>
-                    </Box>
-                    <Button onClick={(event) => onPrev(event)}>Prev</Button>
-                    <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
-                  </Box>
+                {/* Desktop history view */}
+                <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
                   <TableContainer component={Paper}>
                     <Table size="small">
                       <TableHead>
@@ -671,26 +520,37 @@ const Player = () => {
                       </TableBody>
                     </Table>
                   </TableContainer>
-                  <Box mx={3}>
-                    <Button onClick={(event) => onPrev(event)}>Prev</Button>
-                    <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
-                  </Box>
-                </React.Fragment>
-              ) : null}
-            </Box>
-            {currentCharData ? (
-              <RatingChart player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short}/>
+                </Box>
+                <Box mx={{ xs: 1, lg: 3 }}>
+                  <Button onClick={(event) => onPrev(event)}>Prev</Button>
+                  <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
+                </Box>
+              </React.Fragment>
             ) : null}
-            <Matchup player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} />
           </Box>
-          <Box sx={{ width: 300, overflowY: 'auto', minWidth: '200px' }}>
+          {currentCharData ? (
+            <RatingChart player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} />
+          ) : null}
+          <Matchup player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} />
+        </Box>
+
+        {/* Sidebar Area */}
+        <Box sx={{
+          gridArea: 'sidebar',
+          display: { xs: 'contents', lg: 'flex' },
+          flexDirection: { lg: 'column' },
+          overflowY: { lg: 'auto' },
+          minWidth: { lg: '200px' }
+        }}>
+          {/* Sidebar content - avatar/comment in own area on mobile */}
+          <Box sx={{ gridArea: { xs: 'avatar', lg: 'unset' } }}>
             {comment && (
               <Box
                 sx={{
                   backgroundColor: 'rgba(255, 255, 255, 0.1)',
                   borderRadius: '12px',
                   padding: '12px',
-                  marginTop: '50px',
+                  marginTop: { xs: 0, lg: '10px' },
                   marginBottom: '3px',
                   marginLeft: '10px',
                   marginRight: '10px',
@@ -715,6 +575,9 @@ const Player = () => {
               </Box>
             )}
             {avatar && <img src={avatar} alt="Player Avatar" style={{ transform: 'scale(0.5)' }} />}
+          </Box>
+          {/* Characters list - stays in sidebar area */}
+          <Box sx={{ gridArea: { xs: 'sidebar', lg: 'unset' } }}>
             {player && player.id !== BigInt(0) ? (
               <React.Fragment>
                 <hr />
@@ -725,7 +588,14 @@ const Player = () => {
                   <Box key={i}>
                     <Button variant="text" onMouseDown={(event) => { onLinkClick(event, `/player/${player.id}/${item.char_short}`) }} sx={{ textAlign: 'left', color: 'white' }}>
                       <Typography fontSize={12.5} my={0.3}>
-                          {item.character} {Utils.displayRating(item.rating)} <Box sx={{ display: 'inline-flex', position: 'relative', top: '16px', marginLeft: '5px' }}>{Utils.displayRankIcon(item.rating, "32px")}</Box><br />({item.match_count} games)
+                        {/* Mobile: stacked layout */}
+                        <Box sx={{ display: { xs: 'block', lg: 'none' } }}>
+                          {item.character}<br />{Utils.displayRankIcon(item.rating, "32px", item.is_global_top_100)}<br />{Utils.displayRating(item.rating)}<br />({item.match_count} games)
+                        </Box>
+                        {/* Desktop: inline layout */}
+                        <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
+                          {item.character} {Utils.displayRating(item.rating)} <Box sx={{ display: 'inline-flex', position: 'relative', top: '16px', marginLeft: '5px' }}>{Utils.displayRankIcon(item.rating, "32px", item.is_global_top_100)}</Box><br />({item.match_count} games)
+                        </Box>
                       </Typography>
                     </Button>
                     <br />
@@ -736,7 +606,7 @@ const Player = () => {
             ) : null}
           </Box>
         </Box>
-      )}
+      </Box>
 
       {/* Error Dialog */}
       <Dialog

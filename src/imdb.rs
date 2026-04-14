@@ -270,7 +270,10 @@ pub async fn get_last_update_daily(
     let last_update_daily = match get_string("last_update_daily", redis).await {
         Ok(lud) => lud,
         Err(_) => {
-            return Err("Failed to get last_update_daily".to_string());
+            // Key doesn't exist yet (fresh deployment) - return a time in the past
+            // to indicate data needs to be refreshed
+            tracing::warn!("last_update_daily not found in Redis, using default (2 days ago)");
+            return Ok(chrono::Utc::now().naive_utc() - chrono::Duration::days(2));
         }
     };
 
