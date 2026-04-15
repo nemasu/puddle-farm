@@ -100,9 +100,24 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
 
           rating_history_result.reverse();
 
+          const hasVanquisher = rating_history_result.some((item: RatingsResponse) => item.rating > 10000000);
+          const hasNormal = rating_history_result.some((item: RatingsResponse) => item.rating <= 10000000);
+
           const convertedRatings = rating_history_result.map((item: RatingsResponse) => Utils.convertRating(item.rating));
           const minRating = Math.min(...convertedRatings);
           const maxRating = Math.max(...convertedRatings);
+
+          const allThresholds = Utils.getRankThresholds();
+          const maxRawRating = Math.max(...rating_history_result.map((item: RatingsResponse) => item.rating));
+          const currentRankIndex = allThresholds.findIndex((t) => maxRawRating >= t.rating);
+          const rawNextRank = currentRankIndex > 0 ? allThresholds[currentRankIndex - 1] : null;
+
+          // Diamond 3 promotes to Vanquisher at 45,000 RP, not at the 10,000,000 magic number.
+          const VANQUISHER_PROMOTION_RP = 45000;
+          const nextRankLine = rawNextRank === null ? null
+              : rawNextRank.rating >= 10000000 && !hasVanquisher
+                  ? { name: rawNextRank.name, color: rawNextRank.color, convertedRating: VANQUISHER_PROMOTION_RP }
+                  : { name: rawNextRank.name, color: rawNextRank.color, convertedRating: Utils.convertRating(rawNextRank.rating) };
 
           const lineChartData = {
             labels: rating_history_result.map((item: RatingsResponse) => Utils.formatUTCToLocal(item.timestamp)),
@@ -112,9 +127,15 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
                 data: convertedRatings,
                 borderColor: 'rgb(75, 192, 192)',
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                pointRadius: 3,
+                borderWidth: 2,
               },
-            ].concat(Utils.getRankThresholds()
+            ].concat(allThresholds
                 .filter((rank) => {
+                    if (rawNextRank && rank.rating === rawNextRank.rating) return false;
+                    const rankIsVanquisher = rank.rating > 10000000;
+                    if (rankIsVanquisher && !hasVanquisher) return false;
+                    if (!rankIsVanquisher && !hasNormal) return false;
                     const cr = Utils.convertRating(rank.rating);
                     return cr <= maxRating && cr >= minRating;
                 })
@@ -128,7 +149,14 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
                         borderWidth: 1,
                     })
                 ),
-            ),
+            ).concat(nextRankLine ? [{
+                label: nextRankLine.name,
+                data: rating_history_result.map(() => nextRankLine.convertedRating),
+                borderColor: nextRankLine.color,
+                backgroundColor: nextRankLine.color,
+                pointRadius: 0,
+                borderWidth: 1,
+            }] : []),
           };
 
           setLineChartData(lineChartData);
