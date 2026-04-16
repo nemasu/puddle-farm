@@ -32,7 +32,7 @@ import('react-chartjs-2').then(module => {
   Line = module.Line;
 });
 
-const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_ENDPOINT }) => {
+const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_ENDPOINT, latest_rating }) => {
 
   const [lineChartData, setLineChartData] = React.useState<LineChartData | null>(null);
   const [duration, setDuration] = React.useState<string>('100');
@@ -100,6 +100,12 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
 
           rating_history_result.reverse();
 
+          //Add current rating to the end
+          rating_history_result.push({
+            timestamp: "Now",
+            rating: latest_rating,
+          });
+
           const hasVanquisher = rating_history_result.some((item: RatingsResponse) => item.rating > 10000000);
           const hasNormal = rating_history_result.some((item: RatingsResponse) => item.rating <= 10000000);
 
@@ -164,7 +170,7 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
       }
     }
     fetchChartData();
-  }, [player_id, char_short, API_ENDPOINT, duration]);
+  }, [player_id, char_short, API_ENDPOINT, latest_rating, duration]);
 
   return (
     <React.Fragment>

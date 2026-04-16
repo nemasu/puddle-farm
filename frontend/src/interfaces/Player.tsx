@@ -32,4 +32,5 @@ export interface RatingChartProps {
   player_id: BigInt;
   char_short: string | undefined;
   API_ENDPOINT: string;
+  latest_rating: number;
 }
