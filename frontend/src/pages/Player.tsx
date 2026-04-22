@@ -116,6 +116,9 @@ const Player = () => {
           }));
         });
         setTags(tags);
+      } else {
+        setHistory([]);
+        setTags({});
       }
     }
   };

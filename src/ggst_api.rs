@@ -204,18 +204,20 @@ fn decrypt_response<T: for<'a> Deserialize<'a>>(
         hex::decode("EEBC1F57487F51921C0465665F8AE6D1658BB26DE6F8A069A3520293A572078F").unwrap();
     let aes_gcm = Aes256Gcm::new_from_slice(&key).unwrap();
 
-    let mut nonce = [0; 12];
-    for i in 0..12 {
-        nonce[i] = bytes[i];
+    if bytes.len() < 12 {
+        error!("decrypt_response: response too short ({} bytes)", bytes.len());
+        return Err(format!("response too short: {} bytes", bytes.len()).into());
     }
 
-    //let nonce: GenericArray<_, _> = todo!();// GenericArray::from(&response_bytes[..12]);
+    let mut nonce = [0u8; 12];
+    nonce.copy_from_slice(&bytes[..12]);
     let nonce = GenericArray::from(nonce);
 
     let decrypted = match aes_gcm.decrypt(&nonce, &bytes[12..]) {
         Ok(decrypted) => decrypted,
         Err(e) => {
-            panic!("Error decrypting: {:?}", e);
+            error!("decrypt_response: AES-GCM decrypt failed: {:?}", e);
+            return Err(format!("decrypt failed: {:?}", e).into());
         }
     };
 
