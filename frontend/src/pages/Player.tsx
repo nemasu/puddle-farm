@@ -532,7 +532,7 @@ const Player = () => {
             ) : null}
           </Box>
           {currentCharData ? (
-            <RatingChart player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} latest_rating={currentCharData.rating} />
+            <RatingChart player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} latest_rating={currentCharData.rating} total_games={currentCharData.match_count}/>
           ) : null}
           <Matchup player_id={player_id_checked} API_ENDPOINT={API_ENDPOINT} char_short={char_short} />
         </Box>
