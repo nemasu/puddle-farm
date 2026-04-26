@@ -125,6 +125,11 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
                   ? { name: rawNextRank.name, color: rawNextRank.color, convertedRating: VANQUISHER_PROMOTION_RP }
                   : { name: rawNextRank.name, color: rawNextRank.color, convertedRating: Utils.convertRating(rawNextRank.rating) };
 
+          // if the user has less than 100 games, select
+          if (total_games < 100){
+            setDuration(total_games.toString());
+          }
+
           const lineChartData = {
             labels: rating_history_result.map((item: RatingsResponse) => Utils.formatUTCToLocal(item.timestamp)),
             datasets: [
@@ -183,7 +188,11 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
             onChange={handleDurationChange}
           >
             {
-              [100, 200, 300, 400, 500, total_games].sort((a, b)=> a-b).map((nbGame)=> <MenuItem value={nbGame}>{nbGame}</MenuItem>)
+              [100,  200, 300, 400, 500, total_games]
+                  .filter((value, index, self) => self.indexOf(value) === index) // remove duplicates
+                  .sort((a, b) => a - b)
+                  .filter(n => n <= total_games)
+                  .map((nbGame) => <MenuItem value={nbGame}>{nbGame}</MenuItem>)
             }
             <MenuItem value={customGames} onClick={handleOpenDialog}>Custom...</MenuItem>
           </Select>
