@@ -32,7 +32,7 @@ import('react-chartjs-2').then(module => {
   Line = module.Line;
 });
 
-const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_ENDPOINT, latest_rating }) => {
+const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_ENDPOINT, latest_rating, total_games }) => {
 
   const [lineChartData, setLineChartData] = React.useState<LineChartData | null>(null);
   const [duration, setDuration] = React.useState<string>('100');
@@ -125,6 +125,11 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
                   ? { name: rawNextRank.name, color: rawNextRank.color, convertedRating: VANQUISHER_PROMOTION_RP }
                   : { name: rawNextRank.name, color: rawNextRank.color, convertedRating: Utils.convertRating(rawNextRank.rating) };
 
+          // if the user has less than 100 games, select
+          if (total_games < 100){
+            setDuration(total_games.toString());
+          }
+
           const lineChartData = {
             labels: rating_history_result.map((item: RatingsResponse) => Utils.formatUTCToLocal(item.timestamp)),
             datasets: [
@@ -182,11 +187,13 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
             label="Games"
             onChange={handleDurationChange}
           >
-            <MenuItem value="100">100</MenuItem>
-            <MenuItem value="200">200</MenuItem>
-            <MenuItem value="300">300</MenuItem>
-            <MenuItem value="400">400</MenuItem>
-            <MenuItem value="500">500</MenuItem>
+            {
+              [100,  200, 300, 400, 500, total_games]
+                  .filter((value, index, self) => self.indexOf(value) === index) // remove duplicates
+                  .sort((a, b) => a - b)
+                  .filter(n => n <= total_games)
+                  .map((nbGame) => <MenuItem value={nbGame}>{nbGame}</MenuItem>)
+            }
             <MenuItem value={customGames} onClick={handleOpenDialog}>Custom...</MenuItem>
           </Select>
         </FormControl>
