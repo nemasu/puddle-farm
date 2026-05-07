@@ -43,8 +43,8 @@ pub struct ReplayRequest {
 struct ReplayQuery {
     int1: i64,
     int2: i64,
-    int3: i64,
-    int4: i64,
+    min_rank: i64,
+    max_rank: i64,
     min_floor: i64,
     max_floor: i64,
     seq1: Vec<()>,
@@ -120,6 +120,7 @@ pub fn generate_replay_request(
             version: VERSION.to_owned(),
             platform: 3, //PC
         },
+        //Matches request when filtering on Ranked Match, for all ranks (min_rank -> max_rank)
         body: ReplayRequest {
             int1: 1,
             index,
@@ -127,17 +128,16 @@ pub fn generate_replay_request(
             query: ReplayQuery {
                 int1: -1,
                 int2: 0,
-                int3: 0,
-                int4: 19,
+                min_rank: 0, // No Rank
+                max_rank: 22, // Currently 22 for Vanquisher 3 Vindex
                 min_floor: 0,
-                max_floor: 0, // Ranked only for now
-                //max_floor: 99,
+                max_floor: 99,
                 seq1: vec![],
                 char_1: -1,
                 char_2: -1,
                 winner: 0,
                 int5: 0,
-                int6: -1,
+                int6: 7, // Ranked Matches Only (I think)
             },
             platforms: 6, //All
         },
