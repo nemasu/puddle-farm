@@ -125,8 +125,19 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
                   ? { name: rawNextRank.name, color: rawNextRank.color, convertedRating: VANQUISHER_PROMOTION_RP }
                   : { name: rawNextRank.name, color: rawNextRank.color, convertedRating: Utils.convertRating(rawNextRank.rating) };
 
-          // if the user has less than 100 games, select
-          if (total_games < 100){
+          // if the user has less than 100 games, select his total game number
+          if (total_games < 100) {
+            setDuration(total_games.toString());
+          }
+
+          // Clamp duration to total_games if not in available options (on character change for example)
+          const items = total_games < 100
+              ? [total_games]
+              : [...Array(Math.floor(total_games / 100)).keys()]
+                  .map(i => (i + 1) * 100)
+                  .concat(total_games % 100 === 0 ? [] : [total_games]);
+          let currentDuration = parseInt(duration);
+          if (!items.includes(currentDuration) && currentDuration != parseInt(tempGames)) { // second check keep custom game count working
             setDuration(total_games.toString());
           }
 
@@ -188,11 +199,12 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
             onChange={handleDurationChange}
           >
             {
-              [100,  200, 300, 400, 500, total_games]
-                  .filter((value, index, self) => self.indexOf(value) === index) // remove duplicates
-                  .sort((a, b) => a - b)
-                  .filter(n => n <= total_games)
-                  .map((nbGame) => <MenuItem value={nbGame}>{nbGame}</MenuItem>)
+              (total_games < 100
+                  ? [total_games]
+                  : [...Array(Math.floor(total_games / 100)).keys()]
+                      .map(i => (i + 1) * 100)
+                      .concat(total_games % 100 === 0 ? [] : [total_games])
+              ).map((nbGame) => <MenuItem value={nbGame}>{nbGame}</MenuItem>)
             }
             <MenuItem value={customGames} onClick={handleOpenDialog}>Custom...</MenuItem>
           </Select>
