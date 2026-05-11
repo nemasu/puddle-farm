@@ -33,4 +33,5 @@ export interface RatingChartProps {
   char_short: string | undefined;
   API_ENDPOINT: string;
   latest_rating: number;
+  total_games: number;
 }
