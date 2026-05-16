@@ -894,6 +894,7 @@ async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> 
           players p ON p.id = r.id
         WHERE
           r.rn = 1
+          AND r.id NOT IN (SELECT player_id FROM tags WHERE tag = 'Banned')
         ORDER BY
           r.value DESC
         LIMIT 1000
@@ -908,11 +909,12 @@ async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> 
         let results = sql_query(
             "
             INSERT INTO character_ranks (rank, id, char_id)
-            SELECT ROW_NUMBER() 
+            SELECT ROW_NUMBER()
             OVER (ORDER BY value DESC) as rank, r.id, char_id
             FROM player_ratings r, players p
             WHERE r.id = p.id
             AND char_id = $1
+            AND p.id NOT IN (SELECT player_id FROM tags WHERE tag = 'Banned')
             ORDER BY value DESC
             LIMIT 1000
             RETURNING rank
