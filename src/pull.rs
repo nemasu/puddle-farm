@@ -895,6 +895,15 @@ async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> 
         WHERE
           r.rn = 1
           AND r.id NOT IN (SELECT player_id FROM tags WHERE tag = 'Banned')
+          AND r.id IN (
+            SELECT id_a FROM games WHERE timestamp > NOW() - INTERVAL '120 hours'
+            UNION
+            SELECT id_b FROM games WHERE timestamp > NOW() - INTERVAL '120 hours'
+            UNION
+            SELECT id_a FROM games WHERE real_timestamp > NOW() - INTERVAL '120 hours'
+            UNION
+            SELECT id_b FROM games WHERE real_timestamp > NOW() - INTERVAL '120 hours'
+          )
         ORDER BY
           r.value DESC
         LIMIT 1000
@@ -915,6 +924,15 @@ async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> 
             WHERE r.id = p.id
             AND char_id = $1
             AND p.id NOT IN (SELECT player_id FROM tags WHERE tag = 'Banned')
+            AND r.id IN (
+              SELECT id_a FROM games WHERE timestamp > NOW() - INTERVAL '120 hours' AND char_a = $1
+              UNION
+              SELECT id_b FROM games WHERE timestamp > NOW() - INTERVAL '120 hours' AND char_b = $1
+              UNION
+              SELECT id_a FROM games WHERE real_timestamp > NOW() - INTERVAL '120 hours' AND char_a = $1
+              UNION
+              SELECT id_b FROM games WHERE real_timestamp > NOW() - INTERVAL '120 hours' AND char_b = $1
+            )
             ORDER BY value DESC
             LIMIT 1000
             RETURNING rank
