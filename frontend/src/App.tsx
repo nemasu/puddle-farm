@@ -11,6 +11,7 @@ import PatreonIcon from './images/patreon-mark-white.svg?react';
 
 import NavBar from './components/NavBar';
 import Player from './pages/Player';
+import Legend from './pages/Legend';
 import TopGlobal from './pages/TopGlobal';
 import ThemeManager from './components/ThemeManager';
 import About from './pages/About';
@@ -34,7 +35,7 @@ const App = () => {
       {isMobile ? (
         <Box sx={{ display: 'block' }}> {/* Mobile View */}
           <Routes>
-            <Route path="/" element={<TopGlobal />} />
+            <Route path="/" element={<Legend />} />
             <Route path="/about" element={<About />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/top_global/:count?/:offset?" element={<TopGlobal />} />
@@ -46,13 +47,14 @@ const App = () => {
             <Route path="/matchup" element={<Matchup />} />
             <Route path="/distribution" element={<Distribution />} />
             <Route path="/terms" element={<Terms />} />
-            <Route path="*" element={<TopGlobal />} />
+            <Route path="/legend" element={<Legend />} />
+            <Route path="*" element={<Legend />} />
           </Routes>
         </Box>
       ) : (
         <Box sx={{ display: 'block' }}> {/* Desktop View */}
           <Routes>
-          <Route path="/" element={<TopGlobal />} />
+          <Route path="/" element={<Legend />} />
             <Route path="/about" element={<About />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/top_global/:count?/:offset?" element={<TopGlobal />} />
@@ -64,7 +66,8 @@ const App = () => {
             <Route path="/matchup" element={<Matchup />} />
             <Route path="/distribution" element={<Distribution />} />
             <Route path="/terms" element={<Terms />} />
-            <Route path="*" element={<TopGlobal />} />
+            <Route path="/legend" element={<Legend />} />
+            <Route path="*" element={<Legend />} />
           </Routes>
         </Box>
       )}

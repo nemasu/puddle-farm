@@ -6,8 +6,12 @@ use axum::{extract::State, http::StatusCode, response::Json, routing::get, Route
 use bb8::PooledConnection;
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
 use handlers::common::{Pagination, TagResponse};
-use models::{CharacterRank, GlobalRank, Player};
-use serde::Serialize;
+use models::Player;
+use serde::{Serialize, Serializer};
+
+fn serialize_i64_as_string<S: Serializer>(v: &i64, s: S) -> Result<S::Ok, S::Error> {
+    s.serialize_str(&v.to_string())
+}
 use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
 use std::vec;
@@ -84,13 +88,41 @@ async fn player(
 ) -> Result<Json<crate::handlers::player::PlayerResponse>, (StatusCode, String)> {
     let mut db = pools.db_pool.get().await.unwrap();
 
-    let (player_char, match_counts, top_chars, top_defeated, top_rating, top_global, tags) =
+    let (player_char, match_counts, mut top_chars, top_defeated, top_rating, mut top_global, tags) =
         match db::get_player_response_data(id, &mut db).await {
             Ok(response) => response,
             Err(e) => return Err((StatusCode::NOT_FOUND, e)),
         };
 
-    let global_top100_ids = db::get_global_top100_ids(&mut db).await.unwrap_or_default();
+    let mut redis = pools.redis_pool.get().await.unwrap();
+    let legend_keys = get_legend_keys(&mut redis).await;
+
+    let leaderboard: Vec<responses::LeaderboardEntry> = read_leaderboard(&mut redis, "leaderboard_all")
+        .await
+        .unwrap_or_else(|_| vec![]);
+
+    if !leaderboard.is_empty() {
+        let player_id_str = id.to_string();
+
+        // top_global: best rank across all chars
+        if let Some(entry) = leaderboard.iter()
+            .filter(|e| e.player_id == player_id_str)
+            .min_by_key(|e| e.rank)
+        {
+            top_global = entry.rank as i32;
+        }
+
+        // top_chars: position within each character's filtered leaderboard
+        for (_, rating) in &player_char {
+            let char_id = rating.char_id as i64;
+            let char_entries: Vec<_> = leaderboard.iter()
+                .filter(|e| e.char_id == char_id)
+                .collect();
+            if let Some(pos) = char_entries.iter().position(|e| e.player_id == player_id_str) {
+                top_chars.insert(rating.char_id, (pos + 1) as i32);
+            }
+        }
+    }
 
     match handlers::player::handle_get_player(
         player_char,
@@ -100,7 +132,7 @@ async fn player(
         top_rating,
         top_global,
         tags,
-        global_top100_ids,
+        legend_keys,
     )
     .await
     {
@@ -143,43 +175,120 @@ async fn player_history(
         Err(_) => HashMap::new(),
     };
 
-    let global_top100_ids = db::get_global_top100_ids(&mut db).await.unwrap_or_default();
+    let mut redis = pools.redis_pool.get().await.unwrap();
+    let legend_keys = get_legend_keys(&mut redis).await;
 
-    match handlers::player_history::handle_get_player_history(player_id, games, player_tags, global_top100_ids).await {
+    match handlers::player_history::handle_get_player_history(player_id, games, player_tags, legend_keys).await {
         Ok(response) => Ok(Json(response)),
         Err(e) => Err((StatusCode::NOT_FOUND, e)),
     }
 }
 
+async fn get_legend_keys(redis: &mut crate::RedisConnection<'_>) -> HashSet<(i64, i64)> {
+    use bb8_redis::redis;
+    let data: Result<String, redis::RedisError> = redis::cmd("GET")
+        .arg("leaderboard_legend")
+        .query_async(&mut **redis)
+        .await;
+    match data {
+        Ok(json) => {
+            let entries: Vec<responses::LeaderboardEntry> =
+                serde_json::from_str(&json).unwrap_or_default();
+            entries
+                .iter()
+                .filter_map(|e| e.player_id.parse::<i64>().ok().map(|id| (id, e.char_id)))
+                .collect()
+        }
+        Err(_) => HashSet::new(),
+    }
+}
+
+fn build_rank_response(
+    entries: &[responses::LeaderboardEntry],
+    legend_keys: &HashSet<(i64, i64)>,
+    player_tags: &HashMap<i64, Vec<(String, String)>>,
+    offset: usize,
+    count: usize,
+    rerank: bool,
+) -> handlers::top::RankResponse {
+    use handlers::top::{PlayerRankResponse, RankResponse, TagResponse};
+    let ranks = entries
+        .iter()
+        .skip(offset)
+        .take(count)
+        .enumerate()
+        .map(|(i, e)| {
+            let id = e.player_id.parse::<i64>().unwrap_or(0);
+            let tags = player_tags.get(&id).map(|t| {
+                t.iter().map(|(tag, style)| TagResponse {
+                    tag: tag.clone(),
+                    style: style.clone(),
+                }).collect()
+            }).unwrap_or_default();
+            PlayerRankResponse {
+                rank: if rerank { (offset + i + 1) as i64 } else { e.rank },
+                id,
+                name: e.player_name.clone(),
+                rating: e.rating,
+                char_short: CHAR_NAMES[e.char_id as usize].0.to_string(),
+                char_long: CHAR_NAMES[e.char_id as usize].1.to_string(),
+                is_legend: legend_keys.contains(&(id, e.char_id)),
+                tags,
+            }
+        })
+        .collect();
+    RankResponse { ranks }
+}
+
+async fn read_leaderboard(
+    redis: &mut crate::RedisConnection<'_>,
+    key: &str,
+) -> Result<Vec<responses::LeaderboardEntry>, (StatusCode, String)> {
+    use bb8_redis::redis;
+    let data: Result<String, redis::RedisError> = redis::cmd("GET")
+        .arg(key)
+        .query_async(&mut **redis)
+        .await;
+    match data {
+        Ok(json) => serde_json::from_str(&json)
+            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
+        Err(_) => Err((StatusCode::SERVICE_UNAVAILABLE, "Leaderboard not yet available".to_string())),
+    }
+}
+
+async fn top_legend(
+    State(pools): State<AppState>,
+    Query(pagination): Query<Pagination>,
+) -> Result<Json<handlers::top::RankResponse>, (StatusCode, String)> {
+    let mut redis = pools.redis_pool.get().await.unwrap();
+    let entries = read_leaderboard(&mut redis, "leaderboard_legend").await?;
+    let legend_keys: HashSet<(i64, i64)> = entries
+        .iter()
+        .filter_map(|e| e.player_id.parse::<i64>().ok().map(|id| (id, e.char_id)))
+        .collect();
+    let count = pagination.count.unwrap_or(100);
+    let offset = pagination.offset.unwrap_or(0);
+    let player_ids: HashSet<i64> = entries.iter().skip(offset).take(count)
+        .filter_map(|e| e.player_id.parse::<i64>().ok()).collect();
+    let mut db = pools.db_pool.get().await.unwrap();
+    let player_tags = db::get_tags_from_player_list(player_ids, &mut db).await.unwrap_or_default();
+    Ok(Json(build_rank_response(&entries, &legend_keys, &player_tags, offset, count, false)))
+}
+
 async fn top(
     State(pools): State<AppState>,
     Query(pagination): Query<Pagination>,
-) -> Result<Json<crate::handlers::top::RankResponse>, (StatusCode, String)> {
+) -> Result<Json<handlers::top::RankResponse>, (StatusCode, String)> {
+    let mut redis = pools.redis_pool.get().await.unwrap();
+    let entries = read_leaderboard(&mut redis, "leaderboard_all").await?;
+    let legend_keys = get_legend_keys(&mut redis).await;
+    let count = pagination.count.unwrap_or(100);
+    let offset = pagination.offset.unwrap_or(0);
+    let player_ids: HashSet<i64> = entries.iter().skip(offset).take(count)
+        .filter_map(|e| e.player_id.parse::<i64>().ok()).collect();
     let mut db = pools.db_pool.get().await.unwrap();
-
-    let count = pagination.count.unwrap_or(100) as i64;
-    let offset = pagination.offset.unwrap_or(0) as i64;
-
-    let data: Vec<(GlobalRank, Player, PlayerRating)> =
-        match db::get_top_players(count, offset, &mut db).await {
-            Ok(games) => games,
-            Err(e) => return Err((StatusCode::NOT_FOUND, e)),
-        };
-
-    //Get tags
-    let mut player_ids = HashSet::new();
-    for d in &data {
-        player_ids.insert(d.1.id);
-    }
-    let player_tags = match db::get_tags_from_player_list(player_ids, &mut db).await {
-        Ok(tags) => tags,
-        Err(_) => HashMap::new(),
-    };
-
-    match handlers::top::get_top(data, player_tags).await {
-        Ok(response) => Ok(Json(response)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+    let player_tags = db::get_tags_from_player_list(player_ids, &mut db).await.unwrap_or_default();
+    Ok(Json(build_rank_response(&entries, &legend_keys, &player_tags, offset, count, false)))
 }
 
 async fn top_char(
@@ -187,40 +296,21 @@ async fn top_char(
     Path(char_id): Path<String>,
     Query(pagination): Query<Pagination>,
 ) -> Result<Json<handlers::top::RankResponse>, (StatusCode, String)> {
+    let char_idx = match CHAR_NAMES.iter().position(|(c, _)| *c == char_id) {
+        Some(id) => id as i64,
+        None => return Err((StatusCode::NOT_FOUND, "Character not found".to_string())),
+    };
+    let mut redis = pools.redis_pool.get().await.unwrap();
+    let all = read_leaderboard(&mut redis, "leaderboard_all").await?;
+    let entries: Vec<_> = all.into_iter().filter(|e| e.char_id == char_idx).collect();
+    let legend_keys = get_legend_keys(&mut redis).await;
+    let count = pagination.count.unwrap_or(100);
+    let offset = pagination.offset.unwrap_or(0);
+    let player_ids: HashSet<i64> = entries.iter().skip(offset).take(count)
+        .filter_map(|e| e.player_id.parse::<i64>().ok()).collect();
     let mut db = pools.db_pool.get().await.unwrap();
-
-    let count = pagination.count.unwrap_or(100) as i64;
-    let offset = pagination.offset.unwrap_or(0) as i64;
-
-    let char_id = match CHAR_NAMES.iter().position(|(c, _)| *c == char_id) {
-        Some(id) => id as i16,
-        None => {
-            return Err((StatusCode::NOT_FOUND, "Character not found".to_string()));
-        }
-    };
-
-    let data: Vec<(CharacterRank, Player, PlayerRating)> =
-        match db::get_top_for_char(char_id, count, offset, &mut db).await {
-            Ok(games) => games,
-            Err(e) => return Err((StatusCode::NOT_FOUND, e)),
-        };
-
-    //Get tags
-    let mut player_ids = HashSet::new();
-    for d in &data {
-        player_ids.insert(d.1.id);
-    }
-    let player_tags = match db::get_tags_from_player_list(player_ids, &mut db).await {
-        Ok(tags) => tags,
-        Err(_) => HashMap::new(),
-    };
-
-    let global_top100_ids = db::get_global_top100_ids(&mut db).await.unwrap_or_default();
-
-    match handlers::top::get_top_char(data, player_tags, global_top100_ids).await {
-        Ok(response) => Ok(Json(response)),
-        Err(e) => Err((StatusCode::NOT_FOUND, e)),
-    }
+    let player_tags = db::get_tags_from_player_list(player_ids, &mut db).await.unwrap_or_default();
+    Ok(Json(build_rank_response(&entries, &legend_keys, &player_tags, offset, count, true)))
 }
 
 async fn characters() -> Result<Json<Vec<(&'static str, &'static str)>>, (StatusCode, String)> {
@@ -306,6 +396,7 @@ async fn rating_sync (
 
 #[derive(Serialize)]
 struct SettingsResponse {
+    #[serde(serialize_with = "serialize_i64_as_string")]
     id: i64,
     name: String,
 }
@@ -610,6 +701,7 @@ async fn matchups(
 
 #[derive(Serialize)]
 struct Supporter {
+    #[serde(serialize_with = "serialize_i64_as_string")]
     id: i64,
     name: String,
     tags: Vec<TagResponse>,
@@ -930,6 +1022,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     "/api/player/:player_id/:char_id/history",
                     get(player_history),
                 )
+                .route("/api/top_legend", get(top_legend))
                 .route("/api/top", get(top))
                 .route("/api/top_char/:char_id", get(top_char))
                 .route("/api/characters", get(characters))

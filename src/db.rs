@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::models::{self, CharacterRank, Player, PlayerRating};
-use crate::models::GlobalRank;
+use crate::models::{self, Player, PlayerRating};
 use crate::pull::Matchup;
 use crate::{schema, CHAR_NAMES};
 use diesel::sql_types::{BigInt, Integer, Timestamp};
@@ -46,18 +45,6 @@ async fn get_player_char_and_rating(
     Ok(player_char.clone())
 }
 
-//TODO Use Redis for this?
-async fn get_global_rank(id: i64, db: &mut crate::Connection<'_>) -> Result<i32, String> {
-    match schema::global_ranks::table
-        .filter(schema::global_ranks::id.eq(id))
-        .select(schema::global_ranks::rank)
-        .first::<i32>(db)
-        .await
-    {
-        Ok(rank) => Ok(rank),
-        Err(_) => Err("Rank not found".to_string()),
-    }
-}
 
 async fn get_match_count(
     id: i64,
@@ -84,23 +71,6 @@ async fn get_match_count(
     }
 }
 
-//TODO Use Redis for this?
-async fn get_top_char(
-    id: i64,
-    char_id: i16,
-    db: &mut crate::Connection<'_>,
-) -> Result<i32, String> {
-    match schema::character_ranks::table
-        .filter(schema::character_ranks::char_id.eq(char_id))
-        .filter(schema::character_ranks::id.eq(id))
-        .select(schema::character_ranks::rank)
-        .first::<i32>(db)
-        .await
-    {
-        Ok(rank) => Ok(rank),
-        Err(_) => Err("Rank not found".to_string()),
-    }
-}
 
 async fn get_top_defeated(
     id: i64,
@@ -280,10 +250,7 @@ pub async fn get_player_response_data(
     let mut top_defeated = HashMap::new();
     let mut top_rating = HashMap::new();
 
-    let top_global = match get_global_rank(id, db).await {
-        Ok(rank) => rank,
-        Err(_) => 0,
-    };
+    let top_global = 0i32;
 
     for (player, rating) in player_char.iter() {
         let match_count = match get_match_count(player.id, rating.char_id, db).await {
@@ -292,11 +259,7 @@ pub async fn get_player_response_data(
         };
         match_counts.insert(rating.char_id, match_count as i32);
 
-        let top_char = match get_top_char(id, rating.char_id, db).await {
-            Ok(rank) => rank,
-            Err(_) => 0,
-        };
-        top_chars.insert(rating.char_id, top_char);
+        top_chars.insert(rating.char_id, 0i32);
 
         let top_defeated_res: Vec<(
             chrono::NaiveDateTime,
@@ -400,77 +363,6 @@ pub async fn get_games(
     {
         Ok(games) => Ok(games),
         Err(_) => Err("Games not found".to_string()),
-    }
-}
-
-pub async fn get_top_players(
-    count: i64,
-    offset: i64,
-    db: &mut crate::Connection<'_>,
-) -> Result<Vec<(GlobalRank, Player, PlayerRating)>, String> {
-    match schema::global_ranks::table
-        .inner_join(schema::players::table.on(schema::players::id.eq(schema::global_ranks::id)))
-        .inner_join(
-            schema::player_ratings::table
-                .on(schema::player_ratings::id.eq(schema::global_ranks::id)),
-        )
-        .select((
-            GlobalRank::as_select(),
-            Player::as_select(),
-            PlayerRating::as_select(),
-        ))
-        .filter(schema::global_ranks::char_id.eq(schema::player_ratings::char_id))
-        .order(schema::global_ranks::rank.asc())
-        .limit(count)
-        .offset(offset)
-        .load(db)
-        .await
-    {
-        Ok(games) => Ok(games),
-        Err(_) => Err("Games not found".to_string()),
-    }
-}
-
-pub async fn get_top_for_char(
-    char_id: i16,
-    count: i64,
-    offset: i64,
-    db: &mut crate::Connection<'_>,
-) -> Result<Vec<(CharacterRank, Player, PlayerRating)>, String> {
-    match schema::character_ranks::table
-        .inner_join(schema::players::table)
-        .inner_join(
-            schema::player_ratings::table.on(schema::players::id.eq(schema::player_ratings::id)),
-        )
-        .select((
-            CharacterRank::as_select(),
-            Player::as_select(),
-            PlayerRating::as_select(),
-        ))
-        .filter(schema::character_ranks::char_id.eq(char_id))
-        .filter(schema::player_ratings::char_id.eq(char_id))
-        .order(schema::character_ranks::rank.asc())
-        .limit(count)
-        .offset(offset)
-        .load(db)
-        .await
-    {
-        Ok(games) => Ok(games),
-        Err(_) => Err("Games not found".to_string()),
-    }
-}
-
-pub async fn get_global_top100_ids(
-    db: &mut crate::Connection<'_>,
-) -> Result<HashSet<(i64, i16)>, String> {
-    match schema::global_ranks::table
-        .select((schema::global_ranks::id, schema::global_ranks::char_id))
-        .filter(schema::global_ranks::rank.le(100))
-        .load::<(i64, i16)>(db)
-        .await
-    {
-        Ok(rows) => Ok(rows.into_iter().collect()),
-        Err(e) => Err(format!("Error fetching global top 100: {}", e)),
     }
 }
 

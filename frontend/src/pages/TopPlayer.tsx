@@ -9,6 +9,7 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -33,12 +34,18 @@ const TopPlayer = () => {
   const [charLong, setCharLong] = useState<string>();
 
   const [loading, setLoading] = useState<boolean>(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [pageInput, setPageInput] = useState('');
 
   useEffect(() => {
     window.scrollTo(0, 0);
 
+    const currentPage = Math.floor((offset ? parseInt(offset) : 0) / (count ? parseInt(count) : defaultCount)) + 1;
+    setPageInput(String(currentPage));
+
     const fetchRanking = async () => {
       setLoading(true);
+      setErrorMessage(null);
       try {
 
         const url = API_ENDPOINT
@@ -49,6 +56,13 @@ const TopPlayer = () => {
 
         if (response.status === 404) {
           navigate(`/`);
+          return;
+        }
+
+        if (!response.ok) {
+          const text = await response.text();
+          setErrorMessage(text || `Error ${response.status}`);
+          setLoading(false);
           return;
         }
 
@@ -82,6 +96,8 @@ const TopPlayer = () => {
         setLoading(false);
       } catch (error) {
         console.error('Error fetching player data:', error);
+        setErrorMessage('Could not connect to the API.');
+        setLoading(false);
       }
     };
 
@@ -106,6 +122,14 @@ const TopPlayer = () => {
     navigate(`/top/${char_short}/${nav_count}/${nav_offset}`);
   }
 
+  function onGoToPage() {
+    const page = parseInt(pageInput);
+    if (!isNaN(page) && page > 0) {
+      const nav_count = count ? parseInt(count) : defaultCount;
+      navigate(`/top/${char_short}/${nav_count}/${(page - 1) * nav_count}`);
+    }
+  }
+
   return (
     <React.Fragment>
       <AppBar position="static"
@@ -128,10 +152,12 @@ const TopPlayer = () => {
         </Box>
       </AppBar>
       <Box m={4}>
+        {errorMessage && <Typography color="error" align="center" sx={{ mb: 2 }}>{errorMessage}</Typography>}
         <Box mx={3} sx={{ display: 'inline-block' }}>
           <Button onClick={() => onPrev()}>Prev</Button>
           <Button style={showNext ? {} : { display: 'none' }} onClick={() => onNext()}>Next</Button>
-          <Button onClick={() => navigate(`/top/${char_short}/1000/0`)}>View All</Button>
+          <TextField size="small" label="Page" type="number" value={pageInput} onChange={e => setPageInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && onGoToPage()} sx={{ width: 80, mx: 1 }} />
+          <Button onClick={onGoToPage}>Go</Button>
         </Box>
         <TableContainer component={Paper}>
           <Table size="small">
@@ -158,7 +184,7 @@ const TopPlayer = () => {
                   <TableCell>{player.char_short}</TableCell>
                   <TableCell>
                     <Box component={'span'} sx={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                      {Utils.displayRankIcon(player.rating, "32px", player.is_global_top_100)}
+                      {Utils.displayRankIcon(player.rating, "32px", player.is_legend)}
                       <Box component={'span'} title={player.rating.toString()}>{Utils.displayRating(player.rating)}</Box>
                     </Box>
                   </TableCell>
@@ -170,7 +196,8 @@ const TopPlayer = () => {
         <Box mx={3} sx={{ display: 'inline-block' }}>
           <Button onClick={() => onPrev()}>Prev</Button>
           <Button style={showNext ? {} : { display: 'none' }} onClick={() => onNext()}>Next</Button>
-          <Button onClick={() => navigate(`/top/${char_short}/1000/0`)}>View All</Button>
+          <TextField size="small" label="Page" type="number" value={pageInput} onChange={e => setPageInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && onGoToPage()} sx={{ width: 80, mx: 1 }} />
+          <Button onClick={onGoToPage}>Go</Button>
         </Box>
       </Box>
     </React.Fragment>

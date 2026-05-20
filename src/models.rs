@@ -13,18 +13,10 @@ use diesel::{
     prelude::*,
 };
 use crate::schema::{
-    self, character_ranks, games, global_ranks, player_names, players, tags, player_ratings,
+    self, games, player_names, players, tags, player_ratings,
 };
 
 use chrono::NaiveDateTime;
-#[derive(Selectable, Insertable, Queryable, Identifiable)]
-#[diesel(primary_key(rank, char_id))]
-pub struct CharacterRank {
-    pub id: i64,
-    pub char_id: i16,
-    pub rank: i32,
-}
-
 #[derive(Selectable, Insertable, Queryable, Identifiable)]
 #[diesel(primary_key(timestamp, id_a, id_b))]
 pub struct Game {
@@ -42,14 +34,6 @@ pub struct Game {
     pub value_a: i64,
     pub value_b: i64,
     pub real_timestamp: Option<NaiveDateTime>,
-}
-
-#[derive(Selectable, Insertable, Queryable, Identifiable)]
-#[diesel(primary_key(rank))]
-pub struct GlobalRank {
-    pub rank: i32,
-    pub id: i64,
-    pub char_id: i16,
 }
 
 #[derive(Selectable, Insertable, Queryable, Identifiable)]

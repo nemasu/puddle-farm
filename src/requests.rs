@@ -153,6 +153,96 @@ pub struct LoginRequest {
     steam_token: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RankMatchLegendRequest {
+    int1: i64,
+    int2: i64,
+    platforms: i64,
+}
+
+pub fn generate_rank_match_legend_request(token: &str) -> Request<RankMatchLegendRequest> {
+    Request {
+        header: RequestHeader {
+            player_id: PLAYER_ID.to_owned(),
+            token: token.to_owned(),
+            int1: 2,
+            version: VERSION.to_owned(),
+            platform: 3,
+        },
+        body: RankMatchLegendRequest {
+            int1: 0,
+            int2: 0,
+            platforms: 6,
+        },
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RankMatchMrRequest {
+    page: i64,
+    int1: i64,
+    int2: i64,
+    char_id: i64,
+    platforms: i64,
+    int3: i64,
+}
+
+pub fn generate_rank_match_mr_request(
+    token: &str,
+    page: i64,
+    char_id: i64,
+) -> Request<RankMatchMrRequest> {
+    Request {
+        header: RequestHeader {
+            player_id: PLAYER_ID.to_owned(),
+            token: token.to_owned(),
+            int1: 2,
+            version: VERSION.to_owned(),
+            platform: 3,
+        },
+        body: RankMatchMrRequest {
+            page,
+            int1: 0,
+            int2: 0,
+            char_id,
+            platforms: 6,
+            int3: 0,
+        },
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RankMatchLpRequest {
+    page: i64,
+    int1: i64,
+    char_id: i64,
+    platforms: i64,
+    int2: i64,
+}
+
+pub fn generate_rank_match_lp_request(
+    token: &str,
+    page: i64,
+    char_id: i64,
+) -> Request<RankMatchLpRequest> {
+    Request {
+        header: RequestHeader {
+            player_id: PLAYER_ID.to_owned(),
+            token: token.to_owned(),
+            int1: 2,
+            version: VERSION.to_owned(),
+            platform: 3,
+        },
+        body: RankMatchLpRequest {
+            page,
+            int1: 0,
+            char_id,
+            platforms: 6,
+            int2: 0,
+        },
+    }
+}
+
 pub async fn generate_login_request() -> Request<LoginRequest> {
     let client = Client::init_app(STEAM_APP_ID).unwrap();
     let user = client.user();

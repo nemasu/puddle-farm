@@ -1,6 +1,10 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
-use serde::Serialize;
+use serde::{Serialize, Serializer};
+
+fn serialize_i64_as_string<S: Serializer>(v: &i64, s: S) -> Result<S::Ok, S::Error> {
+    s.serialize_str(&v.to_string())
+}
 
 use crate::{models::{Player, PlayerRating}, CHAR_NAMES};
 
@@ -8,6 +12,7 @@ use super::common::TagResponse;
 
 #[derive(Serialize)]
 pub struct PlayerResponse {
+    #[serde(serialize_with = "serialize_i64_as_string")]
     id: i64,
     name: String,
     ratings: Vec<PlayerResponsePlayer>,
@@ -25,12 +30,13 @@ struct PlayerResponsePlayer {
     top_char: i32,
     top_defeated: TopDefeated,
     top_rating: TopRating,
-    is_global_top_100: bool,
+    is_legend: bool,
 }
 
 #[derive(Serialize, Clone)]
 pub struct TopDefeated {
     pub timestamp: String,
+    #[serde(serialize_with = "serialize_i64_as_string")]
     pub id: i64,
     pub name: String,
     pub char_short: String,
@@ -51,7 +57,7 @@ pub async fn handle_get_player(
     top_rating: HashMap<i16, TopRating>,
     top_global: i32,
     tags: Vec<(String, String)>,
-    global_top100_ids: HashSet<(i64, i16)>,
+    legend_keys: std::collections::HashSet<(i64, i64)>,
 ) -> Result<PlayerResponse, String> {
     let ratings: Vec<PlayerResponsePlayer> = player_char
         .iter()
@@ -78,7 +84,7 @@ pub async fn handle_get_player(
                     value: 0,
                 })
                 .clone(),
-            is_global_top_100: global_top100_ids.contains(&(p.0.id, p.1.char_id)),
+            is_legend: legend_keys.contains(&(p.0.id, p.1.char_id as i64)),
         })
         .collect();
 
@@ -105,7 +111,9 @@ pub async fn handle_get_player(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::collections::HashSet;
+
+use super::*;
 
     #[tokio::test]
     async fn get_player_empty_top_defeated() {

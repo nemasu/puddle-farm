@@ -9,20 +9,15 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Tag } from "./../components/Tag";
+import { Link } from 'react-router-dom';
+import { Tag } from './../components/Tag';
 import { JSONParse } from '../utils/JSONParse';
 import { Utils } from '../utils/Utils';
 
-const TopGlobal = () => {
+const Legend = () => {
   const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
-
-  const defaultCount = 100;
-
-  const navigate = useNavigate();
 
   interface Player {
     rank: number;
@@ -31,40 +26,21 @@ const TopGlobal = () => {
     char_short: string;
     rating: number;
     tags?: { style: React.CSSProperties; tag: string }[];
-    is_legend: boolean;
   }
 
   const [ranking, setRanking] = useState<Player[]>([]);
-
-  const [showNext, setShowNext] = useState(true);
-
-  let { count, offset } = useParams();
-
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [pageInput, setPageInput] = useState('');
 
   useEffect(() => {
-    document.title = 'Top Players | Puddle Farm';
+    document.title = 'Legend Players | Puddle Farm';
     window.scrollTo(0, 0);
-
-    const currentPage = Math.floor((offset ? parseInt(offset) : 0) / (count ? parseInt(count) : defaultCount)) + 1;
-    setPageInput(String(currentPage));
 
     const fetchRanking = async () => {
       setLoading(true);
       setErrorMessage(null);
       try {
-        const url = API_ENDPOINT
-          + '/top?'
-          + 'count=' + (count ? count : defaultCount)
-          + '&offset=' + (offset ? offset : 0);
-        const response = await fetch(url);
-
-        if (response.status === 404) {
-          navigate(`/`);
-          return;
-        }
+        const response = await fetch(API_ENDPOINT + '/top_legend?count=100');
 
         if (!response.ok) {
           const text = await response.text();
@@ -73,9 +49,7 @@ const TopGlobal = () => {
           return;
         }
 
-        // eslint-disable-next-line
         const result = await response.text().then(body => {
-
           var parsed = JSONParse(body);
 
           for (var key in parsed.ranks) {
@@ -86,53 +60,20 @@ const TopGlobal = () => {
             }
           }
 
-          if (parsed.ranks.length < (count ? count : defaultCount) || parsed.ranks.length === 1000) {
-            setShowNext(false);
-          } else {
-            setShowNext(true);
-          }
-
           setRanking(parsed.ranks);
-
           return parsed;
         });
 
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching player data:', error);
+        console.error('Error fetching legend data:', error);
         setErrorMessage('Could not connect to the API.');
         setLoading(false);
       }
     };
 
     fetchRanking();
-  }, [count, offset, API_ENDPOINT]);
-
-  function onPrev(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
-    let nav_count = count ? parseInt(count) : defaultCount;
-    let nav_offset = offset ? parseInt(offset) - nav_count : 0;
-    if (nav_count < 0) {
-      nav_count = defaultCount;
-    }
-    if (nav_offset < 0) {
-      nav_offset = 0;
-    }
-    navigate(`/top_global/${nav_count}/${nav_offset}`);
-  }
-
-  function onNext(event: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
-    let nav_count = count ? parseInt(count) : defaultCount;
-    let nav_offset = offset ? parseInt(offset) + nav_count : nav_count;
-    navigate(`/top_global/${nav_count}/${nav_offset}`);
-  }
-
-  function onGoToPage() {
-    const page = parseInt(pageInput);
-    if (!isNaN(page) && page > 0) {
-      const nav_count = count ? parseInt(count) : defaultCount;
-      navigate(`/top_global/${nav_count}/${(page - 1) * nav_count}`);
-    }
-  }
+  }, [API_ENDPOINT]);
 
   return (
     <React.Fragment>
@@ -151,18 +92,12 @@ const TopGlobal = () => {
         }
         <Box sx={{ minHeight: 100, paddingTop: '30px' }}>
           <Typography align='center' variant="pageHeader">
-            Top Players
+            Legend Players
           </Typography>
         </Box>
       </AppBar>
       <Box m={3}>
         {errorMessage && <Typography color="error" align="center" sx={{ mb: 2 }}>{errorMessage}</Typography>}
-        <Box sx={{ display: 'inline-block' }}>
-          <Button onClick={(event) => onPrev(event)}>Prev</Button>
-          <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
-          <TextField size="small" label="Page" type="number" value={pageInput} onChange={e => setPageInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && onGoToPage()} sx={{ width: 80, mx: 1 }} />
-          <Button onClick={onGoToPage}>Go</Button>
-        </Box>
         <TableContainer component={Paper}>
           <Table size="small">
             <TableHead>
@@ -188,7 +123,7 @@ const TopGlobal = () => {
                   <TableCell>{player.char_short}</TableCell>
                   <TableCell>
                     <Box component={'span'} sx={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                      {Utils.displayRankIcon(player.rating, "32px", player.is_legend)}
+                      {Utils.displayRankIcon(player.rating, "32px", true)}
                       <Box component={'span'} title={String(player.rating)}>{Utils.displayRating(player.rating)}</Box>
                     </Box>
                   </TableCell>
@@ -197,15 +132,9 @@ const TopGlobal = () => {
             </TableBody>
           </Table>
         </TableContainer>
-        <Box sx={{ display: 'inline-block' }}>
-          <Button onClick={(event) => onPrev(event)}>Prev</Button>
-          <Button style={showNext ? {} : { display: 'none' }} onClick={(event) => onNext(event)}>Next</Button>
-          <TextField size="small" label="Page" type="number" value={pageInput} onChange={e => setPageInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && onGoToPage()} sx={{ width: 80, mx: 1 }} />
-          <Button onClick={onGoToPage}>Go</Button>
-        </Box>
       </Box>
     </React.Fragment>
   );
 };
 
-export default TopGlobal;
+export default Legend;

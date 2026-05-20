@@ -141,7 +141,7 @@ const Player = () => {
 
         setPlayer(player_result);
 
-        if (player_result.id === 0) {
+        if (player_result.id === '0') {
           setHistory([]);
           setCurrentCharData(null);
           setAlias([]);
@@ -346,7 +346,7 @@ const Player = () => {
                   
                   { currentCharData ? (
                     <React.Fragment>
-                      {Utils.displayRankIcon(currentCharData.rating, "64px", player.top_global > 0 && player.top_global <= 100)}
+                      {Utils.displayRankIcon(currentCharData.rating, "64px", currentCharData.is_legend)}
                     </React.Fragment>
                   ) : null}
 
@@ -394,7 +394,7 @@ const Player = () => {
 
                   { currentCharData ? (
                     <React.Fragment>
-                      {Utils.displayRankIcon(currentCharData.rating, "64px", player.top_global > 0 && player.top_global <= 100)}
+                      {Utils.displayRankIcon(currentCharData.rating, "64px", currentCharData.is_legend)}
                     </React.Fragment>
                   ) : null}
 
@@ -581,7 +581,7 @@ const Player = () => {
           </Box>
           {/* Characters list - stays in sidebar area */}
           <Box sx={{ gridArea: { xs: 'sidebar', lg: 'unset' } }}>
-            {player && player.id !== BigInt(0) ? (
+            {player && player.id !== '0' ? (
               <React.Fragment>
                 <hr />
                 <Typography fontSize={14}>
@@ -593,11 +593,11 @@ const Player = () => {
                       <Typography fontSize={12.5} my={0.3}>
                         {/* Mobile: stacked layout */}
                         <Box sx={{ display: { xs: 'block', lg: 'none' } }}>
-                          {item.character}<br />{Utils.displayRankIcon(item.rating, "32px", item.is_global_top_100)}<br />{Utils.displayRating(item.rating)}<br />({item.match_count} games)
+                          {item.character}<br />{Utils.displayRankIcon(item.rating, "32px", item.is_legend)}<br />{Utils.displayRating(item.rating)}<br />({item.match_count} games)
                         </Box>
                         {/* Desktop: inline layout */}
                         <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-                          {item.character} {Utils.displayRating(item.rating)} <Box sx={{ display: 'inline-flex', position: 'relative', top: '16px', marginLeft: '5px' }}>{Utils.displayRankIcon(item.rating, "32px", item.is_global_top_100)}</Box><br />({item.match_count} games)
+                          {item.character} {Utils.displayRating(item.rating)} <Box sx={{ display: 'inline-flex', position: 'relative', top: '16px', marginLeft: '5px' }}>{Utils.displayRankIcon(item.rating, "32px", item.is_legend)}</Box><br />({item.match_count} games)
                         </Box>
                       </Typography>
                     </Button>

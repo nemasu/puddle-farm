@@ -34,7 +34,7 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
       <TableContainer component={Paper}>
         <Table size="small">
           <TableBody>
-            {item.opponent_id === BigInt(0) ? (
+            {item.opponent_id === '0' ? (
               <React.Fragment>
                 <TableRow>
                   <TableCell sx={{ pb: 0, mb: 0 }}>
@@ -88,7 +88,7 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
                     </React.Fragment>
                   </TableCell>
                   <TableCell>
-                    {Utils.displayRankIcon(item.matches[item.matches.length - 1].opponent_rating_value, '32px', item.matches[item.matches.length - 1].opponent_is_global_top_100)}
+                    {Utils.displayRankIcon(item.matches[item.matches.length - 1].opponent_rating_value, '32px', item.matches[item.matches.length - 1].opponent_is_legend)}
                   </TableCell>
                   <TableCell sx={{ px: 0, mx: 0 }}>
                     {Utils.displayRating(item.matches[item.matches.length - 1].opponent_rating_value)}
@@ -116,7 +116,7 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
                     <TableBody>
                       {item.matches.map((item, i) => (
                         <TableRow key={item.timestamp}>
-                          {item.opponent_id === BigInt("0") ? (
+                          {item.opponent_id === '0' ? (
                             <React.Fragment>
                               <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
                               <TableCell align="right"></TableCell>
@@ -157,7 +157,7 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
               {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
             </IconButton>
           </TableCell>
-          {item.opponent_id === BigInt("0") ? (
+          {item.opponent_id === '0' ? (
             <React.Fragment>
               <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
               <TableCell align="right"></TableCell>
@@ -185,7 +185,7 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
                 </React.Fragment>
               </TableCell>
               <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
-              <TableCell align="right"><Box component={'span'}>{Utils.displayRankIcon(item.matches[item.matches.length - 1].opponent_rating_value, '32px', item.matches[item.matches.length - 1].opponent_is_global_top_100)} {Utils.displayRating(item.matches[item.matches.length - 1].opponent_rating_value)}</Box></TableCell>
+              <TableCell align="right"><Box component={'span'}>{Utils.displayRankIcon(item.matches[item.matches.length - 1].opponent_rating_value, '32px', item.matches[item.matches.length - 1].opponent_is_legend)} {Utils.displayRating(item.matches[item.matches.length - 1].opponent_rating_value)}</Box></TableCell>
               <TableCell align="right">{item.wins} - {item.losses}</TableCell>
               <TableCell align="right">
                 {Utils.colorChangeForRating(item.ratingChange)}
@@ -209,7 +209,7 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
                 <TableBody>
                   {item.matches.map((item, i) => (
                     <TableRow key={item.timestamp}>
-                      {item.opponent_id === BigInt(0) ? (
+                      {item.opponent_id === '0' ? (
                         <React.Fragment>
                           <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
                           <TableCell align="right"></TableCell>

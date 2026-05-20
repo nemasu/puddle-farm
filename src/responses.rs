@@ -1,4 +1,4 @@
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]
 pub struct Response<T> {
@@ -84,4 +84,119 @@ pub struct PlayerStats {
 pub struct PlayerAvatar {
     _int1: i64,
     pub png: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct LegendPlayer {
+    pub rank: i64,
+    pub dr: i64,
+    pub char_id: i64,
+    pub player_id: String,
+    pub player_name: String,
+    _str1: String,
+    _str2: String,
+    _int1: i64,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct RankMatchLegend {
+    _int1: i64,
+    _int2: i64,
+    pub players: Vec<LegendPlayer>,
+    pub from_date: String,
+    pub to_date: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct MrPlayer {
+    pub rank: i64,
+    pub dr: i64,
+    pub char_id: i64,
+    pub player_id: String,
+    pub player_name: String,
+    _str1: String,
+    _str2: String,
+    _int1: i64,
+    _int2: i64,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct RankMatchMr {
+    _int1: i64,
+    _int2: i64,
+    _int3: i64,
+    _int4: i64,
+    pub players: Vec<MrPlayer>,
+    _int5: f64,
+    pub from_date: String,
+    pub to_date: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct LpPlayer {
+    pub rank: i64,
+    _int1: i64,
+    pub lp: i64,
+    pub char_id: i64,
+    pub player_id: String,
+    pub player_name: String,
+    _str1: String,
+    _str2: String,
+    _int2: i64,
+    _int3: i64,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct RankMatchLp {
+    _int1: i64,
+    _int2: i64,
+    _int3: i64,
+    _int4: i64,
+    pub players: Vec<LpPlayer>,
+    _int5: f64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct LeaderboardEntry {
+    pub rank: i64,
+    pub player_id: String,
+    pub player_name: String,
+    pub char_id: i64,
+    pub rating: i64,
+}
+
+impl From<LegendPlayer> for LeaderboardEntry {
+    fn from(p: LegendPlayer) -> Self {
+        LeaderboardEntry {
+            rank: p.rank,
+            player_id: p.player_id,
+            player_name: p.player_name,
+            char_id: p.char_id,
+            rating: p.dr + 10_000_000,
+        }
+    }
+}
+
+impl From<MrPlayer> for LeaderboardEntry {
+    fn from(p: MrPlayer) -> Self {
+        LeaderboardEntry {
+            rank: p.rank,
+            player_id: p.player_id,
+            player_name: p.player_name,
+            char_id: p.char_id,
+            rating: p.dr + 10_000_000,
+        }
+    }
+}
+
+impl From<LpPlayer> for LeaderboardEntry {
+    fn from(p: LpPlayer) -> Self {
+        LeaderboardEntry {
+            rank: p.rank,
+            player_id: p.player_id,
+            player_name: p.player_name,
+            char_id: p.char_id,
+            rating: p.lp,
+        }
+    }
 }

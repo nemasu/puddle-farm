@@ -24,7 +24,6 @@ export function groupMatches(data: any[], player: PlayerResponse, char_short: st
 
   for (let i = 0; i < limit; i++) {
     const match = data[i];
-    match.opponent_id = BigInt(match.opponent_id);
 
     if (
       currentGroup &&

@@ -1,5 +1,5 @@
 export interface PlayerResponse {
-  id: BigInt; // Player's ID
+  id: string; // Player's ID
   name: string; // Player's name
   ratings: PlayerResponsePlayer[]; // Player's ratings for each character
   platform: string; // Player's platform (PS, XB, PC)
@@ -17,12 +17,12 @@ export interface PlayerResponsePlayer {
   top_char: number;
   top_defeated: TopDefeated;
   top_rating: TopRating;
-  is_global_top_100: boolean;
+  is_legend: boolean;
 }
 
 export interface TopDefeated {
   timestamp: string;
-  id: number;
+  id: string;
   name: string;
   char_short: string;
   value: number;
@@ -52,14 +52,14 @@ export interface PlayerSet {
   floor: string;
   opponent_name: string;
   opponent_platform: string;
-  opponent_id: BigInt;
+  opponent_id: string;
   opponent_character: string;
   opponent_character_short: string;
   opponent_rating_value: number;
   opponent_rating_deviation: number;
   result_win: boolean;
   odds: number;
-  opponent_is_global_top_100: boolean;
+  opponent_is_legend: boolean;
 }
 
 export interface RankResponse {
@@ -68,14 +68,14 @@ export interface RankResponse {
 
 export interface PlayerRankResponse {
   rank: number; // Player's rank
-  id: BigInt; // Player's ID
+  id: string; // Player's ID
   name: string; // Player's name
   rating: number; // Player's rating
   deviation: number; // Player's rating deviation
   char_short: string; // Short name of the character
   char_long: string; // Full name of the character
   tags: TagResponse[];
-  is_global_top_100: boolean;
+  is_legend: boolean;
 }
 
 export interface SearchResponse {
@@ -83,7 +83,7 @@ export interface SearchResponse {
 }
 
 export interface PlayerSearchResponse {
-  id: BigInt; // Player's ID
+  id: string; // Player's ID
   name: string; // Player's name
   rating: number; // Player's rating
   deviation: number; // Player's rating deviation
@@ -92,7 +92,7 @@ export interface PlayerSearchResponse {
 }
 
 export interface SettingsResponse {
-  id: BigInt; // Player's ID
+  id: string; // Player's ID
   name: string; // Player's name
   status: string; // Player's status (Public, Private, Cheater)
 }
@@ -149,7 +149,7 @@ export interface MatchupEntry {
 }
 
 export interface Supporter {
-  id: BigInt;
+  id: string;
   name: string;
   tags: TagResponse[];
 }

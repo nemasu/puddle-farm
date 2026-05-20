@@ -15,6 +15,7 @@ interface Page {
 }
 
 var pages: Page[] = [
+  { name: 'Legend', link: '/' },
   { name: 'Top', link: './top_global' },
   { name: 'Characters', list: [] },
   { name: 'Popularity', link: './popularity' },
@@ -26,7 +27,7 @@ var pages: Page[] = [
 ];
 
 function resetCharacters() {
-  pages[1].list = [];
+  pages[2].list = [];
 }
 
 function NavBar() {
@@ -78,8 +79,8 @@ function NavBar() {
 
           resetCharacters();
           for (var key in parsed) {
-            if (pages[1].list) {
-              pages[1].list.push({ key: key, name: parsed[key][1], link: '/top/' + parsed[key][0] });
+            if (pages[2].list) {
+              pages[2].list.push({ key: key, name: parsed[key][1], link: '/top/' + parsed[key][0] });
             }
           }
 

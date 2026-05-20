@@ -1,6 +1,10 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 
 use crate::{models::{Player, PlayerRating}, CHAR_NAMES};
+
+fn serialize_i64_as_string<S: Serializer>(v: &i64, s: S) -> Result<S::Ok, S::Error> {
+    s.serialize_str(&v.to_string())
+}
 
 #[derive(Serialize)]
 pub struct SearchResponse {
@@ -8,6 +12,7 @@ pub struct SearchResponse {
 }
 #[derive(Serialize)]
 struct PlayerSearchResponse {
+    #[serde(serialize_with = "serialize_i64_as_string")]
     id: i64,
     name: String,
     rating: i64,

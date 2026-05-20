@@ -4,7 +4,7 @@ export interface GroupedMatch {
   matches: any[]; // Array of individual match details (not provided in the inspection)
   odds: number; // Player's odds of winning the set
   opponent_character_short: string; // Opponent's character (short name)
-  opponent_id: BigInt; // Opponent's ID
+  opponent_id: string; // Opponent's ID
   opponent_name: string; // Opponent's name
   ratingChange: number; // Change in rating after this set of matches
   timestamp: string; // Timestamp of the match set

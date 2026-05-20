@@ -1,6 +1,10 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
-use serde::Serialize;
+use serde::{Serialize, Serializer};
+
+fn serialize_i64_as_string<S: Serializer>(v: &i64, s: S) -> Result<S::Ok, S::Error> {
+    s.serialize_str(&v.to_string())
+}
 
 use crate::{models, CHAR_NAMES};
 
@@ -19,19 +23,20 @@ struct PlayerSet {
     floor: String,
     opponent_name: String,
     opponent_platform: &'static str,
+    #[serde(serialize_with = "serialize_i64_as_string")]
     opponent_id: i64,
     opponent_character: &'static str,
     opponent_character_short: &'static str,
     opponent_rating_value: i64,
     result_win: bool,
-    opponent_is_global_top_100: bool,
+    opponent_is_legend: bool,
 }
 
 pub async fn handle_get_player_history(
     player_id: i64,
     games: Vec<models::Game>,
     player_tags: HashMap<i64, Vec<(String, String)>>,
-    global_top100_ids: HashSet<(i64, i16)>,
+    legend_keys: std::collections::HashSet<(i64, i64)>,
 ) -> Result<PlayerGamesResponse, String> {
     let mut response: PlayerGamesResponse = PlayerGamesResponse {
         history: vec![],
@@ -118,7 +123,7 @@ pub async fn handle_get_player_history(
             opponent_character_short,
             opponent_rating_value: opponent_rating_value,
             result_win,
-            opponent_is_global_top_100: global_top100_ids.contains(&(opponent_id, opponent_char_id)),
+            opponent_is_legend: legend_keys.contains(&(opponent_id, opponent_char_id as i64)),
         });
 
         if opponent_id != 0 && player_tags.contains_key(&opponent_id) {
@@ -150,6 +155,7 @@ pub async fn handle_get_player_history(
 mod tests {
     use super::*;
     use chrono;
+    use std::collections::HashSet;
 
     #[tokio::test]
     async fn get_player_history_platform_pc() {

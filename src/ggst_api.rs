@@ -175,6 +175,90 @@ pub async fn get_replays() -> Result<Vec<responses::Replay>, String> {
     Ok(replays)
 }
 
+pub async fn get_rank_match_legend() -> Result<Vec<responses::LegendPlayer>, String> {
+    let token = get_token().await?;
+    let request_data = requests::generate_rank_match_legend_request(&token);
+    let request_data = encrypt_data(&request_data);
+
+    let response = HTTP_CLIENT
+        .post("https://ggst-game.guiltygear.com/api/ranking/get_rank_match_legend")
+        .header(header::CACHE_CONTROL, "no-store")
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .header("x-client-version", "1")
+        .form(&[("data", request_data)])
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
+
+    let response_bytes = response.bytes().await.map_err(|e| e.to_string())?;
+
+    match decrypt_response::<responses::RankMatchLegend>(&response_bytes) {
+        Ok(r) => Ok(r.body.players),
+        Err(e) => {
+            error!("get_rank_match_legend decrypt_response() error: {}", e);
+            Err("Couldn't get rank match legend".to_owned())
+        }
+    }
+}
+
+pub async fn get_rank_match_mr(
+    page: i64,
+    char_id: i64,
+) -> Result<Vec<responses::MrPlayer>, String> {
+    let token = get_token().await?;
+    let request_data = requests::generate_rank_match_mr_request(&token, page, char_id);
+    let request_data = encrypt_data(&request_data);
+
+    let response = HTTP_CLIENT
+        .post("https://ggst-game.guiltygear.com/api/ranking/rank_match_mr")
+        .header(header::CACHE_CONTROL, "no-store")
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .header("x-client-version", "1")
+        .form(&[("data", request_data)])
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
+
+    let response_bytes = response.bytes().await.map_err(|e| e.to_string())?;
+
+    match decrypt_response::<responses::RankMatchMr>(&response_bytes) {
+        Ok(r) => Ok(r.body.players),
+        Err(e) => {
+            error!("get_rank_match_mr decrypt_response() error: {}", e);
+            Err("Couldn't get rank match MR".to_owned())
+        }
+    }
+}
+
+pub async fn get_rank_match_lp(
+    page: i64,
+    char_id: i64,
+) -> Result<Vec<responses::LpPlayer>, String> {
+    let token = get_token().await?;
+    let request_data = requests::generate_rank_match_lp_request(&token, page, char_id);
+    let request_data = encrypt_data(&request_data);
+
+    let response = HTTP_CLIENT
+        .post("https://ggst-game.guiltygear.com/api/ranking/rank_match_lp")
+        .header(header::CACHE_CONTROL, "no-store")
+        .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+        .header("x-client-version", "1")
+        .form(&[("data", request_data)])
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
+
+    let response_bytes = response.bytes().await.map_err(|e| e.to_string())?;
+
+    match decrypt_response::<responses::RankMatchLp>(&response_bytes) {
+        Ok(r) => Ok(r.body.players),
+        Err(e) => {
+            error!("get_rank_match_lp decrypt_response() error: {}", e);
+            Err("Couldn't get rank match LP".to_owned())
+        }
+    }
+}
+
 fn encrypt_data<T: Serialize>(data: &T) -> String {
     let key =
         hex::decode("EEBC1F57487F51921C0465665F8AE6D1658BB26DE6F8A069A3520293A572078F").unwrap();

@@ -7,7 +7,7 @@ use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error, info, warn};
 
-use crate::schema::{character_ranks, games, global_ranks, player_names, players};
+use crate::schema::{games, player_names, players};
 use chrono::{NaiveDateTime, Utc};
 use diesel::dsl::*;
 
@@ -222,10 +222,6 @@ async fn do_hourly_update(
     conn: &mut crate::Connection<'_>,
     redis_connection: &mut crate::RedisConnection<'_>,
 ) -> Result<(), String> {
-    if let Err(e) = update_ranks(conn).await {
-        error!("update_ranks failed: {e}");
-    }
-
     if let Err(e) = update_stats(conn, redis_connection).await {
         error!("update_stats failed: {e}");
     }
@@ -250,6 +246,11 @@ async fn do_daily_update(
     conn: &mut crate::Connection<'_>,
     redis_connection: &mut crate::RedisConnection<'_>,
 ) -> Result<(), String> {
+
+    if let Err(e) = sync_global_leaderboards(redis_connection).await {
+        error!("sync_global_leaderboards failed: {e}");
+    }
+    
     if let Err(e) = update_popularity(conn, redis_connection).await {
         error!("update_popularity failed: {e}");
     }
@@ -852,106 +853,110 @@ async fn update_stats(
     Ok(())
 }
 
-// Decay function removed - no longer needed with game-provided ratings
+async fn sync_global_leaderboards(
+    redis_connection: &mut crate::RedisConnection<'_>,
+) -> Result<(), String> {
+    use crate::responses::LeaderboardEntry;
 
-#[allow(dead_code)]
-#[derive(QueryableByName)]
-struct InsertedRankRowId {
-    #[diesel(sql_type = Integer)]
-    rank: i32,
-}
-async fn update_ranks(connection: &mut AsyncPgConnection) -> Result<(), String> {
-    info!("Updating ranks");
-    //TODO change this to use Redis?
+    info!("Syncing global leaderboards");
 
-    //Delete all rows in the global_ranks and character_ranks tables
-    diesel::delete(global_ranks::table)
-        .execute(connection)
-        .await
-        .unwrap();
-    diesel::delete(character_ranks::table)
-        .execute(connection)
-        .await
-        .unwrap();
-
-    let results = sql_query(
-        "
-        INSERT INTO global_ranks (rank, id, char_id)
-        SELECT
-          ROW_NUMBER() OVER (ORDER BY r.value DESC) as rank,
-          r.id,
-          r.char_id
-        FROM (
-          SELECT
-            id,
-            char_id,
-            value,
-            ROW_NUMBER() OVER (PARTITION BY id ORDER BY value DESC) as rn
-          FROM
-            player_ratings
-        ) r
-        LEFT JOIN
-          players p ON p.id = r.id
-        WHERE
-          r.rn = 1
-          AND r.id NOT IN (SELECT player_id FROM tags WHERE tag = 'Banned')
-          AND r.id IN (
-            SELECT id_a FROM games WHERE timestamp > NOW() - INTERVAL '120 hours'
-            UNION
-            SELECT id_b FROM games WHERE timestamp > NOW() - INTERVAL '120 hours'
-            UNION
-            SELECT id_a FROM games WHERE real_timestamp > NOW() - INTERVAL '120 hours'
-            UNION
-            SELECT id_b FROM games WHERE real_timestamp > NOW() - INTERVAL '120 hours'
-          )
-        ORDER BY
-          r.value DESC
-        LIMIT 1000
-        RETURNING rank
-    ",
-    );
-    let results: Vec<InsertedRankRowId> = results.get_results(connection).await.unwrap();
-
-    info!("Inserted {} rows into global_ranks", results.len());
-
-    for c in 0..CHAR_NAMES.len() {
-        let results = sql_query(
-            "
-            INSERT INTO character_ranks (rank, id, char_id)
-            SELECT ROW_NUMBER()
-            OVER (ORDER BY value DESC) as rank, r.id, char_id
-            FROM player_ratings r, players p
-            WHERE r.id = p.id
-            AND char_id = $1
-            AND p.id NOT IN (SELECT player_id FROM tags WHERE tag = 'Banned')
-            AND r.id IN (
-              SELECT id_a FROM games WHERE timestamp > NOW() - INTERVAL '120 hours' AND char_a = $1
-              UNION
-              SELECT id_b FROM games WHERE timestamp > NOW() - INTERVAL '120 hours' AND char_b = $1
-              UNION
-              SELECT id_a FROM games WHERE real_timestamp > NOW() - INTERVAL '120 hours' AND char_a = $1
-              UNION
-              SELECT id_b FROM games WHERE real_timestamp > NOW() - INTERVAL '120 hours' AND char_b = $1
-            )
-            ORDER BY value DESC
-            LIMIT 1000
-            RETURNING rank
-        ",
-        );
-        let results: Vec<InsertedRankRowId> = results
-            .bind::<Integer, _>(i32::try_from(c).unwrap())
-            .get_results(connection)
-            .await
-            .unwrap();
-
-        info!(
-            "Inserted {} rows into character_ranks for character {}",
-            results.len(),
-            CHAR_NAMES[c].1
-        );
+    match crate::ggst_api::get_rank_match_legend().await {
+        Ok(players) => {
+            info!("Legend: {} players", players.len());
+            let entries: Vec<LeaderboardEntry> =
+                players.into_iter().map(LeaderboardEntry::from).collect();
+            let json = serde_json::to_string(&entries).unwrap();
+            redis::cmd("SET")
+                .arg("leaderboard_legend")
+                .arg(json)
+                .query_async::<String>(&mut **redis_connection)
+                .await
+                .map_err(|e| format!("Redis SET leaderboard_legend failed: {e}"))?;
+        }
+        Err(e) => error!("sync_global_leaderboards: legend failed: {e}"),
     }
 
-    info!("Updating ranks - Done");
+    let mut mr_all: Vec<LeaderboardEntry> = Vec::new();
+    let mut page = 0i64;
+    loop {
+        match crate::ggst_api::get_rank_match_mr(page, -1).await {
+            Ok(players) => {
+                let n = players.len();
+                if n == 0 {
+                    info!("MR: page {page} empty, done ({} total)", mr_all.len());
+                    break;
+                }
+                mr_all.extend(players.into_iter().map(LeaderboardEntry::from));
+                info!("MR: page {page} ({n} entries, {} total)", mr_all.len());
+                if n < 20 {
+                    info!("MR: partial page, done ({} total)", mr_all.len());
+                    break;
+                }
+                page += 1;
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+            Err(e) => {
+                error!("sync_global_leaderboards: MR page {page} failed: {e}");
+                break;
+            }
+        }
+    }
+
+    let mr_keys: std::collections::HashSet<(String, i64)> =
+        mr_all.iter().map(|e| (e.player_id.clone(), e.char_id)).collect();
+    let mr_count = mr_all.len();
+
+    let mut lp_filtered: Vec<LeaderboardEntry> = Vec::new();
+    let mut page = 0i64;
+    loop {
+        match crate::ggst_api::get_rank_match_lp(page, -1).await {
+            Ok(players) => {
+                let n = players.len();
+                if n == 0 {
+                    info!("LP: page {page} empty, done ({} kept)", lp_filtered.len());
+                    break;
+                }
+                let before = lp_filtered.len();
+                for mut entry in players.into_iter().map(LeaderboardEntry::from) {
+                    if !mr_keys.contains(&(entry.player_id.clone(), entry.char_id)) {
+                        entry.rank = (mr_count + lp_filtered.len() + 1) as i64;
+                        lp_filtered.push(entry);
+                    }
+                }
+                info!("LP: page {page} ({n} entries, {} kept after dedup, {} total)", lp_filtered.len() - before, lp_filtered.len());
+                if n < 20 {
+                    info!("LP: partial page, done ({} kept)", lp_filtered.len());
+                    break;
+                } else if lp_filtered.len() >= 10000 {
+                    info!("LP: reached 10000 kept entries, stopping to avoid excessive processing ({} total)", lp_filtered.len());
+                    break;
+                }
+                page += 1;
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+            Err(e) => {
+                error!("sync_global_leaderboards: LP page {page} failed: {e}");
+                break;
+            }
+        }
+    }
+
+    let lp_count = lp_filtered.len();
+    let mut combined = mr_all;
+    combined.extend(lp_filtered);
+
+    if !combined.is_empty() {
+        info!("Combined leaderboard: {} MR + {} LP = {} total", mr_count, lp_count, combined.len());
+        let json = serde_json::to_string(&combined).unwrap();
+        redis::cmd("SET")
+            .arg("leaderboard_all")
+            .arg(json)
+            .query_async::<String>(&mut **redis_connection)
+            .await
+            .map_err(|e| format!("Redis SET leaderboard_all failed: {e}"))?;
+    }
+
+    info!("Syncing global leaderboards - Done");
     Ok(())
 }
 
