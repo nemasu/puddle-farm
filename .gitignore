@@ -1,5 +1,6 @@
 /target
 .env
 *.log
+*.rdb
 token.txt
 /logs

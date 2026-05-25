@@ -927,8 +927,8 @@ async fn sync_global_leaderboards(
                 if n < 20 {
                     info!("LP: partial page, done ({} kept)", lp_filtered.len());
                     break;
-                } else if lp_filtered.len() >= 10000 {
-                    info!("LP: reached 10000 kept entries, stopping to avoid excessive processing ({} total)", lp_filtered.len());
+                } else if lp_filtered.len() >= 1000 {
+                    info!("LP: reached 1000 kept entries, stopping ({} total)", lp_filtered.len());
                     break;
                 }
                 page += 1;
@@ -954,6 +954,91 @@ async fn sync_global_leaderboards(
             .query_async::<String>(&mut **redis_connection)
             .await
             .map_err(|e| format!("Redis SET leaderboard_all failed: {e}"))?;
+    }
+
+    for (char_idx, (char_short, _)) in crate::CHAR_NAMES.iter().enumerate() {
+        let char_id = char_idx as i64;
+
+        let mut mr_char: Vec<LeaderboardEntry> = Vec::new();
+        let mut page = 0i64;
+        loop {
+            match crate::ggst_api::get_rank_match_mr(page, char_id).await {
+                Ok(players) => {
+                    let n = players.len();
+                    if n == 0 {
+                        info!("Char {char_short} MR: page {page} empty, done ({} total)", mr_char.len());
+                        break;
+                    }
+                    mr_char.extend(players.into_iter().map(LeaderboardEntry::from));
+                    info!("Char {char_short} MR: page {page} ({n} entries, {} total)", mr_char.len());
+                    if n < 20 || mr_char.len() >= 1000 {
+                        info!("Char {char_short} MR: done ({} total)", mr_char.len());
+                        break;
+                    }
+                    page += 1;
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                }
+                Err(e) => {
+                    error!("sync_global_leaderboards: char {char_short} MR page {page} failed: {e}");
+                    break;
+                }
+            }
+        }
+        mr_char.truncate(1000);
+
+        let mr_player_ids: std::collections::HashSet<String> =
+            mr_char.iter().map(|e| e.player_id.clone()).collect();
+        let mr_count = mr_char.len();
+
+        let mut lp_char: Vec<LeaderboardEntry> = Vec::new();
+        let mut page = 0i64;
+        loop {
+            match crate::ggst_api::get_rank_match_lp(page, char_id).await {
+                Ok(players) => {
+                    let n = players.len();
+                    if n == 0 {
+                        info!("Char {char_short} LP: page {page} empty, done ({} kept)", lp_char.len());
+                        break;
+                    }
+                    let before = lp_char.len();
+                    for mut entry in players.into_iter().map(LeaderboardEntry::from) {
+                        if !mr_player_ids.contains(&entry.player_id) {
+                            entry.rank = (mr_count + lp_char.len() + 1) as i64;
+                            lp_char.push(entry);
+                        }
+                    }
+                    info!("Char {char_short} LP: page {page} ({n} entries, {} kept after dedup, {} total)", lp_char.len() - before, lp_char.len());
+                    if n < 20 || mr_count + lp_char.len() >= 1000 {
+                        info!("Char {char_short} LP: done ({} kept)", lp_char.len());
+                        break;
+                    }
+                    page += 1;
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                }
+                Err(e) => {
+                    error!("sync_global_leaderboards: char {char_short} LP page {page} failed: {e}");
+                    break;
+                }
+            }
+        }
+
+        let mut combined = mr_char;
+        combined.extend(lp_char);
+        combined.truncate(1000);
+
+        if !combined.is_empty() {
+            let key = format!("leaderboard_char_{}", char_idx);
+            info!("Char {char_short}: storing {} entries as {key}", combined.len());
+            let json = serde_json::to_string(&combined).unwrap();
+            redis::cmd("SET")
+                .arg(&key)
+                .arg(json)
+                .query_async::<String>(&mut **redis_connection)
+                .await
+                .map_err(|e| format!("Redis SET {key} failed: {e}"))?;
+        }
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
     }
 
     info!("Syncing global leaderboards - Done");

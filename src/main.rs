@@ -209,15 +209,13 @@ fn build_rank_response(
     player_tags: &HashMap<i64, Vec<(String, String)>>,
     offset: usize,
     count: usize,
-    rerank: bool,
 ) -> handlers::top::RankResponse {
     use handlers::top::{PlayerRankResponse, RankResponse, TagResponse};
     let ranks = entries
         .iter()
         .skip(offset)
         .take(count)
-        .enumerate()
-        .map(|(i, e)| {
+        .map(|e| {
             let id = e.player_id.parse::<i64>().unwrap_or(0);
             let tags = player_tags.get(&id).map(|t| {
                 t.iter().map(|(tag, style)| TagResponse {
@@ -226,7 +224,7 @@ fn build_rank_response(
                 }).collect()
             }).unwrap_or_default();
             PlayerRankResponse {
-                rank: if rerank { (offset + i + 1) as i64 } else { e.rank },
+                rank: e.rank,
                 id,
                 name: e.player_name.clone(),
                 rating: e.rating,
@@ -272,7 +270,7 @@ async fn top_legend(
         .filter_map(|e| e.player_id.parse::<i64>().ok()).collect();
     let mut db = pools.db_pool.get().await.unwrap();
     let player_tags = db::get_tags_from_player_list(player_ids, &mut db).await.unwrap_or_default();
-    Ok(Json(build_rank_response(&entries, &legend_keys, &player_tags, offset, count, false)))
+    Ok(Json(build_rank_response(&entries, &legend_keys, &player_tags, offset, count)))
 }
 
 async fn top(
@@ -288,7 +286,7 @@ async fn top(
         .filter_map(|e| e.player_id.parse::<i64>().ok()).collect();
     let mut db = pools.db_pool.get().await.unwrap();
     let player_tags = db::get_tags_from_player_list(player_ids, &mut db).await.unwrap_or_default();
-    Ok(Json(build_rank_response(&entries, &legend_keys, &player_tags, offset, count, false)))
+    Ok(Json(build_rank_response(&entries, &legend_keys, &player_tags, offset, count)))
 }
 
 async fn top_char(
@@ -301,8 +299,8 @@ async fn top_char(
         None => return Err((StatusCode::NOT_FOUND, "Character not found".to_string())),
     };
     let mut redis = pools.redis_pool.get().await.unwrap();
-    let all = read_leaderboard(&mut redis, "leaderboard_all").await?;
-    let entries: Vec<_> = all.into_iter().filter(|e| e.char_id == char_idx).collect();
+    let key = format!("leaderboard_char_{}", char_idx);
+    let entries = read_leaderboard(&mut redis, &key).await?;
     let legend_keys = get_legend_keys(&mut redis).await;
     let count = pagination.count.unwrap_or(100);
     let offset = pagination.offset.unwrap_or(0);
@@ -310,7 +308,7 @@ async fn top_char(
         .filter_map(|e| e.player_id.parse::<i64>().ok()).collect();
     let mut db = pools.db_pool.get().await.unwrap();
     let player_tags = db::get_tags_from_player_list(player_ids, &mut db).await.unwrap_or_default();
-    Ok(Json(build_rank_response(&entries, &legend_keys, &player_tags, offset, count, true)))
+    Ok(Json(build_rank_response(&entries, &legend_keys, &player_tags, offset, count)))
 }
 
 async fn characters() -> Result<Json<Vec<(&'static str, &'static str)>>, (StatusCode, String)> {
