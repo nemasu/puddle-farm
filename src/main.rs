@@ -101,9 +101,9 @@ async fn player(
         .await
         .unwrap_or_else(|_| vec![]);
 
-    if !leaderboard.is_empty() {
-        let player_id_str = id.to_string();
+    let player_id_str = id.to_string();
 
+    if !leaderboard.is_empty() {
         // top_global: best rank across all chars
         if let Some(entry) = leaderboard.iter()
             .filter(|e| e.player_id == player_id_str)
@@ -111,16 +111,14 @@ async fn player(
         {
             top_global = entry.rank as i32;
         }
+    }
 
-        // top_chars: position within each character's filtered leaderboard
-        for (_, rating) in &player_char {
-            let char_id = rating.char_id as i64;
-            let char_entries: Vec<_> = leaderboard.iter()
-                .filter(|e| e.char_id == char_id)
-                .collect();
-            if let Some(pos) = char_entries.iter().position(|e| e.player_id == player_id_str) {
-                top_chars.insert(rating.char_id, (pos + 1) as i32);
-            }
+    // top_chars: position within each character's specific leaderboard
+    for (_, rating) in &player_char {
+        let key = format!("leaderboard_char_{}", rating.char_id);
+        let char_leaderboard = read_leaderboard(&mut redis, &key).await.unwrap_or_else(|_| vec![]);
+        if let Some(pos) = char_leaderboard.iter().position(|e| e.player_id == player_id_str) {
+            top_chars.insert(rating.char_id, (pos + 1) as i32);
         }
     }
 
