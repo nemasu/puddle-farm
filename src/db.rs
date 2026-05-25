@@ -509,20 +509,25 @@ pub async fn get_ratings(
     id: i64,
     char_id: i16,
     duration: i32,
+    pre_vanquisher: bool,
     db: &mut crate::Connection<'_>,
 ) -> Result<Vec<RatingResult>, String> {
     //TODO when positional_order_by + limit is released, change this to ORM query.
 
     // Check if they're Vanq, if they are, only return DR
-    let is_vanq = match schema::player_ratings::table
-        .select(schema::player_ratings::value)
-        .filter(schema::player_ratings::id.eq(id))
-        .filter(schema::player_ratings::char_id.eq(char_id))
-        .first::<i64>(db)
-        .await
-    {
-        Ok(latest_rating) => latest_rating > 10000000,
-        _ => false,
+    let is_vanq = if pre_vanquisher {
+        false
+    } else {
+        match schema::player_ratings::table
+            .select(schema::player_ratings::value)
+            .filter(schema::player_ratings::id.eq(id))
+            .filter(schema::player_ratings::char_id.eq(char_id))
+            .first::<i64>(db)
+            .await
+        {
+            Ok(latest_rating) => latest_rating > 10000000,
+            _ => false,
+        }
     };
 
     

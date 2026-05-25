@@ -7,7 +7,7 @@ use bb8::PooledConnection;
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
 use handlers::common::{Pagination, TagResponse};
 use models::Player;
-use serde::{Serialize, Serializer};
+use serde::{Deserialize, Serialize, Serializer};
 
 fn serialize_i64_as_string<S: Serializer>(v: &i64, s: S) -> Result<S::Ok, S::Error> {
     s.serialize_str(&v.to_string())
@@ -440,9 +440,15 @@ struct RatingsResponse {
     timestamp: String,
     rating: i64,
 }
+#[derive(Deserialize, Default)]
+struct RatingsParams {
+    pre_vanquisher: Option<bool>,
+}
+
 async fn ratings(
     State(pools): State<AppState>,
     Path((player_id, char_id, duration)): Path<(i64, String, i32)>,
+    Query(params): Query<RatingsParams>,
 ) -> Result<Json<Vec<RatingsResponse>>, (StatusCode, String)> {
     let char_id = match CHAR_NAMES.iter().position(|(c, _)| *c == char_id) {
         Some(id) => id as i16,
@@ -453,7 +459,7 @@ async fn ratings(
 
     let mut db = pools.db_pool.get().await.unwrap();
 
-    let results = match db::get_ratings(player_id, char_id, duration, &mut db).await {
+    let results = match db::get_ratings(player_id, char_id, duration, params.pre_vanquisher.unwrap_or(false), &mut db).await {
         Ok(results) => results,
         Err(e) => {
             return Err((StatusCode::NOT_FOUND, e));
