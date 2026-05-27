@@ -99,12 +99,13 @@ pub async fn get_player_avatar(player_id: String) -> Result<String, String> {
 }
 
 pub async fn get_token() -> Result<String, String> {
-    {
-        let token = TOKEN.lock().await;
-        if let Some(t) = token.deref() {
-            debug!("Already have a strive token");
-            return Ok(t.to_owned());
-        }
+    // Hold the lock for the entire check-and-fetch so concurrent callers
+    // block here rather than racing to open duplicate GGST login requests.
+    let mut token = TOKEN.lock().await;
+
+    if let Some(t) = token.deref() {
+        debug!("Already have a strive token");
+        return Ok(t.to_owned());
     }
 
     warn!("Grabbing steam token");
@@ -125,13 +126,10 @@ pub async fn get_token() -> Result<String, String> {
         });
 
     let response_bytes = response.bytes().await.unwrap();
-    
-    info!("Waiting for strive token");
-    let mut t = TOKEN.lock().await;
 
     if let Ok(r) = decrypt_response::<responses::Login>(&response_bytes) {
         info!("Got token: {}", r.header.token);
-        *t = Some(r.header.token.to_owned());
+        *token = Some(r.header.token.to_owned());
         let _ = std::fs::write("token.txt", r.header.token.clone());
         Ok(r.header.token)
     } else {
