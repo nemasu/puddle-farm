@@ -9,7 +9,7 @@ tower-http = { version = "0.6.2", features = ["cors"] }
 bb8 = "0.9"
 bb8-postgres = "0.9"
 bb8-redis = "0.18"
-diesel = { version = "2.2.6", features = ["postgres", "chrono"] }
+diesel = { version = "2.3.8", features = ["postgres", "chrono"] }
 diesel-async = { version = "0.8.0", features = ["postgres", "bb8"] }
 dotenv = "0.15.0"
 tokio = { version = "1.42.0", features = ["time", "rt-multi-thread"] }
