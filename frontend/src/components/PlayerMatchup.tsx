@@ -2,6 +2,7 @@ import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormCon
 import React, { useEffect, useState } from "react";
 import { Utils } from "../utils/Utils";
 import { MatchupProps, Matchups } from '../interfaces/PlayerMatchups';
+import { MatchupResponse } from '../interfaces/API';
 
 const Matchup: React.FC<MatchupProps> = ({ API_ENDPOINT, char_short, player_id }) => {
   const [orderBy, setOrderBy] = useState<string | null>(null);
@@ -9,6 +10,7 @@ const Matchup: React.FC<MatchupProps> = ({ API_ENDPOINT, char_short, player_id }
   const [duration, setDuration] = useState<string>('12');
   const [matchups, setMatchups] = useState<Matchups | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [globalWRMap, setGlobalWRMap] = useState<Map<string, { wins: number; total_games: number }>>(new Map());
   const [customWeeks, setCustomWeeks] = useState<string>('');
   const [tempWeeks, setTempWeeks] = useState<string>('');
   const [openDialog, setOpenDialog] = useState(false);
@@ -47,23 +49,32 @@ const Matchup: React.FC<MatchupProps> = ({ API_ENDPOINT, char_short, player_id }
 
       setLoading(true);
       try {
-        const matchups = await fetch(API_ENDPOINT + '/matchups/' + player_id + '/' + char_short + '/' + duration);
-        if (matchups.status === 200) {
-          const matchups_result = await matchups.json();
-          if (matchups_result !== null) {
+        const [playerRes, globalRes] = await Promise.all([
+          fetch(API_ENDPOINT + '/matchups/' + player_id + '/' + char_short + '/' + duration),
+          fetch(API_ENDPOINT + '/matchups'),
+        ]);
 
+        if (playerRes.status === 200) {
+          const matchups_result = await playerRes.json();
+          if (matchups_result !== null) {
             let total_wins = 0;
             let total_games = 0;
             for (var mkey in matchups_result.matchups) {
               total_wins += matchups_result.matchups[mkey].wins;
               total_games += matchups_result.matchups[mkey].total_games;
             }
-
             matchups_result.total_wins = total_wins;
             matchups_result.total_games = total_games;
-
             setMatchups(matchups_result);
           }
+        }
+
+        if (globalRes.status === 200) {
+          const globalData: MatchupResponse = await globalRes.json();
+          const charEntry = globalData.data_all.find(c => c.char_short === char_short);
+          const map = new Map<string, { wins: number; total_games: number }>();
+          charEntry?.matchups.forEach(m => map.set(m.char_short, { wins: m.wins, total_games: m.total_games }));
+          setGlobalWRMap(map);
         }
       } catch (error) {
         console.error('Error fetching matchups:', error);
@@ -189,7 +200,7 @@ const Matchup: React.FC<MatchupProps> = ({ API_ENDPOINT, char_short, player_id }
               }
             </Typography>
           </Box>
-          <TableContainer component={Paper} sx={{ maxWidth: 400 }}>
+          <TableContainer component={Paper} sx={{ maxWidth: 500 }}>
             <Table stickyHeader>
               <TableHead>
                 <TableRow>
@@ -229,25 +240,37 @@ const Matchup: React.FC<MatchupProps> = ({ API_ENDPOINT, char_short, player_id }
                       Total
                     </TableSortLabel>
                   </TableCell>
+                  <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                    Global WR
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {sortedMatchups.map((matchup, rowIndex) => (
-                  <TableRow key={rowIndex}>
-                    <TableCell component="th" scope="row" sx={{ position: 'sticky', left: 0, background: 'black', zIndex: 1 }}>
-                      {matchup.char_name} ({matchup.char_short})
-                    </TableCell>
-                    <TableCell>
-                      {Utils.colorChangeForPercent(((matchup.wins / matchup.total_games) * 100).toFixed(2))}
-                    </TableCell>
-                    <TableCell>
-                      {matchup.wins}
-                    </TableCell>
-                    <TableCell>
-                      {matchup.total_games}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {sortedMatchups.map((matchup, rowIndex) => {
+                  const globalEntry = globalWRMap.get(matchup.char_short);
+                  const globalWRStr = globalEntry && globalEntry.total_games > 0
+                    ? ((globalEntry.wins / globalEntry.total_games) * 100).toFixed(2)
+                    : null;
+                  return (
+                    <TableRow key={rowIndex}>
+                      <TableCell component="th" scope="row" sx={{ position: 'sticky', left: 0, background: 'black', zIndex: 1 }}>
+                        {matchup.char_name} ({matchup.char_short})
+                      </TableCell>
+                      <TableCell>
+                        {Utils.colorChangeForPercent(((matchup.wins / matchup.total_games) * 100).toFixed(2))}
+                      </TableCell>
+                      <TableCell>
+                        {matchup.wins}
+                      </TableCell>
+                      <TableCell>
+                        {matchup.total_games}
+                      </TableCell>
+                      <TableCell>
+                        {globalWRStr !== null ? Utils.colorChangeForPercent(globalWRStr) : '—'}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>
