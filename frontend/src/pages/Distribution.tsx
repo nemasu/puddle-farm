@@ -77,8 +77,8 @@ const Distribution = () => {
     
     let cumulativePercentage = 0;
     combinedArray.forEach(item => {
-      cumulativePercentage += item.percentage;
       (combined[item.name] as any).percentile = 100 - cumulativePercentage;
+      cumulativePercentage += item.percentage;
     });
     
     return combined;
