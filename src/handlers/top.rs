@@ -7,6 +7,7 @@ fn serialize_i64_as_string<S: Serializer>(v: &i64, s: S) -> Result<S::Ok, S::Err
 #[derive(Serialize)]
 pub struct RankResponse {
     pub ranks: Vec<PlayerRankResponse>,
+    pub last_update: Option<String>,
 }
 
 #[derive(Serialize)]

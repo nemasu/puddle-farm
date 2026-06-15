@@ -222,6 +222,10 @@ async fn do_hourly_update(
     conn: &mut crate::Connection<'_>,
     redis_connection: &mut crate::RedisConnection<'_>,
 ) -> Result<(), String> {
+    if let Err(e) = sync_global_leaderboards(redis_connection).await {
+        error!("sync_global_leaderboards failed: {e}");
+    }
+
     if let Err(e) = update_stats(conn, redis_connection).await {
         error!("update_stats failed: {e}");
     }
@@ -247,10 +251,6 @@ async fn do_daily_update(
     redis_connection: &mut crate::RedisConnection<'_>,
 ) -> Result<(), String> {
 
-    if let Err(e) = sync_global_leaderboards(redis_connection).await {
-        error!("sync_global_leaderboards failed: {e}");
-    }
-    
     if let Err(e) = update_popularity(conn, redis_connection).await {
         error!("update_popularity failed: {e}");
     }

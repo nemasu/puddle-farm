@@ -233,7 +233,7 @@ fn build_rank_response(
             }
         })
         .collect();
-    RankResponse { ranks }
+    RankResponse { ranks, last_update: None }
 }
 
 async fn read_leaderboard(
@@ -252,6 +252,15 @@ async fn read_leaderboard(
     }
 }
 
+async fn read_last_update_hourly(redis: &mut crate::RedisConnection<'_>) -> Option<String> {
+    use bb8_redis::redis;
+    redis::cmd("GET")
+        .arg("last_update_hourly")
+        .query_async::<String>(&mut **redis)
+        .await
+        .ok()
+}
+
 async fn top_legend(
     State(pools): State<AppState>,
     Query(pagination): Query<Pagination>,
@@ -266,9 +275,12 @@ async fn top_legend(
     let offset = pagination.offset.unwrap_or(0);
     let player_ids: HashSet<i64> = entries.iter().skip(offset).take(count)
         .filter_map(|e| e.player_id.parse::<i64>().ok()).collect();
+    let last_update = read_last_update_hourly(&mut redis).await;
     let mut db = pools.db_pool.get().await.unwrap();
     let player_tags = db::get_tags_from_player_list(player_ids, &mut db).await.unwrap_or_default();
-    Ok(Json(build_rank_response(&entries, &legend_keys, &player_tags, offset, count)))
+    let mut response = build_rank_response(&entries, &legend_keys, &player_tags, offset, count);
+    response.last_update = last_update;
+    Ok(Json(response))
 }
 
 async fn top(
@@ -278,13 +290,16 @@ async fn top(
     let mut redis = pools.redis_pool.get().await.unwrap();
     let entries = read_leaderboard(&mut redis, "leaderboard_all").await?;
     let legend_keys = get_legend_keys(&mut redis).await;
+    let last_update = read_last_update_hourly(&mut redis).await;
     let count = pagination.count.unwrap_or(100);
     let offset = pagination.offset.unwrap_or(0);
     let player_ids: HashSet<i64> = entries.iter().skip(offset).take(count)
         .filter_map(|e| e.player_id.parse::<i64>().ok()).collect();
     let mut db = pools.db_pool.get().await.unwrap();
     let player_tags = db::get_tags_from_player_list(player_ids, &mut db).await.unwrap_or_default();
-    Ok(Json(build_rank_response(&entries, &legend_keys, &player_tags, offset, count)))
+    let mut response = build_rank_response(&entries, &legend_keys, &player_tags, offset, count);
+    response.last_update = last_update;
+    Ok(Json(response))
 }
 
 async fn top_char(
@@ -300,13 +315,16 @@ async fn top_char(
     let key = format!("leaderboard_char_{}", char_idx);
     let entries = read_leaderboard(&mut redis, &key).await?;
     let legend_keys = get_legend_keys(&mut redis).await;
+    let last_update = read_last_update_hourly(&mut redis).await;
     let count = pagination.count.unwrap_or(100);
     let offset = pagination.offset.unwrap_or(0);
     let player_ids: HashSet<i64> = entries.iter().skip(offset).take(count)
         .filter_map(|e| e.player_id.parse::<i64>().ok()).collect();
     let mut db = pools.db_pool.get().await.unwrap();
     let player_tags = db::get_tags_from_player_list(player_ids, &mut db).await.unwrap_or_default();
-    Ok(Json(build_rank_response(&entries, &legend_keys, &player_tags, offset, count)))
+    let mut response = build_rank_response(&entries, &legend_keys, &player_tags, offset, count);
+    response.last_update = last_update;
+    Ok(Json(response))
 }
 
 async fn characters() -> Result<Json<Vec<(&'static str, &'static str)>>, (StatusCode, String)> {

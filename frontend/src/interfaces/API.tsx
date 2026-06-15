@@ -64,6 +64,7 @@ export interface PlayerSet {
 
 export interface RankResponse {
   ranks: PlayerRankResponse[]; // List of player rankings
+  last_update?: string; // UTC timestamp "YYYY-MM-DD HH:MM:SS"
 }
 
 export interface PlayerRankResponse {

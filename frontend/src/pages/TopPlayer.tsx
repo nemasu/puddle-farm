@@ -26,6 +26,20 @@ const TopPlayer = () => {
   const navigate = useNavigate();
 
   const [ranking, setRanking] = useState<PlayerRankResponse[]>([]);
+  const [nextUpdateIn, setNextUpdateIn] = useState<number | null>(null);
+
+  const formatCountdown = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${String(sec).padStart(2, '0')}`;
+  };
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setNextUpdateIn(prev => (prev !== null ? prev - 1 : null));
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const [showNext, setShowNext] = useState<boolean>(true);
 
@@ -90,6 +104,12 @@ const TopPlayer = () => {
 
           setRanking(parsed.ranks);
 
+          if (parsed.last_update) {
+            const lastUpdate = new Date(parsed.last_update + 'Z');
+            const secondsLeft = Math.floor((lastUpdate.getTime() + 3600_000 - Date.now()) / 1000);
+            setNextUpdateIn(secondsLeft);
+          }
+
           return parsed;
         });
 
@@ -153,6 +173,11 @@ const TopPlayer = () => {
       </AppBar>
       <Box m={4}>
         {errorMessage && <Typography color="error" align="center" sx={{ mb: 2 }}>{errorMessage}</Typography>}
+        {nextUpdateIn !== null && (
+          <Typography align="center" sx={{ mb: 1 }}>
+            {nextUpdateIn > 0 ? `Next update in: ${formatCountdown(nextUpdateIn)}` : 'Updating...'}
+          </Typography>
+        )}
         <Box mx={3} sx={{ display: 'inline-block' }}>
           <Button onClick={() => onPrev()}>Prev</Button>
           <Button style={showNext ? {} : { display: 'none' }} onClick={() => onNext()}>Next</Button>
