@@ -222,8 +222,8 @@ async fn do_hourly_update(
     conn: &mut crate::Connection<'_>,
     redis_connection: &mut crate::RedisConnection<'_>,
 ) -> Result<(), String> {
-    if let Err(e) = sync_global_leaderboards(redis_connection).await {
-        error!("sync_global_leaderboards failed: {e}");
+    if let Err(e) = sync_legend_leaderboard(redis_connection).await {
+        error!("sync_legend_leaderboard failed: {e}");
     }
 
     if let Err(e) = update_stats(conn, redis_connection).await {
@@ -250,6 +250,10 @@ async fn do_daily_update(
     conn: &mut crate::Connection<'_>,
     redis_connection: &mut crate::RedisConnection<'_>,
 ) -> Result<(), String> {
+
+    if let Err(e) = sync_global_leaderboards(redis_connection).await {
+        error!("sync_global_leaderboards failed: {e}");
+    }
 
     if let Err(e) = update_popularity(conn, redis_connection).await {
         error!("update_popularity failed: {e}");
@@ -341,7 +345,7 @@ async fn update_distribution(
             END AS percentage,
             CASE 
                 WHEN p.upper_bound = 1 THEN 0.0  -- Set percentile to 0 for placement
-                ELSE CAST(ROUND((100.0 - (p.cumulative_sum_ranked_only * 100.0 / p.total_count_excluding_placement)), 2) AS FLOAT)
+                ELSE CAST(ROUND((100.0 - ((p.cumulative_sum_ranked_only - p.bucket_count) * 100.0 / p.total_count_excluding_placement)), 2) AS FLOAT)
             END AS percentile
         FROM percentiles p
         ORDER BY p.lower_bound;
@@ -853,12 +857,12 @@ async fn update_stats(
     Ok(())
 }
 
-async fn sync_global_leaderboards(
+async fn sync_legend_leaderboard(
     redis_connection: &mut crate::RedisConnection<'_>,
 ) -> Result<(), String> {
     use crate::responses::LeaderboardEntry;
 
-    info!("Syncing global leaderboards");
+    info!("Syncing legend leaderboard");
 
     match crate::ggst_api::get_rank_match_legend().await {
         Ok(players) => {
@@ -873,8 +877,18 @@ async fn sync_global_leaderboards(
                 .await
                 .map_err(|e| format!("Redis SET leaderboard_legend failed: {e}"))?;
         }
-        Err(e) => error!("sync_global_leaderboards: legend failed: {e}"),
+        Err(e) => error!("sync_legend_leaderboard: legend failed: {e}"),
     }
+
+    Ok(())
+}
+
+async fn sync_global_leaderboards(
+    redis_connection: &mut crate::RedisConnection<'_>,
+) -> Result<(), String> {
+    use crate::responses::LeaderboardEntry;
+
+    info!("Syncing global leaderboards");
 
     let mut mr_all: Vec<LeaderboardEntry> = Vec::new();
     let mut page = 0i64;

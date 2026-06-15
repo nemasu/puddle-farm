@@ -29,9 +29,10 @@ const TopPlayer = () => {
   const [nextUpdateIn, setNextUpdateIn] = useState<number | null>(null);
 
   const formatCountdown = (s: number) => {
-    const m = Math.floor(s / 60);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
     const sec = s % 60;
-    return `${m}:${String(sec).padStart(2, '0')}`;
+    return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
   };
 
   useEffect(() => {
@@ -106,7 +107,7 @@ const TopPlayer = () => {
 
           if (parsed.last_update) {
             const lastUpdate = new Date(parsed.last_update + 'Z');
-            const secondsLeft = Math.floor((lastUpdate.getTime() + 3600_000 - Date.now()) / 1000);
+            const secondsLeft = Math.floor((lastUpdate.getTime() + 86400_000 - Date.now()) / 1000);
             setNextUpdateIn(secondsLeft);
           }
 
@@ -174,7 +175,7 @@ const TopPlayer = () => {
       <Box m={4}>
         {errorMessage && <Typography color="error" align="center" sx={{ mb: 2 }}>{errorMessage}</Typography>}
         {nextUpdateIn !== null && (
-          <Typography align="center" sx={{ mb: 1 }}>
+          <Typography align="left" sx={{ mb: 1 }}>
             {nextUpdateIn > 0 ? `Next update in: ${formatCountdown(nextUpdateIn)}` : 'Updating...'}
           </Typography>
         )}

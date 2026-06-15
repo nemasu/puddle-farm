@@ -120,7 +120,7 @@ const Legend = () => {
       <Box m={3}>
         {errorMessage && <Typography color="error" align="center" sx={{ mb: 2 }}>{errorMessage}</Typography>}
         {nextUpdateIn !== null && (
-          <Typography align="center" sx={{ mb: 1 }}>
+          <Typography align="left" sx={{ mb: 1 }}>
             {nextUpdateIn > 0 ? `Next update in: ${formatCountdown(nextUpdateIn)}` : 'Updating...'}
           </Typography>
         )}

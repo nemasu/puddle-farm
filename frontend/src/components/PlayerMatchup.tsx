@@ -1,8 +1,18 @@
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Paper, Select, SelectChangeEvent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, TextField, Typography } from "@mui/material";
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Paper, Select, SelectChangeEvent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TableSortLabel, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import { Utils } from "../utils/Utils";
 import { MatchupProps, Matchups } from '../interfaces/PlayerMatchups';
 import { MatchupResponse } from '../interfaces/API';
+
+const TIERS = [
+  { label: 'S', color: '#FFD700', minWR: 65 },
+  { label: 'A', color: '#4CAF50', minWR: 55 },
+  { label: 'B', color: '#2196F3', minWR: 45 },
+  { label: 'C', color: '#FF9800', minWR: 35 },
+  { label: 'D', color: '#f44336', minWR: 0 },
+];
+
+const MIN_GAMES = 5;
 
 const Matchup: React.FC<MatchupProps> = ({ API_ENDPOINT, char_short, player_id }) => {
   const [orderBy, setOrderBy] = useState<string | null>(null);
@@ -14,6 +24,7 @@ const Matchup: React.FC<MatchupProps> = ({ API_ENDPOINT, char_short, player_id }
   const [customWeeks, setCustomWeeks] = useState<string>('');
   const [tempWeeks, setTempWeeks] = useState<string>('');
   const [openDialog, setOpenDialog] = useState(false);
+  const [viewMode, setViewMode] = useState<'table' | 'tierlist'>('table');
 
   const handleCustomWeeksChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setCustomWeeks(event.target.value);
@@ -132,6 +143,102 @@ const Matchup: React.FC<MatchupProps> = ({ API_ENDPOINT, char_short, player_id }
     });
   }, [matchups, orderBy, order]);
 
+  const tierListContent = React.useMemo(() => {
+    if (!matchups?.matchups) return null;
+
+    const enoughData = matchups.matchups.filter(m => m.total_games >= MIN_GAMES);
+    const tooFewGames = matchups.matchups.filter(m => m.total_games < MIN_GAMES);
+
+    return (
+      <Box sx={{ mt: 2 }}>
+        {TIERS.map((tier, tierIndex) => {
+          const upperWR = tierIndex === 0 ? Infinity : TIERS[tierIndex - 1].minWR;
+          const chars = enoughData.filter(m => {
+            const wr = (m.wins / m.total_games) * 100;
+            return wr >= tier.minWR && wr < upperWR;
+          });
+
+          return (
+            <Box key={tier.label} sx={{ display: 'flex', alignItems: 'flex-start', mb: 0.5 }}>
+              <Box sx={{
+                minWidth: 40,
+                height: 40,
+                backgroundColor: tier.color,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mr: 1,
+                borderRadius: 1,
+                flexShrink: 0,
+              }}>
+                <Typography fontWeight="bold" color="black" fontSize={16}>{tier.label}</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center', minHeight: 40 }}>
+                {chars.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'center', fontStyle: 'italic' }}>—</Typography>
+                ) : chars.map(m => {
+                  const wr = (m.wins / m.total_games) * 100;
+                  return (
+                    <Tooltip key={m.char_short} title={`${m.char_name}: ${wr.toFixed(1)}% (${m.wins}/${m.total_games})`} arrow>
+                      <Box sx={{
+                        px: 1,
+                        py: 0.5,
+                        border: `1px solid ${tier.color}`,
+                        borderRadius: 1,
+                        cursor: 'default',
+                        lineHeight: 1.2,
+                      }}>
+                        <Typography fontSize={11} fontWeight="bold">{m.char_short}</Typography>
+                        <Typography fontSize={10} color={tier.color}>{wr.toFixed(0)}%</Typography>
+                      </Box>
+                    </Tooltip>
+                  );
+                })}
+              </Box>
+            </Box>
+          );
+        })}
+        {tooFewGames.length > 0 && (
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', mt: 1 }}>
+            <Box sx={{
+              minWidth: 40,
+              height: 40,
+              backgroundColor: '#9E9E9E',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mr: 1,
+              borderRadius: 1,
+              flexShrink: 0,
+            }}>
+              <Typography fontWeight="bold" color="black" fontSize={16}>?</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center', minHeight: 40 }}>
+              {tooFewGames.map(m => (
+                <Tooltip key={m.char_short} title={`${m.char_name}: ${m.total_games} game${m.total_games === 1 ? '' : 's'} (too few)`} arrow>
+                  <Box sx={{
+                    px: 1,
+                    py: 0.5,
+                    border: '1px solid #9E9E9E',
+                    borderRadius: 1,
+                    cursor: 'default',
+                    lineHeight: 1.2,
+                  }}>
+                    <Typography fontSize={11} fontWeight="bold">{m.char_short}</Typography>
+                    <Typography fontSize={10} color="#9E9E9E">{m.total_games}g</Typography>
+                  </Box>
+                </Tooltip>
+              ))}
+            </Box>
+          </Box>
+        )}
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+          Tiers based on personal win rate: S≥65%, A≥55%, B≥45%, C≥35%, D&lt;35%. ? = fewer than {MIN_GAMES} games.
+        </Typography>
+      </Box>
+    );
+  }, [matchups]);
+
   if (loading) {
     return <Typography>Loading...</Typography>;
   }
@@ -146,6 +253,15 @@ const Matchup: React.FC<MatchupProps> = ({ API_ENDPOINT, char_short, player_id }
         <React.Fragment>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, marginTop: 10, marginBottom: 2 }}>
             <Typography variant="h6">Matchup Table</Typography>
+            <ToggleButtonGroup
+              value={viewMode}
+              exclusive
+              onChange={(_e, val) => { if (val) setViewMode(val); }}
+              size="small"
+            >
+              <ToggleButton value="table">Table</ToggleButton>
+              <ToggleButton value="tierlist">Tier List</ToggleButton>
+            </ToggleButtonGroup>
             <FormControl size="small" sx={{ minWidth: 120 }}>
               <InputLabel>Duration</InputLabel>
               <Select
@@ -200,80 +316,84 @@ const Matchup: React.FC<MatchupProps> = ({ API_ENDPOINT, char_short, player_id }
               }
             </Typography>
           </Box>
-          <TableContainer component={Paper} sx={{ maxWidth: 500 }}>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <TableCell>
-                    <TableSortLabel
-                      active={orderBy === 'character'}
-                      direction={orderBy === 'character' ? order : 'asc'}
-                      onClick={() => handleRequestSort('character')}
-                    >
-                      Character
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                    <TableSortLabel
-                      active={orderBy === 'winrate'}
-                      direction={orderBy === 'winrate' ? order : 'asc'}
-                      onClick={() => handleRequestSort('winrate')}
-                    >
-                      WR
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                    <TableSortLabel
-                      active={orderBy === 'wins'}
-                      direction={orderBy === 'wins' ? order : 'asc'}
-                      onClick={() => handleRequestSort('wins')}
-                    >
-                      Wins
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                    <TableSortLabel
-                      active={orderBy === 'total'}
-                      direction={orderBy === 'total' ? order : 'asc'}
-                      onClick={() => handleRequestSort('total')}
-                    >
-                      Total
-                    </TableSortLabel>
-                  </TableCell>
-                  <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                    Global WR
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sortedMatchups.map((matchup, rowIndex) => {
-                  const globalEntry = globalWRMap.get(matchup.char_short);
-                  const globalWRStr = globalEntry && globalEntry.total_games > 0
-                    ? ((globalEntry.wins / globalEntry.total_games) * 100).toFixed(2)
-                    : null;
-                  return (
-                    <TableRow key={rowIndex}>
-                      <TableCell component="th" scope="row" sx={{ position: 'sticky', left: 0, background: 'black', zIndex: 1 }}>
-                        {matchup.char_name} ({matchup.char_short})
-                      </TableCell>
-                      <TableCell>
-                        {Utils.colorChangeForPercent(((matchup.wins / matchup.total_games) * 100).toFixed(2))}
-                      </TableCell>
-                      <TableCell>
-                        {matchup.wins}
-                      </TableCell>
-                      <TableCell>
-                        {matchup.total_games}
-                      </TableCell>
-                      <TableCell>
-                        {globalWRStr !== null ? Utils.colorChangeForPercent(globalWRStr) : '—'}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          {viewMode === 'table' ? (
+            <TableContainer component={Paper} sx={{ maxWidth: 500 }}>
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>
+                      <TableSortLabel
+                        active={orderBy === 'character'}
+                        direction={orderBy === 'character' ? order : 'asc'}
+                        onClick={() => handleRequestSort('character')}
+                      >
+                        Character
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                      <TableSortLabel
+                        active={orderBy === 'winrate'}
+                        direction={orderBy === 'winrate' ? order : 'asc'}
+                        onClick={() => handleRequestSort('winrate')}
+                      >
+                        WR
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                      <TableSortLabel
+                        active={orderBy === 'wins'}
+                        direction={orderBy === 'wins' ? order : 'asc'}
+                        onClick={() => handleRequestSort('wins')}
+                      >
+                        Wins
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                      <TableSortLabel
+                        active={orderBy === 'total'}
+                        direction={orderBy === 'total' ? order : 'asc'}
+                        onClick={() => handleRequestSort('total')}
+                      >
+                        Total
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                      Global WR
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {sortedMatchups.map((matchup, rowIndex) => {
+                    const globalEntry = globalWRMap.get(matchup.char_short);
+                    const globalWRStr = globalEntry && globalEntry.total_games > 0
+                      ? ((globalEntry.wins / globalEntry.total_games) * 100).toFixed(2)
+                      : null;
+                    return (
+                      <TableRow key={rowIndex}>
+                        <TableCell component="th" scope="row" sx={{ position: 'sticky', left: 0, background: 'black', zIndex: 1 }}>
+                          {matchup.char_name} ({matchup.char_short})
+                        </TableCell>
+                        <TableCell>
+                          {Utils.colorChangeForPercent(((matchup.wins / matchup.total_games) * 100).toFixed(2))}
+                        </TableCell>
+                        <TableCell>
+                          {matchup.wins}
+                        </TableCell>
+                        <TableCell>
+                          {matchup.total_games}
+                        </TableCell>
+                        <TableCell>
+                          {globalWRStr !== null ? Utils.colorChangeForPercent(globalWRStr) : '—'}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            tierListContent
+          )}
         </React.Fragment>
       ) : null}
     </React.Fragment>

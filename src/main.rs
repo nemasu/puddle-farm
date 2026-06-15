@@ -261,6 +261,15 @@ async fn read_last_update_hourly(redis: &mut crate::RedisConnection<'_>) -> Opti
         .ok()
 }
 
+async fn read_last_update_daily(redis: &mut crate::RedisConnection<'_>) -> Option<String> {
+    use bb8_redis::redis;
+    redis::cmd("GET")
+        .arg("last_update_daily")
+        .query_async::<String>(&mut **redis)
+        .await
+        .ok()
+}
+
 async fn top_legend(
     State(pools): State<AppState>,
     Query(pagination): Query<Pagination>,
@@ -290,7 +299,7 @@ async fn top(
     let mut redis = pools.redis_pool.get().await.unwrap();
     let entries = read_leaderboard(&mut redis, "leaderboard_all").await?;
     let legend_keys = get_legend_keys(&mut redis).await;
-    let last_update = read_last_update_hourly(&mut redis).await;
+    let last_update = read_last_update_daily(&mut redis).await;
     let count = pagination.count.unwrap_or(100);
     let offset = pagination.offset.unwrap_or(0);
     let player_ids: HashSet<i64> = entries.iter().skip(offset).take(count)
@@ -315,7 +324,7 @@ async fn top_char(
     let key = format!("leaderboard_char_{}", char_idx);
     let entries = read_leaderboard(&mut redis, &key).await?;
     let legend_keys = get_legend_keys(&mut redis).await;
-    let last_update = read_last_update_hourly(&mut redis).await;
+    let last_update = read_last_update_daily(&mut redis).await;
     let count = pagination.count.unwrap_or(100);
     let offset = pagination.offset.unwrap_or(0);
     let player_ids: HashSet<i64> = entries.iter().skip(offset).take(count)
