@@ -90,6 +90,7 @@ fn get_json_char_code(char_code: &str) -> String {
         "UN" => "UNI".to_string(),
         "LU" => "LUC".to_string(),
         "JA" => "USG".to_string(),
+        "RK" => "RBO".to_string(),
         _ => char_code.to_string(),
     }
 }

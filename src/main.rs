@@ -80,6 +80,7 @@ pub const CHAR_NAMES: &[(&str, &str)] = &[
     ("UN", "Unika"),
     ("LU", "Lucy"),
     ("JA", "Jam"),
+    ("RK", "Robo-Ky"),
 ];
 
 async fn player(
