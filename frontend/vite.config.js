@@ -7,12 +7,4 @@ export default defineConfig({
     globals: true,
     environment: 'node',
   },
-  server: {
-    proxy: {
-      '/api': {
-        target: 'https://puddle.farm',
-        changeOrigin: true,
-      },
-    },
-  },
 })
