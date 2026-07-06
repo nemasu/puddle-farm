@@ -1,11 +1,18 @@
 import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
 import svgr from 'vite-plugin-svgr'
 
 export default defineConfig({
-  plugins: [react(), svgr()],
-  resolve: {
-    alias: {
+  plugins: [svgr()],
+  test: {
+    globals: true,
+    environment: 'node',
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://puddle.farm',
+        changeOrigin: true,
+      },
     },
   },
 })

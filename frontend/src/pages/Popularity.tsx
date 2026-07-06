@@ -1,139 +1,194 @@
-import React, { useEffect } from 'react';
-import { Box, CircularProgress, Typography } from '@mui/material';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
-import { Utils } from './../utils/Utils';
-import { PopularityResult } from '../interfaces/API';
+import {
+  Box,
+  CircularProgress,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+} from "@mui/material";
+import { useEffect, useState } from "react";
+import type { PopularityResult } from "../interfaces/API";
+import { Utils } from "./../utils/Utils";
 
 const Popularity = () => {
   const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
 
-  const [loading, setLoading] = React.useState(true);
-  const [popularity, setPopularity] = React.useState<PopularityResult>();
+  const [loading, setLoading] = useState(true);
+  const [popularity, setPopularity] = useState<PopularityResult>();
 
   useEffect(() => {
-    document.title = 'Popularity | Puddle Farm';
+    document.title = "Popularity | Puddle Farm";
     fetch(`${API_ENDPOINT}/popularity`)
       .then((response) => response.json())
       .then((data) => {
         setPopularity(data);
       });
 
-      setLoading(false);
-  }, [API_ENDPOINT]);
+    setLoading(false);
+  }, []);
 
   return (
-    <React.Fragment>
-      {loading ?
-          <CircularProgress
-            size={60}
-            variant="indeterminate"
-            disableShrink={true}
-            sx={{ position: 'absolute', top: '-1px', color: 'white' }}
-          />
-          : null
-        }
-      <Box m={5}>
+    <>
+      {loading ? (
+        <CircularProgress
+          size={60}
+          variant="indeterminate"
+          disableShrink={true}
+          sx={{ position: "absolute", top: "-1px", color: "white" }}
+        />
+      ) : null}
+      <Box sx={{ m: 5 }}>
         <Typography variant="h4" gutterBottom align="center">
           Popularity
         </Typography>
-        <Box mb={4}>
-          <Typography variant="h5" sx={{ fontWeight: 'bold', marginBottom: 1 }}>
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h5" sx={{ fontWeight: "bold", marginBottom: 1 }}>
             Character Popularity Per Player (Past Month)
           </Typography>
-          <Box mb={4}>
+          <Box sx={{ mb: 4 }}>
             <Typography variant="body1">
-              This table shows the popularity of each character for each player in the last month.<br />
-              For example: If a character has a popularity of 10%, it means that 10% of the players have used that character.<br />
-              It adds up to over 100% because players can use multiple characters.
+              This table shows the popularity of each character for each player
+              in the last month.
+              <br />
+              For example: If a character has a popularity of 10%, it means that
+              10% of the players have used that character.
+              <br />
+              It adds up to over 100% because players can use multiple
+              characters.
             </Typography>
           </Box>
-          <Box display={'flex'} flexWrap={'wrap'}>
-            {popularity && popularity.per_player.reduce<Array<typeof popularity.per_player>>((acc, e, index) => {
-              const groupIndex = Math.floor(index / 10);
-              if (!acc[groupIndex]) {
-                acc[groupIndex] = [];
-              }
-              acc[groupIndex].push(e);
-              return acc;
-            }, []).map((group, groupIndex) => (
-              <Box key={groupIndex} width={'300px'}>
-                <TableContainer component={Paper} sx={{ marginBottom: 4, marginRight: 2 }} key={groupIndex}>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Character</TableCell>
-                        <TableCell>Popularity</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {group.map((e) => (
-                        <TableRow key={e.name}>
-                          <TableCell>{e.name}</TableCell>
-                          <TableCell>{((e.value / popularity['per_player_total']) * 100).toFixed(2)}%</TableCell>
+          <Box sx={{ display: "flex", flexWrap: "wrap" }}>
+            {popularity?.per_player
+              .reduce<Array<typeof popularity.per_player>>((acc, e, index) => {
+                const groupIndex = Math.floor(index / 10);
+                if (!acc[groupIndex]) {
+                  acc[groupIndex] = [];
+                }
+                acc[groupIndex].push(e);
+                return acc;
+              }, [])
+              .map((group, groupIndex) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: synthetic group index, no stable id
+                <Box key={groupIndex} sx={{ width: "300px" }}>
+                  <TableContainer
+                    component={Paper}
+                    sx={{ marginBottom: 4, marginRight: 2 }}
+                  >
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Character</TableCell>
+                          <TableCell>Popularity</TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-            ))}
+                      </TableHead>
+                      <TableBody>
+                        {group.map((e) => (
+                          <TableRow key={e.name}>
+                            <TableCell>{e.name}</TableCell>
+                            <TableCell>
+                              {(
+                                (e.value / popularity.per_player_total) *
+                                100
+                              ).toFixed(2)}
+                              %
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              ))}
           </Box>
-          <Box>Total games per player: {popularity && popularity['per_player_total'].toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</Box>
+          <Box>
+            Total games per player:{" "}
+            {popularity?.per_player_total
+              .toString()
+              .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+          </Box>
         </Box>
-        <Box mb={4}>
-          <Typography variant="h5" sx={{ fontWeight: 'bold', marginBottom: 1 }}>
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h5" sx={{ fontWeight: "bold", marginBottom: 1 }}>
             Character Popularity Per Character (Past Month)
           </Typography>
-          <Box mb={4}>
+          <Box sx={{ mb: 4 }}>
             <Typography variant="body1">
-              This table shows the game count per character in the last month.<br />
-              For example: If a character has a popularity of 10%, it means that 10% of the games are with that character.<br />
+              This table shows the game count per character in the last month.
+              <br />
+              For example: If a character has a popularity of 10%, it means that
+              10% of the games are with that character.
+              <br />
             </Typography>
           </Box>
-          <Box display={'flex'} flexWrap={'wrap'}>
-            {popularity && popularity.per_character.reduce<Array<typeof popularity.per_character>>((acc, e, index) => {
-              const groupIndex = Math.floor(index / 10);
-              if (!acc[groupIndex]) {
-                acc[groupIndex] = [];
-              }
-              acc[groupIndex].push(e);
-              return acc;
-            }, []).map((group, groupIndex) => (
-              <Box key={groupIndex} width={'300px'}>
-                <TableContainer component={Paper} sx={{ marginBottom: 4, marginRight: 2 }} key={groupIndex}>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Character</TableCell>
-                        <TableCell>Popularity</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {group.map((e) => (
-                        <TableRow key={e.name}>
-                          <TableCell>{e.name}</TableCell>
-                          <TableCell>{(((e.value / popularity['per_character_total']) * 100) / 2).toFixed(2)}%</TableCell>
+          <Box sx={{ display: "flex", flexWrap: "wrap" }}>
+            {popularity?.per_character
+              .reduce<Array<typeof popularity.per_character>>(
+                (acc, e, index) => {
+                  const groupIndex = Math.floor(index / 10);
+                  if (!acc[groupIndex]) {
+                    acc[groupIndex] = [];
+                  }
+                  acc[groupIndex].push(e);
+                  return acc;
+                },
+                [],
+              )
+              .map((group, groupIndex) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: synthetic group index, no stable id
+                <Box key={groupIndex} sx={{ width: "300px" }}>
+                  <TableContainer
+                    component={Paper}
+                    sx={{ marginBottom: 4, marginRight: 2 }}
+                  >
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Character</TableCell>
+                          <TableCell>Popularity</TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-            ))}
+                      </TableHead>
+                      <TableBody>
+                        {group.map((e) => (
+                          <TableRow key={e.name}>
+                            <TableCell>{e.name}</TableCell>
+                            <TableCell>
+                              {(
+                                ((e.value / popularity.per_character_total) *
+                                  100) /
+                                2
+                              ).toFixed(2)}
+                              %
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Box>
+              ))}
           </Box>
-          <Box>Total games per character: {popularity && (popularity['per_character_total'] * 2).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</Box>
+          <Box>
+            Total games per character:{" "}
+            {popularity &&
+              (popularity.per_character_total * 2)
+                .toString()
+                .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+          </Box>
         </Box>
         <Box>
           <Typography>Statistics are updated once a day.</Typography>
           {popularity && (
             <Typography variant="body1">
-              Last updated: {Utils.formatUTCToLocal(popularity['last_update'])}
+              Last updated: {Utils.formatUTCToLocal(popularity.last_update)}
             </Typography>
           )}
         </Box>
       </Box>
-
-    </React.Fragment>
+    </>
   );
 };
 

@@ -1,49 +1,50 @@
-import { CircularProgress, Button } from '@mui/material';
-import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
-import Paper from '@mui/material/Paper';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Typography from '@mui/material/Typography';
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { PlayerSearchResponse } from '../interfaces/API';
-import { JSONParse } from '../utils/JSONParse';
-import { Utils } from '../utils/Utils';
+import { Button, CircularProgress } from "@mui/material";
+import AppBar from "@mui/material/AppBar";
+import Box from "@mui/material/Box";
+import Paper from "@mui/material/Paper";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import Typography from "@mui/material/Typography";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import type { PlayerSearchResponse } from "../interfaces/API";
+import { JSONParse } from "../utils/JSONParse";
+import { Utils } from "../utils/Utils";
 
 const Search = () => {
   const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
 
-  const navigate = useNavigate();
+  const _navigate = useNavigate();
 
-  let { search_string, exact } = useParams();
+  const { search_string, exact } = useParams();
 
   const [results, setResults] = useState<PlayerSearchResponse[]>([]);
 
-  const [loading, setLoading ] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    document.title = 'Search Results | Puddle Farm';
+    document.title = "Search Results | Puddle Farm";
     window.scrollTo(0, 0);
 
     const fetchResults = async () => {
       setLoading(true);
       try {
-        const url = API_ENDPOINT
-          + '/player/search?'
-          + 'search_string=' + search_string
-          + '&exact=' + ((exact && exact === 'exact') ? 'true' : 'false');
+        const url =
+          API_ENDPOINT +
+          "/player/search?" +
+          "search_string=" +
+          search_string +
+          "&exact=" +
+          (exact && exact === "exact" ? "true" : "false");
         const response = await fetch(url);
 
-        // eslint-disable-next-line
-        const result = await response.text().then(body => {
-          
-          var parsed = JSONParse(body);
-          
+        const _result = await response.text().then((body) => {
+          const parsed = JSONParse(body);
+
           setResults(parsed.results);
 
           return parsed;
@@ -51,35 +52,35 @@ const Search = () => {
 
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching player data:', error);
+        console.error("Error fetching player data:", error);
       }
     };
 
     fetchResults();
-  }, [search_string, exact, API_ENDPOINT]);
+  }, [search_string, exact]);
 
   return (
-    <React.Fragment>
-      <AppBar position="static"
-        style={{backgroundImage: "none"}}
-        sx={{backgroundColor:"secondary.main"}}
+    <>
+      <AppBar
+        position="static"
+        style={{ backgroundImage: "none" }}
+        sx={{ backgroundColor: "secondary.main" }}
       >
-        { loading ?
+        {loading ? (
           <CircularProgress
             size={60}
             variant="indeterminate"
             disableShrink={true}
-            sx={{ position: 'absolute', top:'-1px', color:'white' }}
+            sx={{ position: "absolute", top: "-1px", color: "white" }}
           />
-          : null
-        }
-        <Box sx={{minHeight:100, paddingTop:'30px'}}>
-        <Typography align='center' variant="pageHeader">
-          Search Results
-        </Typography>
+        ) : null}
+        <Box sx={{ minHeight: 100, paddingTop: "30px" }}>
+          <Typography align="center" variant="pageHeader">
+            Search Results
+          </Typography>
         </Box>
       </AppBar>
-      <Box m={4} maxWidth="700px">
+      <Box sx={{ m: 4, maxWidth: "700px" }}>
         <TableContainer component={Paper}>
           <Table size="small">
             <TableHead>
@@ -90,21 +91,30 @@ const Search = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {results.map((player, index) => (
-                <TableRow key={index}>
-                  <TableCell><Button component={Link} to={`/player/${player.id}/${player.char_short}`}>{player.name}</Button></TableCell>
+              {results.map((player) => (
+                <TableRow key={`${player.id}-${player.char_short}`}>
+                  <TableCell>
+                    <Button
+                      component={Link}
+                      to={`/player/${player.id}/${player.char_short}`}
+                    >
+                      {player.name}
+                    </Button>
+                  </TableCell>
                   <TableCell>{player.char_short}</TableCell>
                   <TableCell>
                     {Utils.displayRankIcon(player.rating, "32px")}
-                    <Box component={'span'}>{Utils.displayRating(player.rating)}</Box>
-                    </TableCell>
+                    <Box component={"span"}>
+                      {Utils.displayRating(player.rating)}
+                    </Box>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </TableContainer>
       </Box>
-    </React.Fragment>
+    </>
   );
 };
 

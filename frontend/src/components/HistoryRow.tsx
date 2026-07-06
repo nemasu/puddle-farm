@@ -1,31 +1,43 @@
-import { Box, TableContainer, Paper, Table, TableBody, TableRow, TableCell, IconButton, Button, Collapse, TableHead } from "@mui/material";
-import React from "react";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
+import {
+  Box,
+  Button,
+  Collapse,
+  IconButton,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+} from "@mui/material";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { TagResponse } from "../interfaces/API";
-import { GroupedMatch } from "../interfaces/Player";
+import type { TagResponse } from "../interfaces/API";
+import type { GroupedMatch } from "../interfaces/Player";
 import { Utils } from "../utils/Utils";
 import { Tag } from "./Tag";
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 
-function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: TagResponse[]; }) {
-  const [open, setOpen] = React.useState(false);
+function HistoryRow(props: {
+  isMobile?: boolean;
+  item?: GroupedMatch;
+  tags?: TagResponse[];
+}) {
+  const [open, setOpen] = useState(false);
 
   const { item, tags } = props;
 
   if (!item) return null;
 
   const formatTimestamp = (timestamp: string) => {
-    const [date, time] = Utils.formatUTCToLocal(timestamp).split(' ');
+    const [date, time] = Utils.formatUTCToLocal(timestamp).split(" ");
     return (
-      <React.Fragment>
-        <Box sx={{ p: 0, m: 0 }}>
-          {date}
-        </Box>
-        <Box sx={{ p: 0, m: 0 }}>
-          {time}
-        </Box>
-      </React.Fragment>
+      <>
+        <Box sx={{ p: 0, m: 0 }}>{date}</Box>
+        <Box sx={{ p: 0, m: 0 }}>{time}</Box>
+      </>
     );
   };
 
@@ -34,8 +46,8 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
       <TableContainer component={Paper}>
         <Table size="small">
           <TableBody>
-            {item.opponent_id === '0' ? (
-              <React.Fragment>
+            {item.opponent_id === "0" ? (
+              <>
                 <TableRow>
                   <TableCell sx={{ pb: 0, mb: 0 }}>
                     <IconButton
@@ -43,23 +55,37 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
                       size="small"
                       onClick={() => setOpen(!open)}
                     >
-                      {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                      {open ? (
+                        <KeyboardArrowUpIcon />
+                      ) : (
+                        <KeyboardArrowDownIcon />
+                      )}
                     </IconButton>
                   </TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }} width={90}>{formatTimestamp(item.timestamp)}</TableCell>
+                  <TableCell sx={{ px: 0, mx: 0 }} width={90}>
+                    {formatTimestamp(item.timestamp)}
+                  </TableCell>
                   <TableCell sx={{ px: 0, mx: 0 }} width={90}></TableCell>
                   <TableCell sx={{ px: 0, mx: 0 }}></TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }}>{item.wins} - {item.losses}</TableCell>
+                  <TableCell sx={{ px: 0, mx: 0 }}>
+                    {item.wins} - {item.losses}
+                  </TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell sx={{ px: 0, mx: 0 }} colSpan={2}><Button component={Link} sx={{ marginLeft: '5px' }} to={``}>{item.opponent_name}</Button></TableCell>
+                  <TableCell sx={{ px: 0, mx: 0 }} colSpan={2}>
+                    <Button component={Link} sx={{ marginLeft: "5px" }} to={``}>
+                      {item.opponent_name}
+                    </Button>
+                  </TableCell>
                   <TableCell sx={{ px: 0, mx: 0 }}></TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }}>{item.matches[0].opponent_character}</TableCell>
+                  <TableCell sx={{ px: 0, mx: 0 }}>
+                    {item.matches[0].opponent_character}
+                  </TableCell>
                   <TableCell sx={{ px: 0, mx: 0 }}></TableCell>
                 </TableRow>
-              </React.Fragment>
+              </>
             ) : (
-              <React.Fragment>
+              <>
                 <TableRow>
                   <TableCell sx={{ p: 0, m: 0 }}>
                     <IconButton
@@ -67,41 +93,75 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
                       size="small"
                       onClick={() => setOpen(!open)}
                     >
-                      {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                      {open ? (
+                        <KeyboardArrowUpIcon />
+                      ) : (
+                        <KeyboardArrowDownIcon />
+                      )}
                     </IconButton>
                   </TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }} width={90}>{formatTimestamp(item.timestamp)}</TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }} width={90}> {Utils.displayRating(item.matches[item.matches.length - 1].own_rating_value)}</TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }}>{item.wins} - {item.losses}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell sx={{ px: 0, mx: 0, maxWidth: '120px' }}>
-                    <Button sx={{ marginLeft: '5px' }} component={Link} to={`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`}>{item.opponent_name}</Button>
-                    <React.Fragment>
-                      <Box>
-                        {tags && tags.map((e: TagResponse, i: number) => (
-                          <Tag key={i} style={JSON.parse(e.style)} sx={{ fontSize: '0.9rem' }}>
-                            {e.tag}
-                          </Tag>
-                        ))}
-                      </Box>
-                    </React.Fragment>
+                  <TableCell sx={{ px: 0, mx: 0 }} width={90}>
+                    {formatTimestamp(item.timestamp)}
                   </TableCell>
-                  <TableCell>
-                    {Utils.displayRankIcon(item.matches[item.matches.length - 1].opponent_rating_value, '32px', item.matches[item.matches.length - 1].opponent_is_legend)}
+                  <TableCell sx={{ px: 0, mx: 0 }} width={90}>
+                    {" "}
+                    {Utils.displayRating(
+                      item.matches[item.matches.length - 1].own_rating_value,
+                    )}
                   </TableCell>
                   <TableCell sx={{ px: 0, mx: 0 }}>
-                    {Utils.displayRating(item.matches[item.matches.length - 1].opponent_rating_value)}
+                    {item.wins} - {item.losses}
                   </TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }}>{item.matches[0].opponent_character_short}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell sx={{ px: 0, mx: 0, maxWidth: "120px" }}>
+                    <Button
+                      sx={{ marginLeft: "5px" }}
+                      component={Link}
+                      to={`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`}
+                    >
+                      {item.opponent_name}
+                    </Button>
+                    <Box>
+                      {tags?.map((e: TagResponse) => (
+                        <Tag
+                          key={e.tag}
+                          style={JSON.parse(e.style)}
+                          sx={{ fontSize: "0.9rem" }}
+                        >
+                          {e.tag}
+                        </Tag>
+                      ))}
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    {Utils.displayRankIcon(
+                      item.matches[item.matches.length - 1]
+                        .opponent_rating_value,
+                      "32px",
+                      item.matches[item.matches.length - 1].opponent_is_legend,
+                    )}
+                  </TableCell>
+                  <TableCell sx={{ px: 0, mx: 0 }}>
+                    {Utils.displayRating(
+                      item.matches[item.matches.length - 1]
+                        .opponent_rating_value,
+                    )}
+                  </TableCell>
+                  <TableCell sx={{ px: 0, mx: 0 }}>
+                    {item.matches[0].opponent_character_short}
+                  </TableCell>
                   <TableCell sx={{ px: 0, mx: 0 }}>
                     {Utils.colorChangeForRating(item.ratingChange)}
                   </TableCell>
                 </TableRow>
-              </React.Fragment>
+              </>
             )}
             <TableRow id={item.timestamp}>
-              <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
+              <TableCell
+                style={{ paddingBottom: 0, paddingTop: 0 }}
+                colSpan={8}
+              >
                 <Collapse in={open} timeout="auto" unmountOnExit>
                   <Table size="small">
                     <TableHead>
@@ -114,24 +174,50 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {item.matches.map((item, i) => (
+                      {item.matches.map((item, _i) => (
                         <TableRow key={item.timestamp}>
-                          {item.opponent_id === '0' ? (
-                            <React.Fragment>
-                              <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
+                          {item.opponent_id === "0" ? (
+                            <>
+                              <TableCell component="th" scope="row">
+                                {Utils.formatUTCToLocal(item.timestamp)}
+                              </TableCell>
                               <TableCell align="right"></TableCell>
                               <TableCell align="right"></TableCell>
-                              <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
-                              <TableCell align='right'>{item.ratingChange > 0 ? '+' : ''}{item.ratingChange}</TableCell>
-                            </React.Fragment>
+                              <TableCell align="right">
+                                {item.result_win ? "Y" : "N"}
+                              </TableCell>
+                              <TableCell align="right">
+                                {item.ratingChange !== undefined &&
+                                parseFloat(item.ratingChange) > 0
+                                  ? "+"
+                                  : ""}
+                                {item.ratingChange}
+                              </TableCell>
+                            </>
                           ) : (
-                            <React.Fragment>
-                              <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
-                              <TableCell align="right">{Utils.displayRating(item.own_rating_value)}</TableCell>
-                              <TableCell align="right">{Utils.displayRating(item.opponent_rating_value)}</TableCell>
-                              <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
-                              <TableCell align='right'>{item.ratingChange > 0 ? '+' : ''}{item.ratingChange}</TableCell>
-                            </React.Fragment>
+                            <>
+                              <TableCell component="th" scope="row">
+                                {Utils.formatUTCToLocal(item.timestamp)}
+                              </TableCell>
+                              <TableCell align="right">
+                                {Utils.displayRating(item.own_rating_value)}
+                              </TableCell>
+                              <TableCell align="right">
+                                {Utils.displayRating(
+                                  item.opponent_rating_value,
+                                )}
+                              </TableCell>
+                              <TableCell align="right">
+                                {item.result_win ? "Y" : "N"}
+                              </TableCell>
+                              <TableCell align="right">
+                                {item.ratingChange !== undefined &&
+                                parseFloat(item.ratingChange) > 0
+                                  ? "+"
+                                  : ""}
+                                {item.ratingChange}
+                              </TableCell>
+                            </>
                           )}
                         </TableRow>
                       ))}
@@ -146,8 +232,8 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
     );
   } else {
     return (
-      <React.Fragment>
-        <TableRow sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+      <>
+        <TableRow sx={{ "&:last-child td, &:last-child th": { border: 0 } }}>
           <TableCell>
             <IconButton
               aria-label="expand row"
@@ -157,40 +243,80 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
               {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
             </IconButton>
           </TableCell>
-          {item.opponent_id === '0' ? (
-            <React.Fragment>
-              <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
-              <TableCell align="right"></TableCell>
-              <TableCell><Button component={Link} to={``}>{item.opponent_name}</Button></TableCell>
-              <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
-              <TableCell align="right"></TableCell>
-              <TableCell align="right">{item.wins} - {item.losses}</TableCell>
-              <TableCell align="right"></TableCell>
-              <TableCell align="right"></TableCell>
-            </React.Fragment>
-          ) : (
-            <React.Fragment>
-              <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
-              <TableCell align="right"><Box component={'span'}>{Utils.displayRating(item.matches[item.matches.length - 1].own_rating_value)}</Box></TableCell>
-              <TableCell >
-                <Button component={Link} to={`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`}>{item.opponent_name}</Button>
-                <React.Fragment>
-                  <Box>
-                    {tags && tags.map((e: TagResponse, i: number) => (
-                      <Tag key={i} style={JSON.parse(e.style)} sx={{ fontSize: '0.9rem', position: 'unset' }}>
-                        {e.tag}
-                      </Tag>
-                    ))}
-                  </Box>
-                </React.Fragment>
+          {item.opponent_id === "0" ? (
+            <>
+              <TableCell component="th" scope="row">
+                {Utils.formatUTCToLocal(item.timestamp)}
               </TableCell>
-              <TableCell align="right">{item.matches[0].opponent_character}</TableCell>
-              <TableCell align="right"><Box component={'span'}>{Utils.displayRankIcon(item.matches[item.matches.length - 1].opponent_rating_value, '32px', item.matches[item.matches.length - 1].opponent_is_legend)} {Utils.displayRating(item.matches[item.matches.length - 1].opponent_rating_value)}</Box></TableCell>
-              <TableCell align="right">{item.wins} - {item.losses}</TableCell>
+              <TableCell align="right"></TableCell>
+              <TableCell>
+                <Button component={Link} to={``}>
+                  {item.opponent_name}
+                </Button>
+              </TableCell>
+              <TableCell align="right">
+                {item.matches[0].opponent_character}
+              </TableCell>
+              <TableCell align="right"></TableCell>
+              <TableCell align="right">
+                {item.wins} - {item.losses}
+              </TableCell>
+              <TableCell align="right"></TableCell>
+              <TableCell align="right"></TableCell>
+            </>
+          ) : (
+            <>
+              <TableCell component="th" scope="row">
+                {Utils.formatUTCToLocal(item.timestamp)}
+              </TableCell>
+              <TableCell align="right">
+                <Box component={"span"}>
+                  {Utils.displayRating(
+                    item.matches[item.matches.length - 1].own_rating_value,
+                  )}
+                </Box>
+              </TableCell>
+              <TableCell>
+                <Button
+                  component={Link}
+                  to={`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`}
+                >
+                  {item.opponent_name}
+                </Button>
+                <Box>
+                  {tags?.map((e: TagResponse) => (
+                    <Tag
+                      key={e.tag}
+                      style={JSON.parse(e.style)}
+                      sx={{ fontSize: "0.9rem", position: "unset" }}
+                    >
+                      {e.tag}
+                    </Tag>
+                  ))}
+                </Box>
+              </TableCell>
+              <TableCell align="right">
+                {item.matches[0].opponent_character}
+              </TableCell>
+              <TableCell align="right">
+                <Box component={"span"}>
+                  {Utils.displayRankIcon(
+                    item.matches[item.matches.length - 1].opponent_rating_value,
+                    "32px",
+                    item.matches[item.matches.length - 1].opponent_is_legend,
+                  )}{" "}
+                  {Utils.displayRating(
+                    item.matches[item.matches.length - 1].opponent_rating_value,
+                  )}
+                </Box>
+              </TableCell>
+              <TableCell align="right">
+                {item.wins} - {item.losses}
+              </TableCell>
               <TableCell align="right">
                 {Utils.colorChangeForRating(item.ratingChange)}
               </TableCell>
-            </React.Fragment>
+            </>
           )}
         </TableRow>
         <TableRow id={item.timestamp}>
@@ -207,24 +333,48 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {item.matches.map((item, i) => (
+                  {item.matches.map((item, _i) => (
                     <TableRow key={item.timestamp}>
-                      {item.opponent_id === '0' ? (
-                        <React.Fragment>
-                          <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
+                      {item.opponent_id === "0" ? (
+                        <>
+                          <TableCell component="th" scope="row">
+                            {Utils.formatUTCToLocal(item.timestamp)}
+                          </TableCell>
                           <TableCell align="right"></TableCell>
                           <TableCell align="right"></TableCell>
-                          <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
-                          <TableCell align='right'>{item.ratingChange > 0 ? '+' : ''}{item.ratingChange}</TableCell>
-                        </React.Fragment>
+                          <TableCell align="right">
+                            {item.result_win ? "Y" : "N"}
+                          </TableCell>
+                          <TableCell align="right">
+                            {item.ratingChange !== undefined &&
+                            parseFloat(item.ratingChange) > 0
+                              ? "+"
+                              : ""}
+                            {item.ratingChange}
+                          </TableCell>
+                        </>
                       ) : (
-                        <React.Fragment>
-                          <TableCell component="th" scope="row">{Utils.formatUTCToLocal(item.timestamp)}</TableCell>
-                          <TableCell align="right">{Utils.displayRating(item.own_rating_value)}</TableCell>
-                          <TableCell align="right">{Utils.displayRating(item.opponent_rating_value)}</TableCell>
-                          <TableCell align="right">{item.result_win ? 'Y' : 'N'}</TableCell>
-                          <TableCell align='right'>{item.ratingChange > 0 ? '+' : ''}{item.ratingChange}</TableCell>
-                        </React.Fragment>
+                        <>
+                          <TableCell component="th" scope="row">
+                            {Utils.formatUTCToLocal(item.timestamp)}
+                          </TableCell>
+                          <TableCell align="right">
+                            {Utils.displayRating(item.own_rating_value)}
+                          </TableCell>
+                          <TableCell align="right">
+                            {Utils.displayRating(item.opponent_rating_value)}
+                          </TableCell>
+                          <TableCell align="right">
+                            {item.result_win ? "Y" : "N"}
+                          </TableCell>
+                          <TableCell align="right">
+                            {item.ratingChange !== undefined &&
+                            parseFloat(item.ratingChange) > 0
+                              ? "+"
+                              : ""}
+                            {item.ratingChange}
+                          </TableCell>
+                        </>
                       )}
                     </TableRow>
                   ))}
@@ -233,7 +383,7 @@ function HistoryRow(props: { isMobile?: boolean; item?: GroupedMatch; tags?: Tag
             </Collapse>
           </TableCell>
         </TableRow>
-      </React.Fragment >
+      </>
     );
   }
 }

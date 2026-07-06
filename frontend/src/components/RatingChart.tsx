@@ -1,12 +1,38 @@
-import React, { useEffect } from 'react';
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, FormControl, InputLabel, MenuItem, Select, SelectChangeEvent, TextField, Typography } from '@mui/material';
-import { RatingChartProps } from '../interfaces/Player';
-import { Utils } from '../utils/Utils';
-import { LineChartData } from '../interfaces/Player';
-import { RatingsResponse } from "../interfaces/API";
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  type SelectChangeEvent,
+  TextField,
+  Typography,
+} from "@mui/material";
+import {
+  type ChangeEvent,
+  type ComponentType,
+  useEffect,
+  useState,
+} from "react";
+import type { RatingsResponse } from "../interfaces/API";
+import type { LineChartData, RatingChartProps } from "../interfaces/Player";
+import { Utils } from "../utils/Utils";
 
-let ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend;
-import('chart.js').then(module => {
+// biome-ignore lint/suspicious/noImplicitAnyLet: dynamic chart.js import assigned after module loads
+let ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend;
+import("chart.js").then((module) => {
   ChartJS = module.Chart;
   CategoryScale = module.CategoryScale;
   LinearScale = module.LinearScale;
@@ -23,24 +49,32 @@ import('chart.js').then(module => {
     LineElement,
     Title,
     Tooltip,
-    Legend
+    Legend,
   );
 });
 
-let Line: React.ComponentType<any>;
-import('react-chartjs-2').then(module => {
+// biome-ignore lint/suspicious/noExplicitAny: dynamic react-chartjs-2 import, Line type unavailable at module level
+let Line: ComponentType<any>;
+import("react-chartjs-2").then((module) => {
   Line = module.Line;
 });
 
-const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_ENDPOINT, latest_rating, total_games }) => {
-
-  const [lineChartData, setLineChartData] = React.useState<LineChartData | null>(null);
-  const [duration, setDuration] = React.useState<string>('100');
-  const [customGames, setCustomGames] = React.useState<string>('');
-  const [tempGames, setTempGames] = React.useState<string>('');
-  const [openDialog, setOpenDialog] = React.useState(false);
-  const [showPreVanquisher, setShowPreVanquisher] = React.useState(false);
-  const [noPreVanquisherData, setNoPreVanquisherData] = React.useState(false);
+const RatingChart = ({
+  player_id,
+  char_short,
+  API_ENDPOINT,
+  latest_rating,
+  total_games,
+}: RatingChartProps) => {
+  const [lineChartData, setLineChartData] = useState<LineChartData | null>(
+    null,
+  );
+  const [duration, setDuration] = useState<string>("100");
+  const [customGames, setCustomGames] = useState<string>("");
+  const [tempGames, setTempGames] = useState<string>("");
+  const [openDialog, setOpenDialog] = useState(false);
+  const [showPreVanquisher, setShowPreVanquisher] = useState(false);
+  const [noPreVanquisherData, setNoPreVanquisherData] = useState(false);
 
   const isVanquisherPlayer = latest_rating > 10000000;
 
@@ -57,13 +91,13 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
     setOpenDialog(false);
   };
 
-  const handleTempGamesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTempGamesChange = (event: ChangeEvent<HTMLInputElement>) => {
     setTempGames(event.target.value);
   };
 
   const handleApplyCustomGames = () => {
-    const games = parseInt(tempGames);
-    if (!isNaN(games) && games > 0) {
+    const games = parseInt(tempGames, 10);
+    if (!Number.isNaN(games) && games > 0) {
       setCustomGames(tempGames);
       setDuration(tempGames);
       handleCloseDialog();
@@ -72,33 +106,33 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
 
   useEffect(() => {
     setShowPreVanquisher(false);
-  }, [char_short]);
+  }, []);
 
   const lineChartOptions = {
     responsive: true,
     plugins: {
       legend: {
-        position: 'top' as const,
+        position: "top" as const,
       },
       title: {
         display: true,
         text: showPreVanquisher
-          ? 'Pre-Vanquisher Rating History'
-          : 'Rating History (' + duration + ' games)',
+          ? "Pre-Vanquisher Rating History"
+          : `Rating History (${duration} games)`,
       },
     },
     scales: {
       x: {
         ticks: {
           display: false,
-        }
-      }
-    }
+        },
+      },
+    },
   };
 
   useEffect(() => {
     const fetchChartData = async () => {
-      if (duration === undefined || duration === '') {
+      if (duration === undefined || duration === "") {
         return;
       }
 
@@ -109,13 +143,21 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
       setNoPreVanquisherData(false);
 
       const apiDuration = showPreVanquisher ? total_games : duration;
-      const query = showPreVanquisher ? '?pre_vanquisher=true' : '';
-      const rating_history_response = await fetch(API_ENDPOINT + '/ratings/' + player_id + '/' + char_short + '/' + apiDuration + query);
+      const query = showPreVanquisher ? "?pre_vanquisher=true" : "";
+      const rating_history_response = await fetch(
+        API_ENDPOINT +
+          "/ratings/" +
+          player_id +
+          "/" +
+          char_short +
+          "/" +
+          apiDuration +
+          query,
+      );
       if (rating_history_response.status === 200) {
         const rating_history_result = await rating_history_response.json();
 
         if (rating_history_result !== null && char_short !== null) {
-
           rating_history_result.reverse();
 
           if (!showPreVanquisher) {
@@ -126,7 +168,7 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
             });
           }
 
-          const durationLimit = parseInt(duration);
+          const durationLimit = parseInt(duration, 10);
           const displayData: RatingsResponse[] = showPreVanquisher
             ? rating_history_result
                 .filter((item: RatingsResponse) => item.rating <= 10000000)
@@ -140,24 +182,45 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
           }
           setNoPreVanquisherData(false);
 
-          const hasVanquisher = displayData.some((item: RatingsResponse) => item.rating > 10000000);
-          const hasNormal = displayData.some((item: RatingsResponse) => item.rating <= 10000000);
+          const hasVanquisher = displayData.some(
+            (item: RatingsResponse) => item.rating > 10000000,
+          );
+          const hasNormal = displayData.some(
+            (item: RatingsResponse) => item.rating <= 10000000,
+          );
 
-          const convertedRatings = displayData.map((item: RatingsResponse) => Utils.convertRating(item.rating));
+          const convertedRatings = displayData.map((item: RatingsResponse) =>
+            Utils.convertRating(item.rating),
+          );
           const minRating = Math.min(...convertedRatings);
           const maxRating = Math.max(...convertedRatings);
 
           const allThresholds = Utils.getRankThresholds();
-          const maxRawRating = Math.max(...displayData.map((item: RatingsResponse) => item.rating));
-          const currentRankIndex = allThresholds.findIndex((t) => maxRawRating >= t.rating);
-          const rawNextRank = currentRankIndex > 0 ? allThresholds[currentRankIndex - 1] : null;
+          const maxRawRating = Math.max(
+            ...displayData.map((item: RatingsResponse) => item.rating),
+          );
+          const currentRankIndex = allThresholds.findIndex(
+            (t) => maxRawRating >= t.rating,
+          );
+          const rawNextRank =
+            currentRankIndex > 0 ? allThresholds[currentRankIndex - 1] : null;
 
           // Diamond 3 promotes to Vanquisher at 45,000 RP, not at the 10,000,000 magic number.
           const VANQUISHER_PROMOTION_RP = 45000;
-          const nextRankLine = rawNextRank === null ? null
+          const nextRankLine =
+            rawNextRank === null
+              ? null
               : rawNextRank.rating >= 10000000 && !hasVanquisher
-                  ? { name: rawNextRank.name, color: rawNextRank.color, convertedRating: VANQUISHER_PROMOTION_RP }
-                  : { name: rawNextRank.name, color: rawNextRank.color, convertedRating: Utils.convertRating(rawNextRank.rating) };
+                ? {
+                    name: rawNextRank.name,
+                    color: rawNextRank.color,
+                    convertedRating: VANQUISHER_PROMOTION_RP,
+                  }
+                : {
+                    name: rawNextRank.name,
+                    color: rawNextRank.color,
+                    convertedRating: Utils.convertRating(rawNextRank.rating),
+                  };
 
           if (!showPreVanquisher) {
             // if the user has less than 100 games, select his total game number
@@ -166,67 +229,95 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
             }
 
             // Clamp duration to total_games if not in available options (on character change for example)
-            const items = total_games < 100
+            const items =
+              total_games < 100
                 ? [total_games]
                 : [...Array(Math.floor(total_games / 100)).keys()]
-                    .map(i => (i + 1) * 100)
+                    .map((i) => (i + 1) * 100)
                     .concat(total_games % 100 === 0 ? [] : [total_games]);
-            let currentDuration = parseInt(duration);
-            if (!items.includes(currentDuration) && currentDuration != parseInt(tempGames)) { // second check keep custom game count working
+            const currentDuration = parseInt(duration, 10);
+            if (
+              !items.includes(currentDuration) &&
+              currentDuration !== parseInt(tempGames, 10)
+            ) {
+              // second check keep custom game count working
               setDuration(total_games.toString());
             }
           }
 
           const lineChartData = {
-            labels: displayData.map((item: RatingsResponse) => Utils.formatUTCToLocal(item.timestamp)),
+            labels: displayData.map((item: RatingsResponse) =>
+              Utils.formatUTCToLocal(item.timestamp),
+            ),
             datasets: [
               {
-                label: 'Rating',
+                label: "Rating",
                 data: convertedRatings,
-                borderColor: 'rgb(75, 192, 192)',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: "rgb(75, 192, 192)",
+                backgroundColor: "rgba(75, 192, 192, 0.2)",
                 pointRadius: 3,
                 borderWidth: 2,
               },
-            ].concat(allThresholds
-                .filter((rank) => {
-                    if (rawNextRank && rank.rating === rawNextRank.rating) return false;
+            ]
+              .concat(
+                allThresholds
+                  .filter((rank) => {
+                    if (rawNextRank && rank.rating === rawNextRank.rating)
+                      return false;
                     const rankIsVanquisher = rank.rating > 10000000;
                     if (rankIsVanquisher && !hasVanquisher) return false;
                     if (!rankIsVanquisher && !hasNormal) return false;
                     const cr = Utils.convertRating(rank.rating);
                     return cr <= maxRating && cr >= minRating;
-                })
-                .map((rank) =>
-                    ({
-                        label: rank.name,
-                        data: displayData.map(() => Utils.convertRating(rank.rating)),
-                        borderColor: rank.color,
-                        backgroundColor: rank.color,
+                  })
+                  .map((rank) => ({
+                    label: rank.name,
+                    data: displayData.map(() =>
+                      Utils.convertRating(rank.rating),
+                    ),
+                    borderColor: rank.color,
+                    backgroundColor: rank.color,
+                    pointRadius: 0,
+                    borderWidth: 1,
+                  })),
+              )
+              .concat(
+                nextRankLine
+                  ? [
+                      {
+                        label: nextRankLine.name,
+                        data: displayData.map(
+                          () => nextRankLine.convertedRating,
+                        ),
+                        borderColor: nextRankLine.color,
+                        backgroundColor: nextRankLine.color,
                         pointRadius: 0,
                         borderWidth: 1,
-                    })
-                ),
-            ).concat(nextRankLine ? [{
-                label: nextRankLine.name,
-                data: displayData.map(() => nextRankLine.convertedRating),
-                borderColor: nextRankLine.color,
-                backgroundColor: nextRankLine.color,
-                pointRadius: 0,
-                borderWidth: 1,
-            }] : []),
+                      },
+                    ]
+                  : [],
+              ),
           };
 
           setLineChartData(lineChartData);
         }
       }
-    }
+    };
     fetchChartData();
-  }, [player_id, char_short, API_ENDPOINT, latest_rating, duration, showPreVanquisher, total_games]);
+  }, [
+    player_id,
+    char_short,
+    API_ENDPOINT,
+    latest_rating,
+    duration,
+    showPreVanquisher,
+    total_games,
+    tempGames,
+  ]);
 
   return (
-    <React.Fragment>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 5 }}>
+    <>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 5 }}>
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>Game Count</InputLabel>
           <Select
@@ -234,19 +325,27 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
             label="Games"
             onChange={handleDurationChange}
           >
-            {
-              (total_games < 100
-                  ? [total_games]
-                  : [...Array(Math.floor(total_games / 100)).keys()]
-                      .map(i => (i + 1) * 100)
-                      .concat(total_games % 100 === 0 ? [] : [total_games])
-              ).map((nbGame) => <MenuItem value={nbGame}>{nbGame}</MenuItem>)
-            }
-            <MenuItem value={customGames} onClick={handleOpenDialog}>Custom...</MenuItem>
+            {(total_games < 100
+              ? [total_games]
+              : [...Array(Math.floor(total_games / 100)).keys()]
+                  .map((i) => (i + 1) * 100)
+                  .concat(total_games % 100 === 0 ? [] : [total_games])
+            ).map((nbGame) => (
+              <MenuItem key={nbGame} value={nbGame}>
+                {nbGame}
+              </MenuItem>
+            ))}
+            <MenuItem value={customGames} onClick={handleOpenDialog}>
+              Custom...
+            </MenuItem>
           </Select>
         </FormControl>
 
-        <Dialog open={openDialog} onClose={handleCloseDialog} disableScrollLock={true}>
+        <Dialog
+          open={openDialog}
+          onClose={handleCloseDialog}
+          disableScrollLock={true}
+        >
           <DialogTitle>Custom Game Count</DialogTitle>
           <DialogContent>
             <TextField
@@ -255,9 +354,7 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
               type="number"
               value={tempGames}
               onChange={handleTempGamesChange}
-              inputProps={{
-                min: 1
-              }}
+              slotProps={{ htmlInput: { min: 1 } }}
             />
           </DialogContent>
           <DialogActions>
@@ -271,12 +368,14 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
             variant="outlined"
             size="small"
             onClick={() => {
-            setLineChartData(null);
-            setNoPreVanquisherData(false);
-            setShowPreVanquisher(v => !v);
-          }}
+              setLineChartData(null);
+              setNoPreVanquisherData(false);
+              setShowPreVanquisher((v) => !v);
+            }}
           >
-            {showPreVanquisher ? 'Show Vanquisher History' : 'Show Pre-Vanquisher History'}
+            {showPreVanquisher
+              ? "Show Vanquisher History"
+              : "Show Pre-Vanquisher History"}
           </Button>
         )}
       </Box>
@@ -288,8 +387,8 @@ const RatingChart: React.FC<RatingChartProps> = ({ player_id, char_short, API_EN
       ) : (
         <Typography>Loading...</Typography>
       )}
-    </React.Fragment>
+    </>
   );
-}
+};
 
 export default RatingChart;
