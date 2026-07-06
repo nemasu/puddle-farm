@@ -1,7 +1,11 @@
+import type { PlayerSet } from "./API";
+
+export type MatchWithRating = PlayerSet & { ratingChange?: string };
+
 export interface GroupedMatch {
   floor: string; // Floor of the match (e.g., "Celestial", "99")
   losses: number; // Number of losses in this set of matches
-  matches: any[]; // Array of individual match details (not provided in the inspection)
+  matches: MatchWithRating[];
   odds: number; // Player's odds of winning the set
   opponent_character_short: string; // Opponent's character (short name)
   opponent_id: string; // Opponent's ID
@@ -24,12 +28,12 @@ export interface LineChartDataSet {
 }
 
 export interface ClaimDialogProps {
-  playerId: BigInt;
+  playerId: bigint;
   API_ENDPOINT: string;
 }
 
 export interface RatingChartProps {
-  player_id: BigInt;
+  player_id: bigint;
   char_short: string | undefined;
   API_ENDPOINT: string;
   latest_rating: number;

@@ -1,21 +1,30 @@
-import { PlayerResponse } from "../interfaces/API";
+import type { PlayerResponse } from "../interfaces/API";
+import type { MatchWithRating } from "../interfaces/Player";
 
 function getCurrentPlayerRating(player: PlayerResponse, char_short: string) {
-  for (var key in player.ratings) {
+  for (const key in player.ratings) {
     if (player.ratings[key].char_short === char_short) {
-      return { rating: player.ratings[key].rating, deviation: player.ratings[key].deviation };
+      return {
+        rating: player.ratings[key].rating,
+        deviation: player.ratings[key].deviation,
+      };
     }
   }
 }
 
-export function groupMatches(data: any[], player: PlayerResponse, char_short: string, has_offset: boolean) {
+export function groupMatches(
+  data: MatchWithRating[],
+  player: PlayerResponse,
+  char_short: string,
+  has_offset: boolean,
+) {
   const groupedData = [];
   let currentGroup = null;
   let lastValidGroup = null;
   let lastValidMatch = null;
   data.reverse();
 
-  let limit;
+  let limit: number;
   if (has_offset) {
     limit = data.length - 1;
   } else {
@@ -27,8 +36,8 @@ export function groupMatches(data: any[], player: PlayerResponse, char_short: st
 
     if (
       currentGroup &&
-      (currentGroup.opponent_id === match.opponent_id) &&
-      (currentGroup.opponent_character_short === match.opponent_character_short)
+      currentGroup.opponent_id === match.opponent_id &&
+      currentGroup.opponent_character_short === match.opponent_character_short
     ) {
       // Continue the current group if the opponent and character are the same as the previous match
       currentGroup.matches.push(match);
@@ -36,7 +45,11 @@ export function groupMatches(data: any[], player: PlayerResponse, char_short: st
       currentGroup.losses += match.result_win ? 0 : 1;
       if (match.own_rating_value !== 0) {
         if (lastValidMatch) {
-          const ratingChange = parseFloat((match.own_rating_value - lastValidMatch.own_rating_value).toString());
+          const ratingChange = parseFloat(
+            (
+              match.own_rating_value - lastValidMatch.own_rating_value
+            ).toString(),
+          );
           currentGroup.ratingChange += ratingChange;
           lastValidMatch.ratingChange = ratingChange.toFixed(2);
         }
@@ -45,8 +58,13 @@ export function groupMatches(data: any[], player: PlayerResponse, char_short: st
       if (currentGroup) {
         // Only calculate rating change if the last match in the current group is valid
         // This will not calculate the rating change for the most recent match for the group before a hidden group
-        if (lastValidMatch && match.own_rating_value !== 0 && currentGroup.matches[0].own_rating_value !== 0) {
-          const lastChange = match.own_rating_value - lastValidMatch.own_rating_value;
+        if (
+          lastValidMatch &&
+          match.own_rating_value !== 0 &&
+          currentGroup.matches[0].own_rating_value !== 0
+        ) {
+          const lastChange =
+            match.own_rating_value - lastValidMatch.own_rating_value;
           currentGroup.ratingChange += lastChange;
           currentGroup.matches.reverse();
           currentGroup.matches[0].ratingChange = lastChange.toFixed(2);
@@ -70,12 +88,15 @@ export function groupMatches(data: any[], player: PlayerResponse, char_short: st
       };
 
       //This calculates the rating change for the most recent match for the group before a hidden group
-      if (currentGroup !== lastValidGroup
-        && match.own_rating_value !== 0
-        && lastValidGroup
-        && !lastValidGroup.matches[0].ratingChange) {
-
-        const lastChange = match.own_rating_value - lastValidMatch.own_rating_value;
+      if (
+        currentGroup !== lastValidGroup &&
+        match.own_rating_value !== 0 &&
+        lastValidGroup &&
+        lastValidMatch &&
+        !lastValidGroup.matches[0].ratingChange
+      ) {
+        const lastChange =
+          match.own_rating_value - lastValidMatch.own_rating_value;
         lastValidGroup.ratingChange += lastChange;
         lastValidGroup.matches[0].ratingChange = lastChange.toFixed(2);
       }
@@ -101,13 +122,18 @@ export function groupMatches(data: any[], player: PlayerResponse, char_short: st
     player_rating.rating = data[data.length - 1].own_rating_value;
   } else {
     const currentRating = getCurrentPlayerRating(player, char_short);
-    player_rating = currentRating ? { rating: currentRating.rating } : { rating: undefined };
+    player_rating = currentRating
+      ? { rating: currentRating.rating }
+      : { rating: undefined };
   }
 
   // Calculate the final rating change with the first good match
   for (let i = 0; i < groupedData.length; i++) {
     if (groupedData[i].matches[0].own_rating_value !== 0) {
-      const lastChange = player_rating.rating !== undefined ? player_rating.rating - groupedData[i].matches[0].own_rating_value : 0;
+      const lastChange =
+        player_rating.rating !== undefined
+          ? player_rating.rating - groupedData[i].matches[0].own_rating_value
+          : 0;
       groupedData[i].ratingChange += lastChange;
       groupedData[i].matches[0].ratingChange = lastChange.toFixed(2);
       break;

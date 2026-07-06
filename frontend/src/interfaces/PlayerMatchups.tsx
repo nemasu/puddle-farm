@@ -1,7 +1,7 @@
 export interface MatchupProps {
   API_ENDPOINT: string;
   char_short: string | undefined;
-  player_id: BigInt;
+  player_id: bigint;
 }
 
 export interface Matchup {
