@@ -244,7 +244,10 @@ const Matchup = () => {
             <MatchupTable data={matchup.data_all} title="All Players" />
           )}
           {matchup?.data_vanq && (
-            <MatchupTable data={matchup.data_vanq} title="Vanquisher Players" />
+            <MatchupTable
+              data={matchup.data_vanq}
+              title="Vanquisher I Ignis and Above"
+            />
           )}
         </Paper>
         <Typography sx={{ marginTop: 5 }}>

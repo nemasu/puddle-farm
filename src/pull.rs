@@ -470,19 +470,19 @@ async fn update_matchups(
                 WHERE char_a = $1
                 AND timestamp > now() - interval '1 month'
                 AND game_floor = 0  -- Only ranked matches
-                AND value_a > 10000000
-                AND value_b > 10000000
+                AND value_a >= 10001600
+                AND value_b >= 10001600
                 UNION ALL
-                SELECT 
-                    char_a as opponent_char, 
+                SELECT
+                    char_a as opponent_char,
                     winner,
                     'b' as position
                 FROM games
                 WHERE char_b = $1
                 AND timestamp > now() - interval '1 month'
                 AND game_floor = 0  -- Only ranked matches
-                AND value_a > 10000000
-                AND value_b > 10000000
+                AND value_a >= 10001600
+                AND value_b >= 10001600
             ) as combined_results
             GROUP BY opponent_char
             ORDER BY opponent_char;

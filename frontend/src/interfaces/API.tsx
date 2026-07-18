@@ -133,7 +133,7 @@ export interface PopularityResultChar {
 export interface MatchupResponse {
   last_update: string; // Timestamp of the last update
   data_all: MatchupCharResponse[]; // Matchup data for all ranks
-  data_vanq: MatchupCharResponse[]; // Matchup data for Vanquisher players
+  data_vanq: MatchupCharResponse[]; // Matchup data for Vanquisher I Ignis+ players
 }
 
 export interface MatchupCharResponse {
