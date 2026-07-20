@@ -11,9 +11,9 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import type { SettingsResponse } from "../interfaces/API";
 import { type StorageOptions, StorageUtils } from "./../utils/Storage";
-import Themes from "./../utils/Themes";
+import { characterNames } from "./../utils/Themes";
 
-const themes = Array.from(Themes.keys());
+const themes = characterNames;
 
 const Settings = () => {
   const _API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;

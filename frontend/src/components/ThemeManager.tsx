@@ -1,10 +1,14 @@
 import { ThemeProvider } from "@mui/material/styles";
 import { type ReactNode, useEffect, useState } from "react";
 import { StorageUtils } from "../utils/Storage";
-import Themes from "../utils/Themes";
+import Themes, {
+  defaultCharacterName,
+  defaultTheme,
+  isCharacterName,
+} from "../utils/Themes";
 
 const ThemeManager = ({ children }: { children: ReactNode }) => {
-  const [theme, setTheme] = useState("Sol");
+  const [theme, setTheme] = useState<string>(defaultCharacterName);
 
   useEffect(() => {
     const theme = StorageUtils.getTheme();
@@ -12,11 +16,17 @@ const ThemeManager = ({ children }: { children: ReactNode }) => {
     if (theme) {
       setTheme(theme);
     } else {
-      setTheme("Sol");
+      setTheme(defaultCharacterName);
     }
   }, []);
 
-  return <ThemeProvider theme={Themes.get(theme)}>{children}</ThemeProvider>;
+  return (
+    <ThemeProvider
+      theme={isCharacterName(theme) ? Themes[theme] : defaultTheme}
+    >
+      {children}
+    </ThemeProvider>
+  );
 };
 
 export default ThemeManager;
