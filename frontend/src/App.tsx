@@ -3,15 +3,7 @@ import "@fontsource/roboto/400.css";
 import "@fontsource/roboto/500.css";
 import "@fontsource/roboto/700.css";
 
-import {
-  Box,
-  Button,
-  CssBaseline,
-  Link,
-  Typography,
-  useMediaQuery,
-  useTheme,
-} from "@mui/material";
+import { Box, Button, CssBaseline, Link, Typography } from "@mui/material";
 import { Route, Routes } from "react-router-dom";
 import NavBar from "./components/NavBar";
 import ThemeManager from "./components/ThemeManager";
@@ -32,74 +24,34 @@ import TopGlobal from "./pages/TopGlobal";
 import TopPlayer from "./pages/TopPlayer";
 
 const App = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-
   return (
     <ThemeManager>
       <CssBaseline enableColorScheme />
       <NavBar />
-      {isMobile ? (
-        <Box sx={{ display: "block" }}>
-          {" "}
-          {/* Mobile View */}
-          <Routes>
-            <Route path="/" element={<Legend />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route
-              path="/top_global/:count?/:offset?"
-              element={<TopGlobal />}
-            />
-            <Route
-              path="/top/:char_short/:count?/:offset?"
-              element={<TopPlayer />}
-            />
-            <Route
-              path="/player/:player_id/:char_short?/:count?/:offset?"
-              element={<Player />}
-            />
-            <Route path="/search/:search_string/:exact?" element={<Search />} />
-            <Route path="/stats" element={<Stats />} />
-            <Route path="/popularity" element={<Popularity />} />
-            <Route path="/matchup" element={<Matchup />} />
-            <Route path="/distribution" element={<Distribution />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/legend" element={<Legend />} />
-            <Route path="*" element={<Legend />} />
-          </Routes>
-        </Box>
-      ) : (
-        <Box sx={{ display: "block" }}>
-          {" "}
-          {/* Desktop View */}
-          <Routes>
-            <Route path="/" element={<Legend />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route
-              path="/top_global/:count?/:offset?"
-              element={<TopGlobal />}
-            />
-            <Route
-              path="/top/:char_short/:count?/:offset?"
-              element={<TopPlayer />}
-            />
-            <Route
-              path="/player/:player_id/:char_short?/:count?/:offset?"
-              element={<Player />}
-            />
-            <Route path="/search/:search_string/:exact?" element={<Search />} />
-            <Route path="/stats" element={<Stats />} />
-            <Route path="/popularity" element={<Popularity />} />
-            <Route path="/matchup" element={<Matchup />} />
-            <Route path="/distribution" element={<Distribution />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/legend" element={<Legend />} />
-            <Route path="*" element={<Legend />} />
-          </Routes>
-        </Box>
-      )}
+      <Box sx={{ display: "block" }}>
+        <Routes>
+          <Route path="/" element={<Legend />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/top_global/:count?/:offset?" element={<TopGlobal />} />
+          <Route
+            path="/top/:char_short/:count?/:offset?"
+            element={<TopPlayer />}
+          />
+          <Route
+            path="/player/:player_id/:char_short?/:count?/:offset?"
+            element={<Player />}
+          />
+          <Route path="/search/:search_string/:exact?" element={<Search />} />
+          <Route path="/stats" element={<Stats />} />
+          <Route path="/popularity" element={<Popularity />} />
+          <Route path="/matchup" element={<Matchup />} />
+          <Route path="/distribution" element={<Distribution />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/legend" element={<Legend />} />
+          <Route path="*" element={<Legend />} />
+        </Routes>
+      </Box>
       <Box
         sx={{
           display: "block",
