@@ -11,7 +11,7 @@ import {
   TableSortLabel,
   Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { Suspense, use, useState } from "react";
 import type {
   MatchupCharResponse,
   MatchupEntry,
@@ -19,6 +19,8 @@ import type {
 } from "../interfaces/API";
 import type { CharWinRates } from "../interfaces/Matchup";
 import { Utils } from "./../utils/Utils";
+
+const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
 
 const calculateAverageWinRate = (matchups: MatchupEntry[]) => {
   const totalWins = matchups.reduce((sum, m) => sum + m.wins, 0);
@@ -201,64 +203,71 @@ const MatchupTable = ({
   );
 };
 
+const MatchupContent = ({
+  data,
+}: {
+  data: Promise<MatchupResponse | undefined>;
+}) => {
+  const matchup = use(data);
+
+  return (
+    <Box sx={{ m: 2 }}>
+      <Paper elevation={2} sx={{ p: 3 }}>
+        <Typography variant="h5" gutterBottom>
+          Matchup Tables
+        </Typography>
+        <Typography variant="body1">
+          Timeframe is the past month.
+          <br />
+          Win rates are calculated by the number of wins divided by the total
+          number of games played.
+          <br />
+        </Typography>
+        {matchup?.data_all && (
+          <MatchupTable data={matchup.data_all} title="All Players" />
+        )}
+        {matchup?.data_vanq && (
+          <MatchupTable
+            data={matchup.data_vanq}
+            title="Vanquisher I Ignis and Above"
+          />
+        )}
+      </Paper>
+      <Typography sx={{ marginTop: 5 }}>
+        Statistics are updated once a day.
+      </Typography>
+      {matchup ? (
+        <Typography variant="body1">
+          Last updated: {Utils.formatUTCToLocal(matchup.last_update)}
+        </Typography>
+      ) : null}
+    </Box>
+  );
+};
+
 const Matchup = () => {
-  const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
-
-  const [loading, setLoading] = useState(true);
-  const [matchup, setMatchup] = useState<MatchupResponse>();
-
-  useEffect(() => {
-    document.title = "Matchup | Puddle Farm";
-    fetch(`${API_ENDPOINT}/matchups`)
-      .then((response) => response.json())
-      .then((data) => {
-        setMatchup(data);
-      });
-
-    setLoading(false);
-  }, []);
+  const [matchupPromise] = useState(
+    (): Promise<MatchupResponse | undefined> =>
+      fetch(`${API_ENDPOINT}/matchups`)
+        .then((res) => res.json())
+        .catch(() => undefined),
+  );
 
   return (
     <>
-      {loading ? (
-        <CircularProgress
-          size={60}
-          variant="indeterminate"
-          disableShrink={true}
-          sx={{ position: "absolute", top: "-1px", color: "white" }}
-        />
-      ) : null}
-      <Box sx={{ m: 2 }}>
-        <Paper elevation={2} sx={{ p: 3 }}>
-          <Typography variant="h5" gutterBottom>
-            Matchup Tables
-          </Typography>
-          <Typography variant="body1">
-            Timeframe is the past month.
-            <br />
-            Win rates are calculated by the number of wins divided by the total
-            number of games played.
-            <br />
-          </Typography>
-          {matchup?.data_all && (
-            <MatchupTable data={matchup.data_all} title="All Players" />
-          )}
-          {matchup?.data_vanq && (
-            <MatchupTable
-              data={matchup.data_vanq}
-              title="Vanquisher I Ignis and Above"
-            />
-          )}
-        </Paper>
-        <Typography sx={{ marginTop: 5 }}>
-          Statistics are updated once a day.
-        </Typography>
-        {matchup ? (
-          <Typography variant="body1">
-            Last updated: {Utils.formatUTCToLocal(matchup.last_update)}
-          </Typography>
-        ) : null}
-      </Box>
+      <title>Matchup | Puddle Farm</title>
+      <Suspense
+        fallback={
+          <CircularProgress
+            size={60}
+            variant="indeterminate"
+            disableShrink={true}
+            sx={{ position: "absolute", top: "-1px", color: "white" }}
+          />
+        }
+      >
+        <MatchupContent data={matchupPromise} />
+      </Suspense>
     </>
   );
 };

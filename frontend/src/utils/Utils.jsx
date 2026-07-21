@@ -1,6 +1,8 @@
 import { Typography } from "@mui/material";
 import { StorageUtils } from "./Storage";
 
+const numberFormatter = new Intl.NumberFormat("en-US");
+
 const IMPERIUS_SPRITE = {
   spriteX: 3,
   spriteY: 5,
@@ -101,6 +103,7 @@ const rankThresholds = [
 ];
 
 const Utils = {
+  formatNumber: (n) => numberFormatter.format(n),
   getRankThresholds: () => rankThresholds,
   getRankSprite: (rating) => {
     for (const threshold of rankThresholds) {

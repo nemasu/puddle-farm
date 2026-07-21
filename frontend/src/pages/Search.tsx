@@ -9,111 +9,131 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
-import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Suspense, use, useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import type { PlayerSearchResponse } from "../interfaces/API";
 import { JSONParse } from "../utils/JSONParse";
 import { Utils } from "../utils/Utils";
 
+const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
+
+function fetchSearchResults(
+  q: string | undefined,
+  exact: string | undefined,
+): Promise<{ results: PlayerSearchResponse[] }> {
+  if (!q) return Promise.resolve({ results: [] });
+
+  const isExact = exact === "exact" ? "true" : "false";
+  const params = new URLSearchParams({ search_string: q, exact: isExact });
+
+  return fetch(`${API_ENDPOINT}/player/search?${params.toString()}`)
+    .then((res) => res.text())
+    .then((body) => {
+      const parsed = JSONParse(body) as { results: PlayerSearchResponse[] };
+      return parsed;
+    })
+    .catch(() => ({ results: [] }));
+}
+
+interface SearchResultsProps {
+  resultsPromise: Promise<{ results: PlayerSearchResponse[] }>;
+}
+
+const SearchResultsLoader = ({
+  search_string,
+  exact,
+}: {
+  search_string: string | undefined;
+  exact: string | undefined;
+}) => {
+  const [resultsPromise] = useState(() =>
+    fetchSearchResults(search_string, exact),
+  );
+  return (
+    <Suspense fallback={<CircularProgress size={60} />}>
+      <SearchResults resultsPromise={resultsPromise} />
+    </Suspense>
+  );
+};
+
+const SearchResults = ({ resultsPromise }: SearchResultsProps) => {
+  const data = use(resultsPromise);
+  const players = data.results ?? [];
+
+  if (players.length === 0) {
+    return (
+      <Box sx={{ m: 4 }}>
+        <Typography align="center">No results found.</Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ m: 4, maxWidth: "700px" }}>
+      <TableContainer component={Paper}>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>Player</TableCell>
+              <TableCell>Character</TableCell>
+              <TableCell>Rating</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {players.map((player) => (
+              <TableRow key={`${player.id}-${player.char_short}`}>
+                <TableCell>
+                  <Button
+                    component={Link}
+                    to={`/player/${player.id}/${player.char_short}`}
+                  >
+                    {player.name}
+                  </Button>
+                </TableCell>
+                <TableCell>{player.char_short}</TableCell>
+                <TableCell>
+                  {Utils.displayRankIcon(player.rating, "32px")}
+                  <Box component={"span"}>
+                    {Utils.displayRating(player.rating)}
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
+  );
+};
+
 const Search = () => {
-  const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
-
-  const _navigate = useNavigate();
-
   const { search_string, exact } = useParams();
 
-  const [results, setResults] = useState<PlayerSearchResponse[]>([]);
-
-  const [loading, setLoading] = useState(true);
-
+  // biome-ignore lint/correctness/useExhaustiveDependencies: trigger only
   useEffect(() => {
-    document.title = "Search Results | Puddle Farm";
-    window.scrollTo(0, 0);
-
-    const fetchResults = async () => {
-      setLoading(true);
-      try {
-        const url =
-          API_ENDPOINT +
-          "/player/search?" +
-          "search_string=" +
-          search_string +
-          "&exact=" +
-          (exact && exact === "exact" ? "true" : "false");
-        const response = await fetch(url);
-
-        const _result = await response.text().then((body) => {
-          const parsed = JSONParse(body);
-
-          setResults(parsed.results);
-
-          return parsed;
-        });
-
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching player data:", error);
-      }
-    };
-
-    fetchResults();
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [search_string, exact]);
 
   return (
     <>
+      <title>Search Results | Puddle Farm</title>
       <AppBar
         position="static"
         style={{ backgroundImage: "none" }}
         sx={{ backgroundColor: "secondary.main" }}
       >
-        {loading ? (
-          <CircularProgress
-            size={60}
-            variant="indeterminate"
-            disableShrink={true}
-            sx={{ position: "absolute", top: "-1px", color: "white" }}
-          />
-        ) : null}
         <Box sx={{ minHeight: 100, paddingTop: "30px" }}>
           <Typography align="center" variant="pageHeader">
             Search Results
           </Typography>
         </Box>
       </AppBar>
-      <Box sx={{ m: 4, maxWidth: "700px" }}>
-        <TableContainer component={Paper}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Player</TableCell>
-                <TableCell>Character</TableCell>
-                <TableCell>Rating</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {results.map((player) => (
-                <TableRow key={`${player.id}-${player.char_short}`}>
-                  <TableCell>
-                    <Button
-                      component={Link}
-                      to={`/player/${player.id}/${player.char_short}`}
-                    >
-                      {player.name}
-                    </Button>
-                  </TableCell>
-                  <TableCell>{player.char_short}</TableCell>
-                  <TableCell>
-                    {Utils.displayRankIcon(player.rating, "32px")}
-                    <Box component={"span"}>
-                      {Utils.displayRating(player.rating)}
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Box>
+
+      <SearchResultsLoader
+        key={`${search_string}-${exact}`}
+        search_string={search_string}
+        exact={exact}
+      />
     </>
   );
 };
