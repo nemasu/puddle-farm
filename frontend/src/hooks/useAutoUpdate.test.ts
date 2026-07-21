@@ -56,6 +56,33 @@ describe("useAutoUpdate", () => {
     expect(result.current).toBe(60);
   });
 
+  test("does not call onUpdate again while a previous call is still pending", async () => {
+    StorageUtils.setAutoUpdate(true);
+    let resolveUpdate: () => void = () => {};
+    const onUpdate = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveUpdate = resolve;
+        }),
+    );
+    renderHook(() => useAutoUpdate(onUpdate));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60000);
+    });
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    expect(onUpdate).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveUpdate();
+      await Promise.resolve();
+    });
+  });
+
   test("clears timers on unmount", () => {
     StorageUtils.setAutoUpdate(true);
     const onUpdate = vi.fn().mockResolvedValue(undefined);
