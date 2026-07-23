@@ -15,387 +15,501 @@ import {
   TableRow,
   Tooltip,
   Typography,
-  useMediaQuery,
-  useTheme,
 } from "@mui/material";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
 import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
-import { type MouseEvent, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { type MouseEvent, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import HistoryRow from "../components/HistoryRow";
 import Matchup from "../components/PlayerMatchup";
 import RatingChart from "../components/RatingChart";
 import { Tag } from "./../components/Tag";
+import { usePlayerData } from "../hooks/usePlayerData";
 import type {
   PlayerResponse,
   PlayerResponsePlayer,
   TagResponse,
 } from "../interfaces/API";
 import type { GroupedMatch } from "../interfaces/Player";
-import { JSONParse } from "../utils/JSONParse";
-import { groupMatches } from "../utils/Player";
-import { StorageUtils } from "./../utils/Storage";
+import { API_ENDPOINT } from "../utils/playerApi";
+import {
+  calcNextOffset,
+  calcPrevOffset,
+  findHighestRatedChar,
+  isEmptyPlayer,
+} from "../utils/playerUtils";
 import { Utils } from "./../utils/Utils";
 
-const Player = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("lg"));
+type LinkClickHandler = (event: MouseEvent<HTMLElement>, url: string) => void;
 
-  let API_ENDPOINT = "/api";
-  if (import.meta.env.VITE_API_ENDPOINT !== undefined) {
-    API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
+function PlayerHeader({
+  player,
+  currentCharData,
+  alias,
+}: {
+  player: PlayerResponse | null;
+  currentCharData: PlayerResponsePlayer | null;
+  alias: string[];
+}) {
+  const navigate = useNavigate();
+
+  const playerInfo = player ? (
+    <>
+      {player.tags && player.tags.length > 0 && (
+        <Box>
+          {player.tags.map((e) => (
+            <Tag key={e.tag} style={JSON.parse(e.style)}>
+              {e.tag}
+            </Tag>
+          ))}
+        </Box>
+      )}
+      {currentCharData
+        ? Utils.displayRankIcon(
+            currentCharData.rating,
+            "64px",
+            currentCharData.is_legend,
+          )
+        : null}
+      <Typography variant="playerName">{player.name}</Typography>
+      <Typography variant="platform">{player.platform}</Typography>
+      {player.top_global !== 0 ? (
+        <Typography
+          variant="global_rank"
+          onMouseDown={(_event) => navigate("/top_global")}
+          sx={{ cursor: "pointer" }}
+        >
+          #{player.top_global} Overall
+        </Typography>
+      ) : null}
+    </>
+  ) : null;
+
+  const aliasSection =
+    alias && alias.length > 0 ? (
+      <Box sx={{ textAlign: "center", fontSize: 17 }}>
+        <Typography
+          variant="platform"
+          sx={{
+            position: "relative",
+            top: "0px",
+            marginTop: "10px",
+            display: "inline-block",
+          }}
+        >
+          AKA
+        </Typography>
+        <Box sx={{ m: 1, display: "inline-block" }}>
+          {alias.map((item) => (
+            <Typography
+              key={item}
+              variant="playerName"
+              sx={{
+                px: 0.8,
+                py: 0.2,
+                mx: 0.3,
+                my: 0.2,
+                display: "inline-block",
+              }}
+            >
+              {item}
+            </Typography>
+          ))}
+        </Box>
+      </Box>
+    ) : null;
+
+  return (
+    <AppBar
+      position="static"
+      style={{ backgroundImage: "none" }}
+      sx={{ backgroundColor: "secondary.main" }}
+    >
+      <Box
+        sx={{
+          minHeight: { xs: 50, lg: 100 },
+          paddingTop: { xs: 0, lg: "30px" },
+        }}
+      >
+        <Typography
+          align="center"
+          variant="pageHeader"
+          sx={{ fontSize: 30, marginTop: { xs: 2, lg: 0 } }}
+        >
+          {playerInfo}
+        </Typography>
+        {aliasSection}
+      </Box>
+    </AppBar>
+  );
+}
+
+function CharacterStats({
+  currentCharData,
+  syncLoading,
+  onRatingSync,
+  onLinkClick,
+}: {
+  currentCharData: PlayerResponsePlayer;
+  syncLoading: boolean;
+  onRatingSync: () => void;
+  onLinkClick: LinkClickHandler;
+}) {
+  return (
+    <>
+      <Typography variant="h5" sx={{ my: 2 }}>
+        {currentCharData.character} Rating:{" "}
+        <Box component={"span"}>
+          {Utils.displayRating(currentCharData.rating)}
+        </Box>{" "}
+        ({currentCharData.match_count} games)
+        <Tooltip title="Sync ratings from game">
+          <IconButton
+            onClick={onRatingSync}
+            disabled={syncLoading}
+            size="small"
+            sx={{ ml: 1, color: "primary.main" }}
+          >
+            <RefreshIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        {currentCharData.top_char !== 0 ? (
+          <Typography
+            variant="char_rank"
+            onMouseDown={(event) =>
+              onLinkClick(event, `/top/${currentCharData.char_short}`)
+            }
+            sx={{ cursor: "pointer" }}
+          >
+            #{currentCharData.top_char} {currentCharData.character}
+          </Typography>
+        ) : null}
+      </Typography>
+      {currentCharData.top_rating.value !== 0 ? (
+        <Typography>
+          Top Rating:{" "}
+          <Box component={"span"}>
+            {Utils.displayRating(currentCharData.top_rating.value)}
+          </Box>{" "}
+          ({Utils.formatUTCToLocal(currentCharData.top_rating.timestamp)})
+        </Typography>
+      ) : null}
+      {currentCharData.top_defeated.value !== 0.0 ? (
+        <Typography>
+          Top Defeated:{" "}
+          <Button
+            sx={{ fontSize: "16px" }}
+            component={Link}
+            nativeButton={false}
+            onMouseDown={(event) =>
+              onLinkClick(
+                event,
+                `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`,
+              )
+            }
+          >
+            {currentCharData.top_defeated.name} (
+            {currentCharData.top_defeated.char_short})
+          </Button>{" "}
+          <Box component={"span"}>
+            {Utils.displayRating(currentCharData.top_defeated.value)}
+          </Box>{" "}
+          ({Utils.formatUTCToLocal(currentCharData.top_defeated.timestamp)})
+        </Typography>
+      ) : null}
+    </>
+  );
+}
+
+function MatchHistory({
+  filteredHistory,
+  tags,
+  showNext,
+  onPrev,
+  onNext,
+}: {
+  filteredHistory: GroupedMatch[];
+  tags: { [key: string]: TagResponse[] };
+  showNext: boolean;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <>
+      <Box sx={{ mx: { xs: 1, lg: 3 }, mb: 2 }}>
+        <Button onClick={onPrev}>Prev</Button>
+        <Button style={showNext ? {} : { display: "none" }} onClick={onNext}>
+          Next
+        </Button>
+      </Box>
+      <Box sx={{ display: { xs: "block", lg: "none" } }}>
+        {tags &&
+          filteredHistory.map((item) => (
+            <Box sx={{ py: 0.3 }} key={`${item.timestamp}-${item.opponent_id}`}>
+              <HistoryRow
+                item={item}
+                isMobile={true}
+                tags={tags[item.opponent_id.toString()]}
+              />
+            </Box>
+          ))}
+      </Box>
+      <Box sx={{ display: { xs: "none", lg: "block" } }}>
+        <TableContainer component={Paper}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell></TableCell>
+                <TableCell width="170px">Timestamp</TableCell>
+                <TableCell width="120px" align="right">
+                  Rating
+                </TableCell>
+                <TableCell>Opponent</TableCell>
+                <TableCell align="right">Character</TableCell>
+                <TableCell width="120px" align="right">
+                  Rating
+                </TableCell>
+                <TableCell align="right">Result</TableCell>
+                <TableCell align="right">Change</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {tags &&
+                filteredHistory.map((item) => (
+                  <HistoryRow
+                    key={`${item.timestamp}-${item.opponent_id}`}
+                    item={item}
+                    tags={tags[item.opponent_id.toString()]}
+                  />
+                ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
+      <Box sx={{ mx: { xs: 1, lg: 3 } }}>
+        <Button onClick={onPrev}>Prev</Button>
+        <Button style={showNext ? {} : { display: "none" }} onClick={onNext}>
+          Next
+        </Button>
+      </Box>
+    </>
+  );
+}
+
+function PlayerSidebar({
+  player,
+  avatar,
+  comment,
+  onLinkClick,
+}: {
+  player: PlayerResponse | null;
+  avatar: string | null;
+  comment: string | null;
+  onLinkClick: LinkClickHandler;
+}) {
+  return (
+    <Box
+      sx={{
+        gridArea: "sidebar",
+        display: { xs: "contents", lg: "flex" },
+        flexDirection: { lg: "column" },
+        overflowY: { lg: "auto" },
+        minWidth: { lg: "200px" },
+      }}
+    >
+      <Box sx={{ gridArea: { xs: "avatar", lg: "unset" } }}>
+        {comment && (
+          <Box
+            sx={{
+              backgroundColor: "rgba(255, 255, 255, 0.1)",
+              borderRadius: "12px",
+              padding: "12px",
+              marginTop: { xs: 0, lg: "10px" },
+              marginBottom: "3px",
+              marginLeft: "10px",
+              marginRight: "10px",
+              position: "relative",
+              "&::after": {
+                content: '""',
+                position: "absolute",
+                bottom: "-8px",
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: 0,
+                height: 0,
+                borderLeft: "8px solid transparent",
+                borderRight: "8px solid transparent",
+                borderTop: "8px solid rgba(255, 255, 255, 0.1)",
+              },
+            }}
+          >
+            <Typography sx={{ fontSize: 13, wordWrap: "break-word" }}>
+              {comment}
+            </Typography>
+          </Box>
+        )}
+        {avatar && (
+          <img
+            src={avatar}
+            alt="Player Avatar"
+            style={{ transform: "scale(0.5)" }}
+          />
+        )}
+      </Box>
+      <Box sx={{ gridArea: { xs: "sidebar", lg: "unset" } }}>
+        {player && !isEmptyPlayer(player) ? (
+          <>
+            <hr />
+            <Typography sx={{ fontSize: 14 }}>Characters:</Typography>
+            {player.ratings?.map((item) => (
+              <Box key={item.char_short}>
+                <Button
+                  variant="text"
+                  onMouseDown={(event) =>
+                    onLinkClick(
+                      event,
+                      `/player/${player.id}/${item.char_short}`,
+                    )
+                  }
+                  sx={{ textAlign: "left", color: "white" }}
+                >
+                  <Typography component="div" sx={{ fontSize: 12.5, my: 0.3 }}>
+                    <Box sx={{ display: { xs: "block", lg: "none" } }}>
+                      {item.character}
+                      <br />
+                      {Utils.displayRankIcon(
+                        item.rating,
+                        "32px",
+                        item.is_legend,
+                      )}
+                      <br />
+                      {Utils.displayRating(item.rating)}
+                      <br />({item.match_count} games)
+                    </Box>
+                    <Box sx={{ display: { xs: "none", lg: "block" } }}>
+                      {item.character} {Utils.displayRating(item.rating)}{" "}
+                      <Box
+                        sx={{
+                          display: "inline-flex",
+                          position: "relative",
+                          top: "16px",
+                          marginLeft: "5px",
+                        }}
+                      >
+                        {Utils.displayRankIcon(
+                          item.rating,
+                          "32px",
+                          item.is_legend,
+                        )}
+                      </Box>
+                      <br />({item.match_count} games)
+                    </Box>
+                  </Typography>
+                </Button>
+                <br />
+              </Box>
+            ))}
+            <hr style={{ marginTop: 10 }} />
+          </>
+        ) : null}
+      </Box>
+    </Box>
+  );
+}
+
+function SyncErrorDialog({
+  syncError,
+  onClose,
+}: {
+  syncError: string | null;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog
+      open={syncError !== null}
+      onClose={onClose}
+      aria-labelledby="sync-error-dialog-title"
+      aria-describedby="sync-error-dialog-description"
+    >
+      <DialogTitle id="sync-error-dialog-title">Rating Sync Error</DialogTitle>
+      <DialogContent>
+        <DialogContentText id="sync-error-dialog-description">
+          {syncError}
+        </DialogContentText>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} autoFocus>
+          OK
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+const Player = () => {
+  const navigate = useNavigate();
+
+  const {
+    player,
+    currentCharData,
+    alias,
+    loading,
+    showNext,
+    tags,
+    countdown,
+    avatar,
+    comment,
+    filteredHistory,
+    syncLoading,
+    syncError,
+    player_id_checked,
+    char_short,
+    count,
+    offset,
+    handleRatingSync,
+    clearSyncError,
+  } = usePlayerData();
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: trigger only
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [player_id_checked, char_short]);
+
+  useEffect(() => {
+    if (player && !isEmptyPlayer(player) && !char_short) {
+      navigate(
+        `/player/${player_id_checked}/${findHighestRatedChar(player.ratings)}`,
+        { replace: true },
+      );
+    }
+  }, [player, char_short, player_id_checked, navigate]);
+
+  function onPrev() {
+    const { count: c, offset: o } = calcPrevOffset(count, offset);
+    navigate(`/player/${player_id_checked}/${char_short}/${c}/${o}`);
   }
 
-  const defaultCount = 100;
-
-  const navigate = useNavigate();
-  const { player_id, char_short, count, offset } = useParams();
-
-  const [history, setHistory] = useState<GroupedMatch[]>([]);
-  const [player, setPlayer] = useState<PlayerResponse | null>(null);
-  const [currentCharData, setCurrentCharData] =
-    useState<PlayerResponsePlayer | null>(null);
-  const [alias, setAlias] = useState<string[]>([]);
-
-  const [loading, setLoading] = useState(true);
-
-  const [showNext, setShowNext] = useState(true);
-
-  const [tags, setTags] = useState<{ [key: string]: TagResponse[] }>();
-
-  const [countdown, setCountdown] = useState<number | null>(null);
-
-  const [avatar, setAvatar] = useState<string | null>();
-  const [comment, setComment] = useState<string | null>(null);
-
-  // Rating sync state
-  const [syncLoading, setSyncLoading] = useState(false);
-  const [syncError, setSyncError] = useState<string | null>(null);
-  const [showErrorDialog, setShowErrorDialog] = useState(false);
-
-  // Match type filter: 'all', 'ranked', 'tower'
-  const [matchFilter, _setMatchFilter] = useState<"all" | "ranked" | "tower">(
-    "all",
-  );
-
-  // Filter history based on match type
-  const filteredHistory = history.filter((item) => {
-    if (matchFilter === "all") return true;
-    if (matchFilter === "ranked") return item.floor === "0";
-    if (matchFilter === "tower") return item.floor !== "0";
-    return true;
-  });
-
-  let player_id_checked: bigint;
-  if (player_id?.match(/[a-zA-Z]/)) {
-    player_id_checked = BigInt(`0x${player_id}`);
-  } else if (player_id) {
-    player_id_checked = BigInt(player_id);
-  } else {
-    player_id_checked = BigInt(0);
+  function onNext() {
+    const { count: c, offset: o } = calcNextOffset(count, offset);
+    navigate(`/player/${player_id_checked}/${char_short}/${c}/${o}`);
   }
 
   function onLinkClick(event: MouseEvent<HTMLElement>, url: string) {
     if (event.button === 1) {
-      //Middle mouse click
       window.open(url, "_blank");
     } else if (event.button === 0) {
-      //Left mouse click
       navigate(url);
     }
   }
 
-  const fetchHistoryData = async (
-    player_result: PlayerResponse,
-    char_short: string,
-  ) => {
-    const has_offset = !!offset;
-    const history_url =
-      API_ENDPOINT +
-      "/player/" +
-      player_id_checked +
-      "/" +
-      char_short +
-      "/history?count=" +
-      (has_offset && offset !== "0" ? Number(count) + 1 : "100") +
-      "&offset=" +
-      (has_offset && offset !== "0" ? Number(offset) - 1 : "0");
-
-    const history_response = await fetch(history_url);
-    if (history_response.status === 200) {
-      const history_result = await history_response.text().then((body) => {
-        const parsed = JSONParse(body);
-        return parsed;
-      });
-
-      if (history_result.history.length < (count ? count : defaultCount)) {
-        setShowNext(false);
-      } else {
-        setShowNext(true);
-      }
-
-      if (history_result.history.length !== 0) {
-        const groupedData = groupMatches(
-          history_result.history,
-          player_result,
-          char_short,
-          has_offset,
-        );
-        setHistory(groupedData);
-
-        const tags: { [key: string]: TagResponse[] } = {};
-        Object.entries(history_result.tags).forEach(([playerId, tagArray]) => {
-          tags[playerId] = (tagArray as TagResponse[]).map((tagObj) => ({
-            tag: tagObj.tag,
-            style: tagObj.style,
-          }));
-        });
-        setTags(tags);
-      } else {
-        setHistory([]);
-        setTags({});
-      }
-    }
-  };
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: fetchHistoryData recreated each render; stable deps are the URL params
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    const fetchPlayerAndHistory = async () => {
-      setLoading(true);
-      try {
-        const player_response = await fetch(
-          `${API_ENDPOINT}/player/${player_id_checked}`,
-        );
-        const player_result = await player_response.text().then((body) => {
-          const parsed = JSONParse(body);
-          return parsed;
-        });
-
-        for (const key in player_result.ratings) {
-          player_result.ratings[key].rating =
-            player_result.ratings[key].rating.toFixed(2);
-        }
-
-        setPlayer(player_result);
-
-        if (player_result.id === "0") {
-          setHistory([]);
-          setCurrentCharData(null);
-          setAlias([]);
-          setLoading(false);
-          setAvatar(null);
-          return;
-        }
-
-        //Redirect to the highest rated character
-        if (char_short === undefined) {
-          let highest_rating = -1;
-          let highest_char = "SO";
-          for (const pkey in player_result.ratings) {
-            if (
-              Number(player_result.ratings[pkey].rating) >
-              Number(highest_rating)
-            ) {
-              highest_rating = Number(player_result.ratings[pkey].rating);
-              highest_char = player_result.ratings[pkey].char_short;
-            }
-          }
-
-          navigate(`/player/${player_id_checked}/${highest_char}`, {
-            replace: true,
-          });
-          return;
-        }
-
-        let _currentCharKey = null;
-        for (const ckey in player_result.ratings) {
-          if (player_result.ratings[ckey].char_short === char_short) {
-            document.title =
-              player_result.name +
-              " (" +
-              char_short +
-              ") - " +
-              Utils.displaySimpleRating(
-                Number(player_result.ratings[ckey].rating),
-              ) +
-              " | Puddle Farm";
-
-            setCurrentCharData(player_result.ratings[ckey]);
-            _currentCharKey = ckey;
-          }
-        }
-
-        // Fetch history data
-        await fetchHistoryData(player_result, char_short);
-
-        const alias_response = await fetch(
-          `${API_ENDPOINT}/alias/${player_id_checked}`,
-        );
-
-        if (alias_response.status === 200) {
-          const alias_result = await alias_response.json();
-
-          if (alias_result !== null) {
-            //loop through alias_result and remove current player name
-            for (const akey in alias_result) {
-              if (alias_result[akey] === player_result.name) {
-                alias_result.splice(akey, 1);
-              }
-            }
-            setAlias(alias_result);
-          }
-        }
-
-        const avatar_response = await fetch(
-          `${API_ENDPOINT}/avatar/${player_id_checked}`,
-        );
-        if (avatar_response.status === 200) {
-          const avatar_result = await avatar_response.blob();
-          setAvatar(URL.createObjectURL(avatar_result));
-        }
-
-        const comment_response = await fetch(
-          `${API_ENDPOINT}/comment/${player_id_checked}`,
-        );
-        if (comment_response.status === 200) {
-          const comment_result = await comment_response.text();
-          setComment(comment_result);
-        }
-
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching player data:", error);
-      }
-    };
-    fetchPlayerAndHistory();
-
-    if (StorageUtils.getAutoUpdate()) {
-      const interval = setInterval(() => {
-        fetchPlayerAndHistory();
-        setCountdown(60);
-      }, 60000);
-
-      const countdownInterval = setInterval(() => {
-        setCountdown((prevCountdown) =>
-          prevCountdown !== null && prevCountdown > 0 ? prevCountdown - 1 : 0,
-        );
-      }, 1000);
-
-      setCountdown(60);
-
-      return () => {
-        clearInterval(interval);
-        clearInterval(countdownInterval);
-      };
-    }
-  }, [char_short, API_ENDPOINT, player_id_checked, navigate]);
-
-  function onPrev(_event: MouseEvent<HTMLButtonElement>) {
-    let nav_count = count ? parseInt(count, 10) : defaultCount;
-    let nav_offset = offset ? parseInt(offset, 10) - nav_count : 0;
-    if (nav_count < 0) {
-      nav_count = defaultCount;
-    }
-    if (nav_offset < 0) {
-      nav_offset = 0;
-    }
-    navigate(
-      `/player/${player_id_checked}/${char_short}/${nav_count}/${nav_offset}`,
-    );
-  }
-
-  function onNext(_event: MouseEvent<HTMLButtonElement>) {
-    const nav_count = count ? parseInt(count, 10) : defaultCount;
-    const nav_offset = offset ? parseInt(offset, 10) + nav_count : nav_count;
-    navigate(
-      `/player/${player_id_checked}/${char_short}/${nav_count}/${nav_offset}`,
-    );
-  }
-
-  const handleRatingSync = async () => {
-    if (!player_id_checked || syncLoading) return;
-
-    setSyncLoading(true);
-    setSyncError(null);
-
-    try {
-      const response = await fetch(
-        `${API_ENDPOINT}/rating_sync/${player_id_checked}`,
-      );
-      const result = await response.text();
-
-      if (response.ok) {
-        // Fetch updated player data instead of reloading page
-        const player_response = await fetch(
-          `${API_ENDPOINT}/player/${player_id_checked}`,
-        );
-        const player_result = await player_response.text().then((body) => {
-          const parsed = JSONParse(body);
-          return parsed;
-        });
-
-        // Format ratings
-        for (const key in player_result.ratings) {
-          player_result.ratings[key].rating =
-            player_result.ratings[key].rating.toFixed(2);
-        }
-
-        setPlayer(player_result);
-
-        // Update current character data if it exists
-        if (char_short) {
-          for (const ckey in player_result.ratings) {
-            if (player_result.ratings[ckey].char_short === char_short) {
-              setCurrentCharData(player_result.ratings[ckey]);
-              // Update page title with new rating
-              document.title =
-                player_result.name +
-                " (" +
-                char_short +
-                ") - " +
-                Utils.displaySimpleRating(
-                  Number(player_result.ratings[ckey].rating),
-                ) +
-                " | Puddle Farm";
-              break;
-            }
-          }
-
-          // Refetch history with updated player ratings
-          try {
-            await fetchHistoryData(player_result, char_short);
-          } catch (historyError) {
-            console.warn(
-              "Failed to update history after rating sync:",
-              historyError,
-            );
-          }
-        }
-      } else {
-        // Show error in popup dialog
-        setSyncError(result);
-        setShowErrorDialog(true);
-      }
-    } catch (error) {
-      setSyncError("Failed to connect to server");
-      setShowErrorDialog(true);
-      console.error("Rating sync error:", error);
-    } finally {
-      setSyncLoading(false);
-    }
-  };
-
-  const handleCloseErrorDialog = () => {
-    setShowErrorDialog(false);
-    setSyncError(null);
-  };
-
   return (
     <>
+      {player && currentCharData && char_short && (
+        <title>{`${player.name} (${char_short}) - ${Utils.displaySimpleRating(Number(currentCharData.rating))} | Puddle Farm`}</title>
+      )}
       {loading ? (
         <CircularProgress
           size={60}
@@ -404,167 +518,11 @@ const Player = () => {
           sx={{ position: "absolute", top: "-1px", color: "white" }}
         />
       ) : null}
-      <AppBar
-        position="static"
-        style={{ backgroundImage: "none" }}
-        sx={{ backgroundColor: "secondary.main" }}
-      >
-        {isMobile ? (
-          <Box sx={{ minHeight: 50, display: { xs: "block", lg: "none" } }}>
-            {" "}
-            {/* Mobile View */}
-            {player ? (
-              <Typography
-                sx={{ textAlign: "center", fontSize: 30, marginTop: 2 }}
-                variant="pageHeader"
-              >
-                <Box>
-                  {player.tags
-                    ? player.tags.map((e) => (
-                        <Tag key={e.tag} style={JSON.parse(e.style)}>
-                          {e.tag}
-                        </Tag>
-                      ))
-                    : null}
-                </Box>
-
-                {currentCharData
-                  ? Utils.displayRankIcon(
-                      currentCharData.rating,
-                      "64px",
-                      currentCharData.is_legend,
-                    )
-                  : null}
-
-                <Typography variant="playerName">{player.name}</Typography>
-                <Typography variant="platform">{player.platform}</Typography>
-                {player.top_global !== 0 ? (
-                  <Typography
-                    variant="global_rank"
-                    onMouseDown={(_event) => navigate(`/top_global`)}
-                    sx={{ cursor: "pointer" }}
-                  >
-                    #{player.top_global} Overall
-                  </Typography>
-                ) : null}
-              </Typography>
-            ) : null}
-            {alias && alias.length > 0 ? (
-              <Box sx={{ textAlign: "center", fontSize: 17 }}>
-                <Typography
-                  variant="platform"
-                  sx={{
-                    position: "relative",
-                    top: "0px",
-                    marginTop: "10px",
-                    display: "inline-block",
-                  }}
-                >
-                  AKA
-                </Typography>
-                <Box sx={{ m: 1, display: "inline-block" }}>
-                  {alias.map((item) => (
-                    <Typography
-                      key={item}
-                      variant="playerName"
-                      sx={{
-                        px: 0.8,
-                        py: 0.2,
-                        mx: 0.3,
-                        my: 0.2,
-                        display: "inline-block",
-                      }}
-                    >
-                      {item}
-                    </Typography>
-                  ))}
-                </Box>
-              </Box>
-            ) : null}
-          </Box>
-        ) : (
-          <Box
-            sx={{
-              minHeight: 100,
-              paddingTop: "30px",
-              display: { xs: "none", lg: "block" },
-            }}
-          >
-            {" "}
-            {/* Desktop View */}
-            {player ? (
-              <Typography
-                align="center"
-                variant="pageHeader"
-                sx={{ fontSize: 30 }}
-              >
-                <Box>
-                  {player.tags
-                    ? player.tags.map((e) => (
-                        <Tag key={e.tag} style={JSON.parse(e.style)}>
-                          {e.tag}
-                        </Tag>
-                      ))
-                    : null}
-                </Box>
-
-                {currentCharData
-                  ? Utils.displayRankIcon(
-                      currentCharData.rating,
-                      "64px",
-                      currentCharData.is_legend,
-                    )
-                  : null}
-
-                <Typography variant="playerName">{player.name}</Typography>
-                <Typography variant="platform">{player.platform}</Typography>
-                {player.top_global !== 0 ? (
-                  <Typography
-                    variant="global_rank"
-                    onMouseDown={(_event) => navigate(`/top_global`)}
-                    sx={{ cursor: "pointer" }}
-                  >
-                    #{player.top_global} Overall
-                  </Typography>
-                ) : null}
-              </Typography>
-            ) : null}
-            {alias && alias.length > 0 ? (
-              <Box sx={{ textAlign: "center", fontSize: 17 }}>
-                <Typography
-                  variant="platform"
-                  sx={{
-                    position: "relative",
-                    top: "0px",
-                    marginTop: "10px",
-                    display: "inline-block",
-                  }}
-                >
-                  AKA
-                </Typography>
-                <Box sx={{ m: 1, display: "inline-block" }}>
-                  {alias.map((item) => (
-                    <Typography
-                      key={item}
-                      variant="playerName"
-                      sx={{
-                        px: 0.8,
-                        py: 0.2,
-                        mx: 0.3,
-                        my: 0.2,
-                        display: "inline-block",
-                      }}
-                    >
-                      {item}
-                    </Typography>
-                  ))}
-                </Box>
-              </Box>
-            ) : null}
-          </Box>
-        )}
-      </AppBar>
-
+      <PlayerHeader
+        player={player}
+        currentCharData={currentCharData}
+        alias={alias}
+      />
       <Box
         sx={{
           display: "grid",
@@ -579,159 +537,30 @@ const Player = () => {
           overflow: "hidden",
         }}
       >
-        {/* Main Content Area */}
         <Box sx={{ gridArea: "main", overflow: "auto", minWidth: 0 }}>
           <Box>
-            {currentCharData ? (
-              <>
-                <Typography variant="h5" sx={{ my: 2 }}>
-                  {currentCharData.character} Rating:{" "}
-                  <Box component={"span"}>
-                    {Utils.displayRating(currentCharData.rating)}
-                  </Box>{" "}
-                  ({currentCharData.match_count} games)
-                  <Tooltip title="Sync ratings from game">
-                    <IconButton
-                      onClick={handleRatingSync}
-                      disabled={syncLoading}
-                      size="small"
-                      sx={{ ml: 1, color: "primary.main" }}
-                    >
-                      <RefreshIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  {currentCharData.top_char !== 0 ? (
-                    <Typography
-                      variant="char_rank"
-                      onMouseDown={(event) =>
-                        onLinkClick(event, `/top/${currentCharData.char_short}`)
-                      }
-                      sx={{ cursor: "pointer" }}
-                    >
-                      #{currentCharData.top_char} {currentCharData.character}
-                    </Typography>
-                  ) : null}
-                </Typography>
-                {currentCharData.top_rating.value !== 0 ? (
-                  <Typography>
-                    Top Rating:{" "}
-                    <Box component={"span"}>
-                      {Utils.displayRating(currentCharData.top_rating.value)}
-                    </Box>{" "}
-                    (
-                    {Utils.formatUTCToLocal(
-                      currentCharData.top_rating.timestamp,
-                    )}
-                    )
-                  </Typography>
-                ) : null}
-                {currentCharData.top_defeated.value !== 0.0 ? (
-                  <Typography>
-                    Top Defeated:{" "}
-                    <Button
-                      sx={{ fontSize: "16px" }}
-                      component={Link}
-                      nativeButton={false}
-                      onMouseDown={(event) =>
-                        onLinkClick(
-                          event,
-                          `/player/${currentCharData.top_defeated.id}/${currentCharData.top_defeated.char_short}`,
-                        )
-                      }
-                    >
-                      {currentCharData.top_defeated.name} (
-                      {currentCharData.top_defeated.char_short})
-                    </Button>{" "}
-                    <Box component={"span"}>
-                      {Utils.displayRating(currentCharData.top_defeated.value)}
-                    </Box>{" "}
-                    (
-                    {Utils.formatUTCToLocal(
-                      currentCharData.top_defeated.timestamp,
-                    )}
-                    )
-                  </Typography>
-                ) : null}
-              </>
-            ) : null}
-            {countdown !== null ? (
+            {currentCharData && (
+              <CharacterStats
+                currentCharData={currentCharData}
+                syncLoading={syncLoading}
+                onRatingSync={handleRatingSync}
+                onLinkClick={onLinkClick}
+              />
+            )}
+            {countdown !== null && (
               <Box>
                 <Typography variant="h6" gutterBottom>
                   Auto-update in: {countdown} seconds
                 </Typography>
               </Box>
-            ) : null}
-            {history ? (
-              <>
-                <Box sx={{ mx: { xs: 1, lg: 3 }, mb: 2 }}>
-                  <Button onClick={(event) => onPrev(event)}>Prev</Button>
-                  <Button
-                    style={showNext ? {} : { display: "none" }}
-                    onClick={(event) => onNext(event)}
-                  >
-                    Next
-                  </Button>
-                </Box>
-                {/* Mobile history view */}
-                <Box sx={{ display: { xs: "block", lg: "none" } }}>
-                  {tags &&
-                    filteredHistory.map((item) => (
-                      <Box
-                        sx={{ py: 0.3 }}
-                        key={`${item.timestamp}-${item.opponent_id}`}
-                      >
-                        <HistoryRow
-                          item={item}
-                          isMobile={true}
-                          tags={tags[item.opponent_id.toString()]}
-                        />
-                      </Box>
-                    ))}
-                </Box>
-                {/* Desktop history view */}
-                <Box sx={{ display: { xs: "none", lg: "block" } }}>
-                  <TableContainer component={Paper}>
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell></TableCell>
-                          <TableCell width="170px">Timestamp</TableCell>
-                          <TableCell width="120px" align="right">
-                            Rating
-                          </TableCell>
-                          <TableCell>Opponent</TableCell>
-                          <TableCell align="right">Character</TableCell>
-                          <TableCell width="120px" align="right">
-                            Rating
-                          </TableCell>
-                          <TableCell align="right">Result</TableCell>
-                          <TableCell align="right">Change</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {tags &&
-                          filteredHistory.map((item) => (
-                            <HistoryRow
-                              key={`${item.timestamp}-${item.opponent_id}`}
-                              item={item}
-                              tags={tags[item.opponent_id.toString()]}
-                            />
-                          ))}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Box>
-                <Box sx={{ mx: { xs: 1, lg: 3 } }}>
-                  <Button onClick={(event) => onPrev(event)}>Prev</Button>
-                  <Button
-                    style={showNext ? {} : { display: "none" }}
-                    onClick={(event) => onNext(event)}
-                  >
-                    Next
-                  </Button>
-                </Box>
-              </>
-            ) : null}
+            )}
+            <MatchHistory
+              filteredHistory={filteredHistory}
+              tags={tags}
+              showNext={showNext}
+              onPrev={onPrev}
+              onNext={onNext}
+            />
           </Box>
           {currentCharData ? (
             <RatingChart
@@ -748,144 +577,14 @@ const Player = () => {
             char_short={char_short}
           />
         </Box>
-
-        {/* Sidebar Area */}
-        <Box
-          sx={{
-            gridArea: "sidebar",
-            display: { xs: "contents", lg: "flex" },
-            flexDirection: { lg: "column" },
-            overflowY: { lg: "auto" },
-            minWidth: { lg: "200px" },
-          }}
-        >
-          {/* Sidebar content - avatar/comment in own area on mobile */}
-          <Box sx={{ gridArea: { xs: "avatar", lg: "unset" } }}>
-            {comment && (
-              <Box
-                sx={{
-                  backgroundColor: "rgba(255, 255, 255, 0.1)",
-                  borderRadius: "12px",
-                  padding: "12px",
-                  marginTop: { xs: 0, lg: "10px" },
-                  marginBottom: "3px",
-                  marginLeft: "10px",
-                  marginRight: "10px",
-                  position: "relative",
-                  "&::after": {
-                    content: '""',
-                    position: "absolute",
-                    bottom: "-8px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    width: 0,
-                    height: 0,
-                    borderLeft: "8px solid transparent",
-                    borderRight: "8px solid transparent",
-                    borderTop: "8px solid rgba(255, 255, 255, 0.1)",
-                  },
-                }}
-              >
-                <Typography sx={{ fontSize: 13, wordWrap: "break-word" }}>
-                  {comment}
-                </Typography>
-              </Box>
-            )}
-            {avatar && (
-              <img
-                src={avatar}
-                alt="Player Avatar"
-                style={{ transform: "scale(0.5)" }}
-              />
-            )}
-          </Box>
-          {/* Characters list - stays in sidebar area */}
-          <Box sx={{ gridArea: { xs: "sidebar", lg: "unset" } }}>
-            {player && player.id !== "0" ? (
-              <>
-                <hr />
-                <Typography sx={{ fontSize: 14 }}>Characters:</Typography>
-                {player.ratings?.map((item) => (
-                  <Box key={item.char_short}>
-                    <Button
-                      variant="text"
-                      onMouseDown={(event) => {
-                        onLinkClick(
-                          event,
-                          `/player/${player.id}/${item.char_short}`,
-                        );
-                      }}
-                      sx={{ textAlign: "left", color: "white" }}
-                    >
-                      <Typography
-                        component="div"
-                        sx={{ fontSize: 12.5, my: 0.3 }}
-                      >
-                        {/* Mobile: stacked layout */}
-                        <Box sx={{ display: { xs: "block", lg: "none" } }}>
-                          {item.character}
-                          <br />
-                          {Utils.displayRankIcon(
-                            item.rating,
-                            "32px",
-                            item.is_legend,
-                          )}
-                          <br />
-                          {Utils.displayRating(item.rating)}
-                          <br />({item.match_count} games)
-                        </Box>
-                        {/* Desktop: inline layout */}
-                        <Box sx={{ display: { xs: "none", lg: "block" } }}>
-                          {item.character} {Utils.displayRating(item.rating)}{" "}
-                          <Box
-                            sx={{
-                              display: "inline-flex",
-                              position: "relative",
-                              top: "16px",
-                              marginLeft: "5px",
-                            }}
-                          >
-                            {Utils.displayRankIcon(
-                              item.rating,
-                              "32px",
-                              item.is_legend,
-                            )}
-                          </Box>
-                          <br />({item.match_count} games)
-                        </Box>
-                      </Typography>
-                    </Button>
-                    <br />
-                  </Box>
-                ))}
-                <hr style={{ marginTop: 10 }} />
-              </>
-            ) : null}
-          </Box>
-        </Box>
+        <PlayerSidebar
+          player={player}
+          avatar={avatar}
+          comment={comment}
+          onLinkClick={onLinkClick}
+        />
       </Box>
-
-      {/* Error Dialog */}
-      <Dialog
-        open={showErrorDialog}
-        onClose={handleCloseErrorDialog}
-        aria-labelledby="sync-error-dialog-title"
-        aria-describedby="sync-error-dialog-description"
-      >
-        <DialogTitle id="sync-error-dialog-title">
-          Rating Sync Error
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="sync-error-dialog-description">
-            {syncError}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseErrorDialog} autoFocus>
-            OK
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <SyncErrorDialog syncError={syncError} onClose={clearSyncError} />
     </>
   );
 };

@@ -155,11 +155,6 @@ export interface Supporter {
   tags: TagResponse[];
 }
 
-export interface TagResponse {
-  tag: string;
-  style: string;
-}
-
 export interface DistributionResult {
   /** Lower bound of the distribution range */
   lower_bound: number;
