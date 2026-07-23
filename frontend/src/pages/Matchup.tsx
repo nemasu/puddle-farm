@@ -94,7 +94,9 @@ const MatchupTable = ({
         <Table stickyHeader>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ position: "sticky", top: 0, zIndex: 1 }}>
+              <TableCell
+                sx={{ position: "sticky", top: 0, left: 0, zIndex: 3 }}
+              >
                 <TableSortLabel
                   active={orderBy === "character"}
                   direction={orderBy === "character" ? order : "asc"}
@@ -110,7 +112,7 @@ const MatchupTable = ({
                     sx={{
                       position: "sticky",
                       top: 0,
-                      zIndex: 1,
+                      zIndex: 2,
                       backgroundColor: hoveredCol === index ? "grey" : "black",
                     }}
                   >
