@@ -1,4 +1,5 @@
 ![Build Status](https://github.com/nemasu/puddle-farm/actions/workflows/rust.yml/badge.svg)
+![Frontend Status](https://github.com/nemasu/puddle-farm/actions/workflows/frontend.yml/badge.svg)
 
 # Puddle Farm
 ### About
