@@ -176,7 +176,14 @@ const TopPlayer = () => {
             sx={{ position: "absolute", top: "-1px", color: "white" }}
           />
         ) : null}
-        <Box sx={{ minHeight: 100, paddingTop: "30px" }}>
+        <Box
+          sx={{
+            minHeight: 100,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <Typography align="center" variant="pageHeader">
             {charLong} Leaderboard
           </Typography>
@@ -195,7 +202,7 @@ const TopPlayer = () => {
               : "Updating..."}
           </Typography>
         )}
-        <Box sx={{ mx: 3, display: "inline-block" }}>
+        <Box sx={{ mx: 3, display: "inline-block", mb: 2 }}>
           <Button onClick={() => onPrev()}>Prev</Button>
           <Button
             style={showNext ? {} : { display: "none" }}
@@ -233,6 +240,7 @@ const TopPlayer = () => {
                   <TableCell>
                     <Button
                       component={Link}
+                      sx={{ justifyContent: "flex-start", minWidth: "auto" }}
                       to={`/player/${player.id}/${player.char_short}`}
                     >
                       {player.name}
@@ -272,7 +280,7 @@ const TopPlayer = () => {
             </TableBody>
           </Table>
         </TableContainer>
-        <Box sx={{ mx: 3, display: "inline-block" }}>
+        <Box sx={{ mx: 3, display: "inline-block", mt: 2 }}>
           <Button onClick={() => onPrev()}>Prev</Button>
           <Button
             style={showNext ? {} : { display: "none" }}

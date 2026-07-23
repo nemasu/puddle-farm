@@ -59,7 +59,7 @@ function PlayerHeader({
   const playerInfo = player ? (
     <>
       {player.tags && player.tags.length > 0 && (
-        <Box>
+        <Box sx={{ flexBasis: "100%" }}>
           {player.tags.map((e) => (
             <Tag key={e.tag} style={JSON.parse(e.style)}>
               {e.tag}
@@ -139,7 +139,16 @@ function PlayerHeader({
           variant="pageHeader"
           sx={{ fontSize: 30, marginTop: { xs: 2, lg: 0 } }}
         >
-          {playerInfo}
+          <Box
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              flexWrap: "wrap",
+              justifyContent: "center",
+            }}
+          >
+            {playerInfo}
+          </Box>
         </Typography>
         {aliasSection}
       </Box>
@@ -289,7 +298,7 @@ function MatchHistory({
           </Table>
         </TableContainer>
       </Box>
-      <Box sx={{ mx: { xs: 1, lg: 3 } }}>
+      <Box sx={{ mx: { xs: 1, lg: 3 }, mt: 2 }}>
         <Button onClick={onPrev}>Prev</Button>
         <Button style={showNext ? {} : { display: "none" }} onClick={onNext}>
           Next
