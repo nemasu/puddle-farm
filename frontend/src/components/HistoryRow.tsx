@@ -16,9 +16,72 @@ import {
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { TagResponse } from "../interfaces/API";
-import type { GroupedMatch } from "../interfaces/Player";
+import type { GroupedMatch, MatchWithRating } from "../interfaces/Player";
 import { Utils } from "../utils/Utils";
 import { Tag } from "./Tag";
+
+function MatchDetailTable({ matches }: { matches: MatchWithRating[] }) {
+  return (
+    <Table size="small">
+      <TableHead>
+        <TableRow>
+          <TableCell>Timestamp</TableCell>
+          <TableCell align="right">Rating</TableCell>
+          <TableCell align="right">Opponent Rating</TableCell>
+          <TableCell align="right">Winner?</TableCell>
+          <TableCell align="right">Rating Change</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {matches.map((item) => (
+          <TableRow key={item.timestamp}>
+            {item.opponent_id === "0" ? (
+              <>
+                <TableCell component="th" scope="row">
+                  {Utils.formatUTCToLocal(item.timestamp)}
+                </TableCell>
+                <TableCell align="right"></TableCell>
+                <TableCell align="right"></TableCell>
+                <TableCell align="right">
+                  {item.result_win ? "Y" : "N"}
+                </TableCell>
+                <TableCell align="right">
+                  {item.ratingChange !== undefined &&
+                  parseFloat(item.ratingChange) > 0
+                    ? "+"
+                    : ""}
+                  {item.ratingChange}
+                </TableCell>
+              </>
+            ) : (
+              <>
+                <TableCell component="th" scope="row">
+                  {Utils.formatUTCToLocal(item.timestamp)}
+                </TableCell>
+                <TableCell align="right">
+                  {Utils.displayRating(item.own_rating_value)}
+                </TableCell>
+                <TableCell align="right">
+                  {Utils.displayRating(item.opponent_rating_value)}
+                </TableCell>
+                <TableCell align="right">
+                  {item.result_win ? "Y" : "N"}
+                </TableCell>
+                <TableCell align="right">
+                  {item.ratingChange !== undefined &&
+                  parseFloat(item.ratingChange) > 0
+                    ? "+"
+                    : ""}
+                  {item.ratingChange}
+                </TableCell>
+              </>
+            )}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
 
 function HistoryRow(props: {
   isMobile?: boolean;
@@ -175,66 +238,7 @@ function HistoryRow(props: {
                 colSpan={8}
               >
                 <Collapse in={open} timeout="auto" unmountOnExit>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Timestamp</TableCell>
-                        <TableCell align="right">Rating</TableCell>
-                        <TableCell align="right">Opponent Rating</TableCell>
-                        <TableCell align="right">Winner?</TableCell>
-                        <TableCell align="right">Rating Change</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {item.matches.map((item, _i) => (
-                        <TableRow key={item.timestamp}>
-                          {item.opponent_id === "0" ? (
-                            <>
-                              <TableCell component="th" scope="row">
-                                {Utils.formatUTCToLocal(item.timestamp)}
-                              </TableCell>
-                              <TableCell align="right"></TableCell>
-                              <TableCell align="right"></TableCell>
-                              <TableCell align="right">
-                                {item.result_win ? "Y" : "N"}
-                              </TableCell>
-                              <TableCell align="right">
-                                {item.ratingChange !== undefined &&
-                                parseFloat(item.ratingChange) > 0
-                                  ? "+"
-                                  : ""}
-                                {item.ratingChange}
-                              </TableCell>
-                            </>
-                          ) : (
-                            <>
-                              <TableCell component="th" scope="row">
-                                {Utils.formatUTCToLocal(item.timestamp)}
-                              </TableCell>
-                              <TableCell align="right">
-                                {Utils.displayRating(item.own_rating_value)}
-                              </TableCell>
-                              <TableCell align="right">
-                                {Utils.displayRating(
-                                  item.opponent_rating_value,
-                                )}
-                              </TableCell>
-                              <TableCell align="right">
-                                {item.result_win ? "Y" : "N"}
-                              </TableCell>
-                              <TableCell align="right">
-                                {item.ratingChange !== undefined &&
-                                parseFloat(item.ratingChange) > 0
-                                  ? "+"
-                                  : ""}
-                                {item.ratingChange}
-                              </TableCell>
-                            </>
-                          )}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <MatchDetailTable matches={item.matches} />
                 </Collapse>
               </TableCell>
             </TableRow>
@@ -339,64 +343,7 @@ function HistoryRow(props: {
         <TableRow id={item.timestamp}>
           <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
             <Collapse in={open} timeout="auto" unmountOnExit>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Timestamp</TableCell>
-                    <TableCell align="right">Rating</TableCell>
-                    <TableCell align="right">Opponent Rating</TableCell>
-                    <TableCell align="right">Winner?</TableCell>
-                    <TableCell align="right">Rating Change</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {item.matches.map((item, _i) => (
-                    <TableRow key={item.timestamp}>
-                      {item.opponent_id === "0" ? (
-                        <>
-                          <TableCell component="th" scope="row">
-                            {Utils.formatUTCToLocal(item.timestamp)}
-                          </TableCell>
-                          <TableCell align="right"></TableCell>
-                          <TableCell align="right"></TableCell>
-                          <TableCell align="right">
-                            {item.result_win ? "Y" : "N"}
-                          </TableCell>
-                          <TableCell align="right">
-                            {item.ratingChange !== undefined &&
-                            parseFloat(item.ratingChange) > 0
-                              ? "+"
-                              : ""}
-                            {item.ratingChange}
-                          </TableCell>
-                        </>
-                      ) : (
-                        <>
-                          <TableCell component="th" scope="row">
-                            {Utils.formatUTCToLocal(item.timestamp)}
-                          </TableCell>
-                          <TableCell align="right">
-                            {Utils.displayRating(item.own_rating_value)}
-                          </TableCell>
-                          <TableCell align="right">
-                            {Utils.displayRating(item.opponent_rating_value)}
-                          </TableCell>
-                          <TableCell align="right">
-                            {item.result_win ? "Y" : "N"}
-                          </TableCell>
-                          <TableCell align="right">
-                            {item.ratingChange !== undefined &&
-                            parseFloat(item.ratingChange) > 0
-                              ? "+"
-                              : ""}
-                            {item.ratingChange}
-                          </TableCell>
-                        </>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <MatchDetailTable matches={item.matches} />
             </Collapse>
           </TableCell>
         </TableRow>
