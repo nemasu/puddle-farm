@@ -85,6 +85,7 @@ const SearchResults = ({ resultsPromise }: SearchResultsProps) => {
                 <TableCell>
                   <Button
                     component={Link}
+                    sx={{ justifyContent: "flex-start", minWidth: "auto" }}
                     to={`/player/${player.id}/${player.char_short}`}
                   >
                     {player.name}
@@ -122,7 +123,14 @@ const Search = () => {
         style={{ backgroundImage: "none" }}
         sx={{ backgroundColor: "secondary.main" }}
       >
-        <Box sx={{ minHeight: 100, paddingTop: "30px" }}>
+        <Box
+          sx={{
+            minHeight: 100,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <Typography align="center" variant="pageHeader">
             Search Results
           </Typography>

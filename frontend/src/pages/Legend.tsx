@@ -116,7 +116,14 @@ const Legend = () => {
             sx={{ position: "absolute", top: "-1px", color: "white" }}
           />
         ) : null}
-        <Box sx={{ minHeight: 100, paddingTop: "30px" }}>
+        <Box
+          sx={{
+            minHeight: 100,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <Typography align="center" variant="pageHeader">
             Legend Players
           </Typography>
@@ -154,6 +161,7 @@ const Legend = () => {
                   <TableCell>
                     <Button
                       component={Link}
+                      sx={{ justifyContent: "flex-start", minWidth: "auto" }}
                       to={`/player/${player.id}/${player.char_short}`}
                     >
                       {player.name}

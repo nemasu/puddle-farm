@@ -73,7 +73,15 @@ function HistoryRow(props: {
                 </TableRow>
                 <TableRow>
                   <TableCell sx={{ px: 0, mx: 0 }} colSpan={2}>
-                    <Button component={Link} sx={{ marginLeft: "5px" }} to={``}>
+                    <Button
+                      component={Link}
+                      sx={{
+                        marginLeft: "5px",
+                        justifyContent: "flex-start",
+                        minWidth: "auto",
+                      }}
+                      to={``}
+                    >
                       {item.opponent_name}
                     </Button>
                   </TableCell>
@@ -116,7 +124,11 @@ function HistoryRow(props: {
                 <TableRow>
                   <TableCell sx={{ px: 0, mx: 0, maxWidth: "120px" }}>
                     <Button
-                      sx={{ marginLeft: "5px" }}
+                      sx={{
+                        marginLeft: "5px",
+                        justifyContent: "flex-start",
+                        minWidth: "auto",
+                      }}
                       component={Link}
                       to={`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`}
                     >
@@ -250,7 +262,11 @@ function HistoryRow(props: {
               </TableCell>
               <TableCell align="right"></TableCell>
               <TableCell>
-                <Button component={Link} to={``}>
+                <Button
+                  component={Link}
+                  sx={{ justifyContent: "flex-start", minWidth: "auto" }}
+                  to={``}
+                >
                   {item.opponent_name}
                 </Button>
               </TableCell>
@@ -279,6 +295,7 @@ function HistoryRow(props: {
               <TableCell>
                 <Button
                   component={Link}
+                  sx={{ justifyContent: "flex-start", minWidth: "auto" }}
                   to={`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`}
                 >
                   {item.opponent_name}
