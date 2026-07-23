@@ -10,7 +10,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { Suspense, use, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import type { PlayerSearchResponse } from "../interfaces/API";
 import { JSONParse } from "../utils/JSONParse";
 import { Utils } from "../utils/Utils";
@@ -18,13 +18,15 @@ import { Utils } from "../utils/Utils";
 const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
 
 function fetchSearchResults(
-  q: string | undefined,
-  exact: string | undefined,
+  q: string,
+  exact: boolean,
 ): Promise<{ results: PlayerSearchResponse[] }> {
   if (!q) return Promise.resolve({ results: [] });
 
-  const isExact = exact === "exact" ? "true" : "false";
-  const params = new URLSearchParams({ search_string: q, exact: isExact });
+  const params = new URLSearchParams({
+    search_string: q,
+    exact: String(exact),
+  });
 
   return fetch(`${API_ENDPOINT}/player/search?${params.toString()}`)
     .then((res) => res.text())
@@ -40,14 +42,14 @@ interface SearchResultsProps {
 }
 
 const SearchResultsLoader = ({
-  search_string,
+  searchQuery,
   exact,
 }: {
-  search_string: string | undefined;
-  exact: string | undefined;
+  searchQuery: string;
+  exact: boolean;
 }) => {
   const [resultsPromise] = useState(() =>
-    fetchSearchResults(search_string, exact),
+    fetchSearchResults(searchQuery, exact),
   );
   return (
     <Suspense fallback={<CircularProgress size={60} />}>
@@ -107,12 +109,14 @@ const SearchResults = ({ resultsPromise }: SearchResultsProps) => {
 };
 
 const Search = () => {
-  const { search_string, exact } = useParams();
+  const [searchParams] = useSearchParams();
+  const searchQuery = searchParams.get("q") ?? "";
+  const exact = searchParams.get("exact") === "true";
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: trigger only
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [search_string, exact]);
+  }, [searchQuery, exact]);
 
   return (
     <>
@@ -130,8 +134,8 @@ const Search = () => {
       </AppBar>
 
       <SearchResultsLoader
-        key={`${search_string}-${exact}`}
-        search_string={search_string}
+        key={`${searchQuery}-${exact}`}
+        searchQuery={searchQuery}
         exact={exact}
       />
     </>

@@ -42,7 +42,7 @@ const App = () => {
             path="/player/:player_id/:char_short?/:count?/:offset?"
             element={<Player />}
           />
-          <Route path="/search/:search_string/:exact?" element={<Search />} />
+          <Route path="/search" element={<Search />} />
           <Route path="/stats" element={<Stats />} />
           <Route path="/popularity" element={<Popularity />} />
           <Route path="/matchup" element={<Matchup />} />

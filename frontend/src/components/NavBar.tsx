@@ -20,7 +20,8 @@ import {
   useEffect,
   useState,
 } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useSearchNavigation } from "../hooks/useSearchNavigation";
 import { JSONParse } from "../utils/JSONParse";
 import { StorageUtils } from "../utils/Storage";
 
@@ -47,7 +48,7 @@ function resetCharacters() {
 }
 
 function NavBar() {
-  const navigate = useNavigate();
+  const navigateToSearch = useSearchNavigation();
 
   const [anchorElNav, setAnchorElNav] = useState<HTMLElement | null>(null);
 
@@ -55,7 +56,7 @@ function NavBar() {
     null,
   );
 
-  const [searchString, setSearchString] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
 
@@ -66,21 +67,21 @@ function NavBar() {
   const handleSearchChange = (event: {
     target: { value: SetStateAction<string> };
   }) => {
-    setSearchString(event.target.value);
+    setSearchQuery(event.target.value);
   };
 
   const handleSearchKeyDown = (event: { key: string }) => {
     if (event.key === "Enter") {
-      navigate(`/search/${searchString}`);
+      navigateToSearch(searchQuery, false);
     }
   };
 
   const handleSearchClick = () => {
-    navigate(`/search/${searchString}`);
+    navigateToSearch(searchQuery, false);
   };
 
   const handleExactSearchClick = () => {
-    navigate(`/search/${searchString}/exact`);
+    navigateToSearch(searchQuery, true);
   };
 
   useEffect(() => {
@@ -251,7 +252,7 @@ function NavBar() {
                 variant="outlined"
                 label="Search..."
                 style={{ marginTop: 10 }}
-                value={searchString}
+                value={searchQuery}
                 onChange={handleSearchChange}
                 onKeyDown={handleSearchKeyDown}
               />
@@ -363,7 +364,7 @@ function NavBar() {
                 variant="outlined"
                 label="Search..."
                 style={{ marginTop: 10 }}
-                value={searchString}
+                value={searchQuery}
                 onChange={handleSearchChange}
                 onKeyDown={handleSearchKeyDown}
               />
