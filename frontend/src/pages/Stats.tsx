@@ -9,87 +9,40 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Suspense, use, useEffect, useState } from "react";
 import type { StatsResponse } from "../interfaces/API";
 import { JSONParse } from "../utils/JSONParse";
 import { Utils } from "./../utils/Utils";
 
-const Stats = () => {
-  const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
+const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
 
-  const _navigate = useNavigate();
+function fetchStats(): Promise<StatsResponse | undefined> {
+  return fetch(`${API_ENDPOINT}/stats`)
+    .then((res) => res.text())
+    .then((body) => JSONParse(body) as StatsResponse)
+    .catch(() => undefined);
+}
 
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<StatsResponse>();
-  const [health, setHealth] = useState<string>("");
+function fetchHealth(): Promise<string> {
+  return fetch(`${API_ENDPOINT}/health`)
+    .then(async (res) => {
+      if (res.ok) return await res.text();
+      return `Error! ${await res.text()}`;
+    })
+    .catch(() => "");
+}
 
-  useEffect(() => {
-    document.title = "Stats | Puddle Farm";
-    window.scrollTo(0, 0);
+const StatsTables = ({
+  data,
+}: {
+  data: Promise<StatsResponse | undefined>;
+}) => {
+  const stats = use(data);
 
-    const fetchResults = async () => {
-      setLoading(true);
-      try {
-        const url = `${API_ENDPOINT}/stats`;
-        const response = await fetch(url);
-
-        const _result = await response.text().then((body) => {
-          const parsed = JSONParse(body);
-
-          setStats(parsed);
-
-          return parsed;
-        });
-
-        setLoading(false);
-
-        const health_url = `${API_ENDPOINT}/health`;
-
-        const health_response = await fetch(health_url);
-
-        if (health_response.status === 200) {
-          const result = await health_response.text().then((body) => {
-            return body;
-          });
-
-          setHealth(result);
-        } else if (health_response.status === 500) {
-          const result = await health_response.text().then((body) => {
-            return body;
-          });
-
-          setHealth(`Error! ${result}`);
-        }
-      } catch (error) {
-        console.error("Error fetching player data:", error);
-      }
-    };
-
-    fetchResults();
-  }, []);
+  if (!stats) return null;
 
   return (
     <>
-      <AppBar
-        position="static"
-        style={{ backgroundImage: "none" }}
-        sx={{ backgroundColor: "secondary.main" }}
-      >
-        {loading ? (
-          <CircularProgress
-            size={60}
-            variant="indeterminate"
-            disableShrink={true}
-            sx={{ position: "absolute", top: "-1px", color: "white" }}
-          />
-        ) : null}
-        <Box sx={{ minHeight: 100, paddingTop: "30px" }}>
-          <Typography align="center" variant="pageHeader">
-            Stats
-          </Typography>
-        </Box>
-      </AppBar>
       <Box sx={{ m: 4, maxWidth: "700px" }}>
         <Typography sx={{ my: 3 }} variant="h5">
           Players
@@ -107,38 +60,22 @@ const Stats = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {stats ? (
-                <TableRow>
-                  <TableCell>
-                    {Utils.formatUTCToLocal(stats.timestamp)}
-                  </TableCell>
-                  <TableCell>
-                    {stats.total_players
-                      .toString()
-                      .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  </TableCell>
-                  <TableCell>
-                    {stats.one_month_players
-                      .toString()
-                      .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  </TableCell>
-                  <TableCell>
-                    {stats.one_week_players
-                      .toString()
-                      .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  </TableCell>
-                  <TableCell>
-                    {stats.one_day_players
-                      .toString()
-                      .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  </TableCell>
-                  <TableCell>
-                    {stats.one_hour_players
-                      .toString()
-                      .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  </TableCell>
-                </TableRow>
-              ) : null}
+              <TableRow>
+                <TableCell>{Utils.formatUTCToLocal(stats.timestamp)}</TableCell>
+                <TableCell>{Utils.formatNumber(stats.total_players)}</TableCell>
+                <TableCell>
+                  {Utils.formatNumber(stats.one_month_players)}
+                </TableCell>
+                <TableCell>
+                  {Utils.formatNumber(stats.one_week_players)}
+                </TableCell>
+                <TableCell>
+                  {Utils.formatNumber(stats.one_day_players)}
+                </TableCell>
+                <TableCell>
+                  {Utils.formatNumber(stats.one_hour_players)}
+                </TableCell>
+              </TableRow>
             </TableBody>
           </Table>
         </TableContainer>
@@ -160,38 +97,20 @@ const Stats = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {stats ? (
-                <TableRow>
-                  <TableCell>
-                    {Utils.formatUTCToLocal(stats.timestamp)}
-                  </TableCell>
-                  <TableCell>
-                    {stats.total_games
-                      .toString()
-                      .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  </TableCell>
-                  <TableCell>
-                    {stats.one_month_games
-                      .toString()
-                      .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  </TableCell>
-                  <TableCell>
-                    {stats.one_week_games
-                      .toString()
-                      .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  </TableCell>
-                  <TableCell>
-                    {stats.one_day_games
-                      .toString()
-                      .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  </TableCell>
-                  <TableCell>
-                    {stats.one_hour_games
-                      .toString()
-                      .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                  </TableCell>
-                </TableRow>
-              ) : null}
+              <TableRow>
+                <TableCell>{Utils.formatUTCToLocal(stats.timestamp)}</TableCell>
+                <TableCell>{Utils.formatNumber(stats.total_games)}</TableCell>
+                <TableCell>
+                  {Utils.formatNumber(stats.one_month_games)}
+                </TableCell>
+                <TableCell>
+                  {Utils.formatNumber(stats.one_week_games)}
+                </TableCell>
+                <TableCell>{Utils.formatNumber(stats.one_day_games)}</TableCell>
+                <TableCell>
+                  {Utils.formatNumber(stats.one_hour_games)}
+                </TableCell>
+              </TableRow>
             </TableBody>
           </Table>
         </TableContainer>
@@ -199,13 +118,61 @@ const Stats = () => {
           Statistics are updated once an hour.
         </Typography>
       </Box>
+    </>
+  );
+};
+
+const HealthDisplay = ({ data }: { data: Promise<string> }) => {
+  const health = use(data);
+
+  if (!health) return null;
+
+  return (
+    <>
+      <Box component="span">Health: </Box>
+      <Box component="span">{health}</Box>
+    </>
+  );
+};
+
+const Stats = () => {
+  const [statsPromise] = useState(() => fetchStats());
+  const [healthPromise] = useState(() => fetchHealth());
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  return (
+    <>
+      <title>Stats | Puddle Farm</title>
+      <AppBar
+        position="static"
+        style={{ backgroundImage: "none" }}
+        sx={{ backgroundColor: "secondary.main" }}
+      >
+        <Box sx={{ minHeight: 100, paddingTop: "30px" }}>
+          <Typography align="center" variant="pageHeader">
+            Stats
+          </Typography>
+        </Box>
+      </AppBar>
+      <Suspense
+        fallback={
+          <CircularProgress
+            size={60}
+            variant="indeterminate"
+            disableShrink={true}
+            sx={{ position: "absolute", top: "-1px", color: "white" }}
+          />
+        }
+      >
+        <StatsTables data={statsPromise} />
+      </Suspense>
       <Box sx={{ m: 4 }}>
-        {health ? (
-          <>
-            <Box component="span">Health: </Box>
-            <Box component="span">{health}</Box>
-          </>
-        ) : null}
+        <Suspense fallback={null}>
+          <HealthDisplay data={healthPromise} />
+        </Suspense>
       </Box>
     </>
   );
