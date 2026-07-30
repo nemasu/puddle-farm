@@ -2,8 +2,10 @@ import type React from "react";
 import { startTransition, use, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { NotFoundError } from "../errors/NotFoundError";
-import type { PlayerRankResponse } from "../interfaces/API";
+import type { PlayerRankResponse, RankResponse } from "../interfaces/API";
 import { JSONParse } from "../utils/JSONParse";
+import type { EpochMs } from "../utils/time";
+import { parseUtcTimestamp } from "../utils/time";
 
 export interface RankingTag {
   tag: string;
@@ -12,6 +14,11 @@ export interface RankingTag {
 
 export interface RankingEntry extends Omit<PlayerRankResponse, "tags"> {
   tags: RankingTag[];
+}
+
+export interface RankingFetchResult {
+  ranks: RankingEntry[];
+  lastUpdateMs: EpochMs | null;
 }
 
 export interface UseRankingConfig {
@@ -23,7 +30,7 @@ export async function fetchRanking(
   config: Pick<UseRankingConfig, "buildFetchUrl">,
   count: number,
   offset: number,
-): Promise<RankingEntry[]> {
+): Promise<RankingFetchResult> {
   const url = config.buildFetchUrl(count, offset);
   const response = await fetch(url);
 
@@ -37,19 +44,21 @@ export async function fetchRanking(
   }
 
   const body = await response.text();
-  const parsed = JSONParse(body) as {
-    ranks: (Omit<PlayerRankResponse, "tags"> & {
-      tags: { tag: string; style: string }[];
-    })[];
-  };
+  const parsed = JSONParse(body) as RankResponse;
 
-  return parsed.ranks.map((entry) => ({
-    ...entry,
-    tags: entry.tags.map((tag) => ({
-      tag: tag.tag,
-      style: JSON.parse(tag.style) as React.CSSProperties,
+  return {
+    ranks: parsed.ranks.map((entry) => ({
+      ...entry,
+      tags: entry.tags.map((tag) => ({
+        tag: tag.tag,
+        style: JSON.parse(tag.style) as React.CSSProperties,
+      })),
     })),
-  }));
+    lastUpdateMs:
+      parsed.last_update !== null
+        ? parseUtcTimestamp(parsed.last_update)
+        : null,
+  };
 }
 
 const DEFAULT_COUNT = 100;
@@ -65,14 +74,14 @@ function parseCountOffset(
 
 export function useRankingPromise(
   config: Pick<UseRankingConfig, "buildFetchUrl">,
-): Promise<RankingEntry[]> {
+): Promise<RankingFetchResult> {
   const { count, offset } = useParams();
   const [parsedCount, parsedOffset] = parseCountOffset(count, offset);
   const cacheKey = config.buildFetchUrl(parsedCount, parsedOffset);
 
   const cacheRef = useRef<{
     key: string;
-    promise: Promise<RankingEntry[]>;
+    promise: Promise<RankingFetchResult>;
   } | null>(null);
 
   if (!cacheRef.current || cacheRef.current.key !== cacheKey) {
@@ -129,6 +138,7 @@ export function computeGoToPage(
 
 export interface UseRankingResult {
   ranking: RankingEntry[];
+  lastUpdateMs: EpochMs | null;
   showNext: boolean;
   pageInput: string;
   setPageInput: (value: string) => void;
@@ -139,14 +149,13 @@ export interface UseRankingResult {
 
 export function useRanking(
   config: UseRankingConfig,
-  rankingPromise: Promise<RankingEntry[]>,
+  rankingPromise: Promise<RankingFetchResult>,
 ): UseRankingResult {
   const navigate = useNavigate();
   const { count, offset } = useParams();
   const [parsedCount, parsedOffset] = parseCountOffset(count, offset);
   const cacheKey = config.buildFetchUrl(parsedCount, parsedOffset);
-
-  const ranking = use(rankingPromise);
+  const { ranks: ranking, lastUpdateMs } = use(rankingPromise);
 
   const [pageInput, setPageInput] = useState(() =>
     computePageInput(parsedCount, parsedOffset),
@@ -192,6 +201,7 @@ export function useRanking(
 
   return {
     ranking,
+    lastUpdateMs,
     showNext,
     pageInput,
     setPageInput,

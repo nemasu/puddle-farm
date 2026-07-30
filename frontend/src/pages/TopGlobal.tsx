@@ -15,20 +15,23 @@ import { Suspense } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { Tag } from "./../components/Tag";
-import type { RankingEntry } from "../hooks/useRanking";
+import { UpdateCountdown } from "../components/UpdateCountdown";
+import type { RankingFetchResult } from "../hooks/useRanking";
 import {
   useTopGlobalRanking,
   useTopGlobalRankingPromise,
 } from "../hooks/useTopGlobalRanking";
+import { ONE_DAY_MS } from "../utils/time";
 import { Utils } from "../utils/Utils";
 
 const TopGlobalTable = ({
   rankingPromise,
 }: {
-  rankingPromise: Promise<RankingEntry[]>;
+  rankingPromise: Promise<RankingFetchResult>;
 }) => {
   const {
     ranking,
+    lastUpdateMs,
     showNext,
     pageInput,
     setPageInput,
@@ -39,6 +42,9 @@ const TopGlobalTable = ({
 
   return (
     <Box sx={{ m: 3 }}>
+      {lastUpdateMs !== null && (
+        <UpdateCountdown lastUpdateMs={lastUpdateMs} intervalMs={ONE_DAY_MS} />
+      )}
       <Box sx={{ display: "inline-block", mb: 2 }}>
         <Button onClick={onPrev}>Prev</Button>
         <Button style={showNext ? {} : { display: "none" }} onClick={onNext}>

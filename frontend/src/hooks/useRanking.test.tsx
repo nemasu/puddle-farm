@@ -49,6 +49,7 @@ describe("fetchRanking", () => {
                   tags: [{ tag: "Champ", style: '{"color":"red"}' }],
                 },
               ],
+              last_update: "2026-01-01 00:00:00",
             }),
           ),
       }),
@@ -56,24 +57,42 @@ describe("fetchRanking", () => {
 
     const result = await fetchRanking(config, 100, 0);
 
-    expect(result).toHaveLength(1);
-    expect(result[0].name).toBe("Alice");
-    expect(result[0].tags[0].style).toEqual({ color: "red" });
+    expect(result.ranks).toHaveLength(1);
+    expect(result.ranks[0].name).toBe("Alice");
+    expect(result.ranks[0].tags[0].style).toEqual({ color: "red" });
+    expect(result.lastUpdateMs).toBe(Date.parse("2026-01-01T00:00:00.000Z"));
   });
 
-  test("returns an empty array when ranks is empty", async () => {
+  test("returns an empty ranks array when ranks is empty", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
         status: 200,
         ok: true,
-        text: () => Promise.resolve(JSON.stringify({ ranks: [] })),
+        text: () =>
+          Promise.resolve(JSON.stringify({ ranks: [], last_update: null })),
       }),
     );
 
     const result = await fetchRanking(config, 100, 0);
 
-    expect(result).toEqual([]);
+    expect(result.ranks).toEqual([]);
+  });
+
+  test("returns null lastUpdateMs when the response has a null last_update", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        status: 200,
+        ok: true,
+        text: () =>
+          Promise.resolve(JSON.stringify({ ranks: [], last_update: null })),
+      }),
+    );
+
+    const result = await fetchRanking(config, 100, 0);
+
+    expect(result.lastUpdateMs).toBeNull();
   });
 
   test("throws NotFoundError on a 404 response", async () => {
@@ -120,7 +139,8 @@ function stubFetchResolvedWithEmptyRanks() {
     vi.fn().mockResolvedValue({
       status: 200,
       ok: true,
-      text: () => Promise.resolve(JSON.stringify({ ranks: [] })),
+      text: () =>
+        Promise.resolve(JSON.stringify({ ranks: [], last_update: null })),
     }),
   );
 }
@@ -135,7 +155,8 @@ describe("useRankingPromise", () => {
     const fetchMock = vi.fn().mockResolvedValue({
       status: 200,
       ok: true,
-      text: () => Promise.resolve(JSON.stringify({ ranks: [] })),
+      text: () =>
+        Promise.resolve(JSON.stringify({ ranks: [], last_update: null })),
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -159,7 +180,8 @@ describe("useRankingPromise", () => {
     const fetchMock = vi.fn().mockResolvedValue({
       status: 200,
       ok: true,
-      text: () => Promise.resolve(JSON.stringify({ ranks: [] })),
+      text: () =>
+        Promise.resolve(JSON.stringify({ ranks: [], last_update: null })),
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -185,7 +207,8 @@ describe("useRankingPromise", () => {
     const fetchMock = vi.fn().mockResolvedValue({
       status: 200,
       ok: true,
-      text: () => Promise.resolve(JSON.stringify({ ranks: [] })),
+      text: () =>
+        Promise.resolve(JSON.stringify({ ranks: [], last_update: null })),
     });
     vi.stubGlobal("fetch", fetchMock);
 

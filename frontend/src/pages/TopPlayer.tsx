@@ -15,21 +15,24 @@ import { Suspense } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { Tag } from "./../components/Tag";
+import { UpdateCountdown } from "../components/UpdateCountdown";
 import { useCharacterNames } from "../hooks/useCharacterNames";
-import type { RankingEntry } from "../hooks/useRanking";
+import type { RankingFetchResult } from "../hooks/useRanking";
 import {
   useTopPlayerRanking,
   useTopPlayerRankingPromise,
 } from "../hooks/useTopPlayerRanking";
+import { ONE_DAY_MS } from "../utils/time";
 import { Utils } from "../utils/Utils";
 
 const TopPlayerTable = ({
   rankingPromise,
 }: {
-  rankingPromise: Promise<RankingEntry[]>;
+  rankingPromise: Promise<RankingFetchResult>;
 }) => {
   const {
     ranking,
+    lastUpdateMs,
     showNext,
     pageInput,
     setPageInput,
@@ -40,6 +43,9 @@ const TopPlayerTable = ({
 
   return (
     <Box sx={{ m: 4 }}>
+      {lastUpdateMs !== null && (
+        <UpdateCountdown lastUpdateMs={lastUpdateMs} intervalMs={ONE_DAY_MS} />
+      )}
       <Box sx={{ mx: 3, display: "inline-block", mb: 2 }}>
         <Button onClick={onPrev}>Prev</Button>
         <Button style={showNext ? {} : { display: "none" }} onClick={onNext}>

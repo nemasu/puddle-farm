@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import type {
-  RankingEntry,
+  RankingFetchResult,
   UseRankingConfig,
   UseRankingResult,
 } from "./useRanking";
@@ -16,13 +16,13 @@ function buildConfig(char_short: string | undefined): UseRankingConfig {
   };
 }
 
-export function useTopPlayerRankingPromise(): Promise<RankingEntry[]> {
+export function useTopPlayerRankingPromise(): Promise<RankingFetchResult> {
   const { char_short } = useParams();
   return useRankingPromise(buildConfig(char_short));
 }
 
 export function useTopPlayerRanking(
-  rankingPromise: Promise<RankingEntry[]>,
+  rankingPromise: Promise<RankingFetchResult>,
 ): UseRankingResult {
   const { char_short } = useParams();
   return useRanking(buildConfig(char_short), rankingPromise);
