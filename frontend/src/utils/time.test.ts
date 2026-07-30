@@ -8,10 +8,8 @@ describe("parseUtcTimestamp", () => {
     expect(ms).toBe(Date.parse("2026-01-01T00:00:00.000Z"));
   });
 
-  test("throws on an invalid timestamp string", () => {
-    expect(() => parseUtcTimestamp("not-a-date")).toThrow(
-      'invalid UTC timestamp "not-a-date"',
-    );
+  test("returns null for an invalid timestamp string", () => {
+    expect(parseUtcTimestamp("not-a-date")).toBeNull();
   });
 });
 

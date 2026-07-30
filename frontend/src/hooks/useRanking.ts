@@ -55,9 +55,7 @@ export async function fetchRanking(
       })),
     })),
     lastUpdateMs:
-      parsed.last_update !== null
-        ? parseUtcTimestamp(parsed.last_update)
-        : null,
+      parsed.last_update != null ? parseUtcTimestamp(parsed.last_update) : null,
   };
 }
 

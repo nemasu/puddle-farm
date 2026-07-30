@@ -95,6 +95,39 @@ describe("fetchRanking", () => {
     expect(result.lastUpdateMs).toBeNull();
   });
 
+  test("returns null lastUpdateMs when last_update is absent from the response", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        status: 200,
+        ok: true,
+        text: () => Promise.resolve(JSON.stringify({ ranks: [] })),
+      }),
+    );
+
+    const result = await fetchRanking(config, 100, 0);
+
+    expect(result.lastUpdateMs).toBeNull();
+  });
+
+  test("returns null lastUpdateMs instead of rejecting when last_update is malformed", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        status: 200,
+        ok: true,
+        text: () =>
+          Promise.resolve(
+            JSON.stringify({ ranks: [], last_update: "not-a-date" }),
+          ),
+      }),
+    );
+
+    const result = await fetchRanking(config, 100, 0);
+
+    expect(result.lastUpdateMs).toBeNull();
+  });
+
   test("throws NotFoundError on a 404 response", async () => {
     vi.stubGlobal(
       "fetch",

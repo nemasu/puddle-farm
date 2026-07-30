@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import type { DurationMs } from "../utils/time";
+import type { DurationMs, EpochMs } from "../utils/time";
 import { ONE_DAY_MS, parseUtcTimestamp } from "../utils/time";
 import { UpdateCountdown } from "./UpdateCountdown";
 
@@ -17,7 +17,7 @@ describe("UpdateCountdown", () => {
   test("shows the remaining time before the window elapses", () => {
     render(
       <UpdateCountdown
-        lastUpdateMs={parseUtcTimestamp("2025-12-31 00:00:01")}
+        lastUpdateMs={parseUtcTimestamp("2025-12-31 00:00:01") as EpochMs}
         intervalMs={ONE_DAY_MS}
       />,
     );
@@ -27,7 +27,7 @@ describe("UpdateCountdown", () => {
   test('shows "Updating..." once the window has elapsed', () => {
     render(
       <UpdateCountdown
-        lastUpdateMs={parseUtcTimestamp("2025-12-30 00:00:00")}
+        lastUpdateMs={parseUtcTimestamp("2025-12-30 00:00:00") as EpochMs}
         intervalMs={ONE_DAY_MS}
       />,
     );
@@ -37,7 +37,7 @@ describe("UpdateCountdown", () => {
   test("respects a different interval, e.g. a 1-hour window", () => {
     render(
       <UpdateCountdown
-        lastUpdateMs={parseUtcTimestamp("2025-12-31 23:00:01")}
+        lastUpdateMs={parseUtcTimestamp("2025-12-31 23:00:01") as EpochMs}
         intervalMs={3600_000 as DurationMs}
       />,
     );

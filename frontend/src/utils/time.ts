@@ -7,10 +7,7 @@ export function addDuration(epoch: EpochMs, duration: DurationMs): EpochMs {
   return (epoch + duration) as EpochMs;
 }
 
-export function parseUtcTimestamp(dateTimeString: string): EpochMs {
+export function parseUtcTimestamp(dateTimeString: string): EpochMs | null {
   const ms = new Date(`${dateTimeString}Z`).getTime();
-  if (Number.isNaN(ms)) {
-    throw new Error(`invalid UTC timestamp "${dateTimeString}"`);
-  }
-  return ms as EpochMs;
+  return Number.isNaN(ms) ? null : (ms as EpochMs);
 }
