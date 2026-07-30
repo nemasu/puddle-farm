@@ -37,12 +37,12 @@ describe("buildSearchPath", () => {
       input: "ソル",
       expected: "/search?q=%E3%82%BD%E3%83%AB",
     },
-  ])("encodes special characters in the search string: $label", ({
-    input,
-    expected,
-  }) => {
-    expect(buildSearchPath(input, false)).toBe(expected);
-  });
+  ])(
+    "encodes special characters in the search string: $label",
+    ({ input, expected }) => {
+      expect(buildSearchPath(input, false)).toBe(expected);
+    },
+  );
 
   test("regression: a literal 'exact' search string is not mistaken for the exact flag", () => {
     expect(buildSearchPath("exact", false)).toBe("/search?q=exact");

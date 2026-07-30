@@ -7,6 +7,7 @@ import { Box, Button, CssBaseline, Link, Typography } from "@mui/material";
 import { Route, Routes } from "react-router-dom";
 import NavBar from "./components/NavBar";
 import ThemeManager from "./components/ThemeManager";
+import { CharacterNamesProvider } from "./hooks/useCharacterNames";
 import DiscordIcon from "./images/discord-mark-white.svg?react";
 import GitHubIcon from "./images/github-mark-white.svg?react";
 import PatreonIcon from "./images/patreon-mark-white.svg?react";
@@ -26,32 +27,37 @@ import TopPlayer from "./pages/TopPlayer";
 const App = () => {
   return (
     <ThemeManager>
-      <CssBaseline enableColorScheme />
-      <NavBar />
-      <Box sx={{ display: "block" }}>
-        <Routes>
-          <Route path="/" element={<Legend />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/top_global/:count?/:offset?" element={<TopGlobal />} />
-          <Route
-            path="/top/:char_short/:count?/:offset?"
-            element={<TopPlayer />}
-          />
-          <Route
-            path="/player/:player_id/:char_short?/:count?/:offset?"
-            element={<Player />}
-          />
-          <Route path="/search" element={<Search />} />
-          <Route path="/stats" element={<Stats />} />
-          <Route path="/popularity" element={<Popularity />} />
-          <Route path="/matchup" element={<Matchup />} />
-          <Route path="/distribution" element={<Distribution />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/legend" element={<Legend />} />
-          <Route path="*" element={<Legend />} />
-        </Routes>
-      </Box>
+      <CharacterNamesProvider>
+        <CssBaseline enableColorScheme />
+        <NavBar />
+        <Box sx={{ display: "block" }}>
+          <Routes>
+            <Route path="/" element={<Legend />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route
+              path="/top_global/:count?/:offset?"
+              element={<TopGlobal />}
+            />
+            <Route
+              path="/top/:char_short/:count?/:offset?"
+              element={<TopPlayer />}
+            />
+            <Route
+              path="/player/:player_id/:char_short?/:count?/:offset?"
+              element={<Player />}
+            />
+            <Route path="/search" element={<Search />} />
+            <Route path="/stats" element={<Stats />} />
+            <Route path="/popularity" element={<Popularity />} />
+            <Route path="/matchup" element={<Matchup />} />
+            <Route path="/distribution" element={<Distribution />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/legend" element={<Legend />} />
+            <Route path="*" element={<Legend />} />
+          </Routes>
+        </Box>
+      </CharacterNamesProvider>
       <Box
         sx={{
           display: "block",
