@@ -151,7 +151,14 @@ const Stats = () => {
         style={{ backgroundImage: "none" }}
         sx={{ backgroundColor: "secondary.main" }}
       >
-        <Box sx={{ minHeight: 100, paddingTop: "30px" }}>
+        <Box
+          sx={{
+            minHeight: 100,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <Typography align="center" variant="pageHeader">
             Stats
           </Typography>

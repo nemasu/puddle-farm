@@ -183,7 +183,14 @@ const TopGlobal = () => {
             sx={{ position: "absolute", top: "-1px", color: "white" }}
           />
         ) : null}
-        <Box sx={{ minHeight: 100, paddingTop: "30px" }}>
+        <Box
+          sx={{
+            minHeight: 100,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           <Typography align="center" variant="pageHeader">
             Top Players
           </Typography>
@@ -202,7 +209,7 @@ const TopGlobal = () => {
               : "Updating..."}
           </Typography>
         )}
-        <Box sx={{ display: "inline-block" }}>
+        <Box sx={{ display: "inline-block", mb: 2 }}>
           <Button onClick={(event) => onPrev(event)}>Prev</Button>
           <Button
             style={showNext ? {} : { display: "none" }}
@@ -240,6 +247,7 @@ const TopGlobal = () => {
                   <TableCell>
                     <Button
                       component={Link}
+                      sx={{ justifyContent: "flex-start", minWidth: "auto" }}
                       to={`/player/${player.id}/${player.char_short}`}
                     >
                       {player.name}
@@ -279,7 +287,7 @@ const TopGlobal = () => {
             </TableBody>
           </Table>
         </TableContainer>
-        <Box sx={{ display: "inline-block" }}>
+        <Box sx={{ display: "inline-block", mt: 2 }}>
           <Button onClick={(event) => onPrev(event)}>Prev</Button>
           <Button
             style={showNext ? {} : { display: "none" }}

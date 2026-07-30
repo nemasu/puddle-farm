@@ -79,8 +79,6 @@ function createCharacterTheme(config: CharacterThemeConfig): Theme {
                   padding: "8px 10px",
                   display: "inline-block",
                   marginLeft: "8px",
-                  top: "-4px",
-                  position: "relative",
                 },
               },
               {
@@ -94,8 +92,7 @@ function createCharacterTheme(config: CharacterThemeConfig): Theme {
                   padding: "8px 10px",
                   display: "inline-block",
                   marginLeft: "8px",
-                  top: "-4px",
-                  position: "relative",
+                  verticalAlign: "middle",
                 },
               },
               {
@@ -109,8 +106,6 @@ function createCharacterTheme(config: CharacterThemeConfig): Theme {
                   padding: "8px 10px",
                   display: "inline-block",
                   marginLeft: "8px",
-                  top: "-4px",
-                  position: "relative",
                 },
               },
             ],
