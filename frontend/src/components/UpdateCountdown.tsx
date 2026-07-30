@@ -14,7 +14,7 @@ export const UpdateCountdown = ({
   const { secondsLeft } = useCountdown(addDuration(lastUpdateMs, intervalMs));
 
   return (
-    <Typography align="left" sx={{ mb: 1 }}>
+    <Typography align="left" sx={{ mb: 2 }}>
       {secondsLeft > 0
         ? `Next update in: ${Utils.formatCountdown(secondsLeft)}`
         : "Updating..."}
