@@ -63,6 +63,7 @@ pub struct PlayerStatsRequest {
     int3: i64,
     int4: i64,
     int5: i64,
+    int6: i64,
 }
 
 pub fn generate_player_stats_request(player_id: String) -> Request<PlayerStatsRequest> {
@@ -78,9 +79,10 @@ pub fn generate_player_stats_request(player_id: String) -> Request<PlayerStatsRe
             player_id: player_id,
             int1: 7,
             int2: -1,
-            int3: 1,
+            int3: -1,
             int4: -1,
             int5: -1,
+            int6: 1,
         },
     }
 }
