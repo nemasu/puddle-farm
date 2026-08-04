@@ -54,6 +54,25 @@ diesel --database-url "${DATABASE_URL}" migration run
 
 `cargo run pull` will run the timed jobs continuously: grab replay, update ratings, update ranking, update redis, etc.
 
+#### Development database (Docker, optional)
+
+Requires [Docker](https://www.docker.com/) with Compose. If you don't want to
+install Postgres/Redis locally, `docker/docker-compose.dev.yml` provides both,
+plus a disposable `diesel_cli` container for running migrations (useful on
+Windows, where linking `diesel_cli` against `libpq` can be a hassle):
+
+```
+docker compose -p puddle-farm-dev -f docker/docker-compose.dev.yml up -d postgres redis
+docker compose -p puddle-farm-dev -f docker/docker-compose.dev.yml run --rm diesel migration run
+```
+
+Or use `scripts/seed/reset.sh` to do both from scratch (drops any existing
+data/volumes first).
+
+To populate the database with dummy data (players, ratings, matches, rankings)
+so the frontend has something to render without running `cargo run pull`, see
+`scripts/seed/README.md`.
+
 `cargo run hourly` runs the hourly jobs once, then exits.
 
 To generate a new model.rs:
