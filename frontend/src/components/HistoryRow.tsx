@@ -20,6 +20,16 @@ import type { GroupedMatch, MatchWithRating } from "../interfaces/Player";
 import { Utils } from "../utils/Utils";
 import { Tag } from "./Tag";
 
+function isByeMatch(item: { opponent_id: string }): boolean {
+  return item.opponent_id === "0";
+}
+
+function formatRatingChange(ratingChange: string | undefined): string {
+  const sign =
+    ratingChange !== undefined && parseFloat(ratingChange) > 0 ? "+" : "";
+  return `${sign}${ratingChange}`;
+}
+
 function MatchDetailTable({ matches }: { matches: MatchWithRating[] }) {
   return (
     <Table size="small">
@@ -35,7 +45,7 @@ function MatchDetailTable({ matches }: { matches: MatchWithRating[] }) {
       <TableBody>
         {matches.map((item) => (
           <TableRow key={item.timestamp}>
-            {item.opponent_id === "0" ? (
+            {isByeMatch(item) ? (
               <>
                 <TableCell component="th" scope="row">
                   {Utils.formatUTCToLocal(item.timestamp)}
@@ -46,11 +56,7 @@ function MatchDetailTable({ matches }: { matches: MatchWithRating[] }) {
                   {item.result_win ? "Y" : "N"}
                 </TableCell>
                 <TableCell align="right">
-                  {item.ratingChange !== undefined &&
-                  parseFloat(item.ratingChange) > 0
-                    ? "+"
-                    : ""}
-                  {item.ratingChange}
+                  {formatRatingChange(item.ratingChange)}
                 </TableCell>
               </>
             ) : (
@@ -68,11 +74,7 @@ function MatchDetailTable({ matches }: { matches: MatchWithRating[] }) {
                   {item.result_win ? "Y" : "N"}
                 </TableCell>
                 <TableCell align="right">
-                  {item.ratingChange !== undefined &&
-                  parseFloat(item.ratingChange) > 0
-                    ? "+"
-                    : ""}
-                  {item.ratingChange}
+                  {formatRatingChange(item.ratingChange)}
                 </TableCell>
               </>
             )}
@@ -109,7 +111,7 @@ function HistoryRow(props: {
       <TableContainer component={Paper}>
         <Table size="small">
           <TableBody>
-            {item.opponent_id === "0" ? (
+            {isByeMatch(item) ? (
               <>
                 <TableRow>
                   <TableCell sx={{ pb: 0, mb: 0 }}>
@@ -259,7 +261,7 @@ function HistoryRow(props: {
               {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
             </IconButton>
           </TableCell>
-          {item.opponent_id === "0" ? (
+          {isByeMatch(item) ? (
             <>
               <TableCell component="th" scope="row">
                 {Utils.formatUTCToLocal(item.timestamp)}
