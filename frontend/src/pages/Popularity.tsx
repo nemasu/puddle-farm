@@ -8,13 +8,121 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   Typography,
 } from "@mui/material";
-import { Suspense, use, useState } from "react";
-import type { PopularityResult } from "../interfaces/API";
+import { Suspense, use, useMemo, useState } from "react";
+import { usePopularityPromise } from "../hooks/usePopularity";
+import type { PopularityResult, PopularityResultChar } from "../interfaces/API";
 import { Utils } from "./../utils/Utils";
 
-const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
+export type SortColumn = "character" | "popularity";
+export type SortState =
+  | { column: "character"; direction: "reversed" }
+  | { column: "popularity"; direction: "asc" | "desc" }
+  | null;
+
+export function nextSortState(
+  current: SortState,
+  clicked: SortColumn,
+): SortState {
+  if (clicked === "character") {
+    return current?.column === "character"
+      ? null
+      : { column: "character", direction: "reversed" };
+  }
+  if (current === null || current.column !== "popularity") {
+    return { column: "popularity", direction: "desc" };
+  }
+  return current.direction === "desc"
+    ? { column: "popularity", direction: "asc" }
+    : null;
+}
+
+export function sortPopularityData<T extends { name: string; value: number }>(
+  items: T[],
+  sortState: SortState,
+): T[] {
+  if (sortState === null) {
+    return items;
+  }
+  if (sortState.column === "character") {
+    return [...items].reverse();
+  }
+  const sorted = [...items].sort((a, b) => a.value - b.value);
+  return sortState.direction === "asc" ? sorted : sorted.reverse();
+}
+
+const PopularityTable = ({
+  data,
+  percentage,
+}: {
+  data: PopularityResultChar[];
+  percentage: (value: number) => number;
+}) => {
+  const [sortState, setSortState] = useState<SortState>(null);
+
+  const sorted = useMemo(
+    () => sortPopularityData(data, sortState),
+    [data, sortState],
+  );
+
+  return (
+    <TableContainer component={Paper} sx={{ maxWidth: 400, marginBottom: 4 }}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>
+              <TableSortLabel
+                active={sortState?.column === "character"}
+                direction={sortState?.column === "character" ? "desc" : "asc"}
+                onClick={() =>
+                  setSortState(nextSortState(sortState, "character"))
+                }
+              >
+                Character
+              </TableSortLabel>
+            </TableCell>
+            <TableCell>
+              <TableSortLabel
+                active={sortState?.column === "popularity"}
+                direction={
+                  sortState?.column === "popularity"
+                    ? sortState.direction
+                    : "desc"
+                }
+                onClick={() =>
+                  setSortState(nextSortState(sortState, "popularity"))
+                }
+              >
+                Popularity
+              </TableSortLabel>
+            </TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {sorted.map((e) => (
+            <TableRow key={e.name}>
+              <TableCell
+                component="th"
+                scope="row"
+                sx={{
+                  position: "sticky",
+                  left: 0,
+                  background: "black",
+                  zIndex: 1,
+                }}
+              >
+                {e.name}
+              </TableCell>
+              <TableCell>{percentage(e.value).toFixed(2)}%</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+};
 
 const PopularityContent = ({
   data,
@@ -43,49 +151,12 @@ const PopularityContent = ({
             It adds up to over 100% because players can use multiple characters.
           </Typography>
         </Box>
-        <Box sx={{ display: "flex", flexWrap: "wrap" }}>
-          {popularity?.per_player
-            .reduce<Array<typeof popularity.per_player>>((acc, e, index) => {
-              const groupIndex = Math.floor(index / 10);
-              if (!acc[groupIndex]) {
-                acc[groupIndex] = [];
-              }
-              acc[groupIndex].push(e);
-              return acc;
-            }, [])
-            .map((group, groupIndex) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: synthetic group index, no stable id
-              <Box key={groupIndex} sx={{ width: "300px" }}>
-                <TableContainer
-                  component={Paper}
-                  sx={{ marginBottom: 4, marginRight: 2 }}
-                >
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Character</TableCell>
-                        <TableCell>Popularity</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {group.map((e) => (
-                        <TableRow key={e.name}>
-                          <TableCell>{e.name}</TableCell>
-                          <TableCell>
-                            {(
-                              (e.value / popularity.per_player_total) *
-                              100
-                            ).toFixed(2)}
-                            %
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-            ))}
-        </Box>
+        <PopularityTable
+          data={popularity?.per_player ?? []}
+          percentage={(value) =>
+            popularity ? (value / popularity.per_player_total) * 100 : 0
+          }
+        />
         <Box>
           Total games per player:{" "}
           {popularity && Utils.formatNumber(popularity.per_player_total)}
@@ -104,50 +175,14 @@ const PopularityContent = ({
             <br />
           </Typography>
         </Box>
-        <Box sx={{ display: "flex", flexWrap: "wrap" }}>
-          {popularity?.per_character
-            .reduce<Array<typeof popularity.per_character>>((acc, e, index) => {
-              const groupIndex = Math.floor(index / 10);
-              if (!acc[groupIndex]) {
-                acc[groupIndex] = [];
-              }
-              acc[groupIndex].push(e);
-              return acc;
-            }, [])
-            .map((group, groupIndex) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: synthetic group index, no stable id
-              <Box key={groupIndex} sx={{ width: "300px" }}>
-                <TableContainer
-                  component={Paper}
-                  sx={{ marginBottom: 4, marginRight: 2 }}
-                >
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Character</TableCell>
-                        <TableCell>Popularity</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {group.map((e) => (
-                        <TableRow key={e.name}>
-                          <TableCell>{e.name}</TableCell>
-                          <TableCell>
-                            {(
-                              ((e.value / popularity.per_character_total) *
-                                100) /
-                              2
-                            ).toFixed(2)}
-                            %
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-            ))}
-        </Box>
+        <PopularityTable
+          data={popularity?.per_character ?? []}
+          percentage={(value) =>
+            popularity
+              ? ((value / popularity.per_character_total) * 100) / 2
+              : 0
+          }
+        />
         <Box>
           Total games per character:{" "}
           {popularity && Utils.formatNumber(popularity.per_character_total * 2)}
@@ -166,12 +201,7 @@ const PopularityContent = ({
 };
 
 const Popularity = () => {
-  const [popularityPromise] = useState(
-    (): Promise<PopularityResult | undefined> =>
-      fetch(`${API_ENDPOINT}/popularity`)
-        .then((res) => res.json())
-        .catch(() => undefined),
-  );
+  const popularityPromise = usePopularityPromise();
 
   return (
     <>
