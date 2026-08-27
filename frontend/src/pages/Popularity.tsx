@@ -9,6 +9,7 @@ import {
   TableHead,
   TableRow,
   TableSortLabel,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { Suspense, use, useMemo, useState } from "react";
@@ -56,9 +57,11 @@ export function sortPopularityData<T extends { name: string; value: number }>(
 const PopularityTable = ({
   data,
   percentage,
+  countLabel,
 }: {
   data: PopularityResultChar[];
   percentage: (value: number) => number;
+  countLabel: string;
 }) => {
   const [sortState, setSortState] = useState<SortState>(null);
 
@@ -115,7 +118,11 @@ const PopularityTable = ({
               >
                 {e.name}
               </TableCell>
-              <TableCell>{percentage(e.value).toFixed(2)}%</TableCell>
+              <TableCell>
+                <Tooltip title={`${e.value} ${countLabel}`} arrow>
+                  <span>{percentage(e.value).toFixed(2)}%</span>
+                </Tooltip>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -156,6 +163,7 @@ const PopularityContent = ({
           percentage={(value) =>
             popularity ? (value / popularity.per_player_total) * 100 : 0
           }
+          countLabel="Players"
         />
         <Box>
           Total games per player:{" "}
@@ -182,6 +190,7 @@ const PopularityContent = ({
               ? ((value / popularity.per_character_total) * 100) / 2
               : 0
           }
+          countLabel="Games"
         />
         <Box>
           Total games per character:{" "}
