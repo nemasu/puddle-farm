@@ -458,7 +458,7 @@ const Matchup = ({ API_ENDPOINT, char_short, player_id }: MatchupProps) => {
             </Typography>
           </Box>
           {viewMode === "table" ? (
-            <TableContainer component={Paper} sx={{ maxWidth: 500 }}>
+            <TableContainer component={Paper} sx={{ maxWidth: 600 }}>
               <Table stickyHeader>
                 <TableHead>
                   <TableRow>
