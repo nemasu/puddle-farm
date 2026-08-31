@@ -344,9 +344,7 @@ const Distribution = () => {
                 </TableCell>
                 <TableCell>{threshold.name}</TableCell>
                 <TableCell>
-                  {threshold.rating >= 10000000
-                    ? `${(threshold.rating - 10000000).toLocaleString()} DR`
-                    : `${threshold.rating.toLocaleString()} RP`}
+                  {Utils.formatRankThresholdRating(threshold)}
                 </TableCell>
               </TableRow>
             ))}

@@ -2,6 +2,7 @@ import { Typography } from "@mui/material";
 import { StorageUtils } from "./Storage";
 
 const numberFormatter = new Intl.NumberFormat("en-US");
+const VANQUISHER_PROMOTION_RP = 45000;
 
 const IMPERIUS_SPRITE = {
   spriteX: 3,
@@ -104,6 +105,15 @@ const rankThresholds = [
 
 const Utils = {
   formatNumber: (n) => numberFormatter.format(n),
+  formatRankThresholdRating: (threshold) => {
+    if (threshold.name === "Vanquisher") {
+      return `${numberFormatter.format(VANQUISHER_PROMOTION_RP)} RP`;
+    }
+    if (threshold.rating >= 10000000) {
+      return `${numberFormatter.format(threshold.rating - 10000000)} DR`;
+    }
+    return `${numberFormatter.format(threshold.rating)} RP`;
+  },
   getRankThresholds: () => rankThresholds,
   getRankSprite: (rating) => {
     for (const threshold of rankThresholds) {
