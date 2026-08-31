@@ -162,6 +162,8 @@ const Matchup = ({ API_ENDPOINT, char_short, player_id }: MatchupProps) => {
             return (a.wins / a.total_games) * 100;
           case "wins":
             return a.wins;
+          case "losses":
+            return a.total_games - a.wins;
           case "total":
             return a.total_games;
           default:
@@ -177,6 +179,8 @@ const Matchup = ({ API_ENDPOINT, char_short, player_id }: MatchupProps) => {
             return (b.wins / b.total_games) * 100;
           case "wins":
             return b.wins;
+          case "losses":
+            return b.total_games - b.wins;
           case "total":
             return b.total_games;
           default:
@@ -454,7 +458,7 @@ const Matchup = ({ API_ENDPOINT, char_short, player_id }: MatchupProps) => {
             </Typography>
           </Box>
           {viewMode === "table" ? (
-            <TableContainer component={Paper} sx={{ maxWidth: 500 }}>
+            <TableContainer component={Paper} sx={{ maxWidth: 600 }}>
               <Table stickyHeader>
                 <TableHead>
                   <TableRow>
@@ -483,6 +487,15 @@ const Matchup = ({ API_ENDPOINT, char_short, player_id }: MatchupProps) => {
                         onClick={() => handleRequestSort("wins")}
                       >
                         Wins
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell sx={{ position: "sticky", top: 0, zIndex: 1 }}>
+                      <TableSortLabel
+                        active={orderBy === "losses"}
+                        direction={orderBy === "losses" ? order : "asc"}
+                        onClick={() => handleRequestSort("losses")}
+                      >
+                        Losses
                       </TableSortLabel>
                     </TableCell>
                     <TableCell sx={{ position: "sticky", top: 0, zIndex: 1 }}>
@@ -532,6 +545,9 @@ const Matchup = ({ API_ENDPOINT, char_short, player_id }: MatchupProps) => {
                           )}
                         </TableCell>
                         <TableCell>{matchup.wins}</TableCell>
+                        <TableCell>
+                          {matchup.total_games - matchup.wins}
+                        </TableCell>
                         <TableCell>{matchup.total_games}</TableCell>
                         <TableCell>
                           {globalWRStr !== null
