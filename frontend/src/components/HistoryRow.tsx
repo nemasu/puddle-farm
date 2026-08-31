@@ -16,9 +16,50 @@ import {
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { TagResponse } from "../interfaces/API";
-import type { GroupedMatch } from "../interfaces/Player";
+import type { GroupedMatch, MatchWithRating } from "../interfaces/Player";
 import { Utils } from "../utils/Utils";
 import { Tag } from "./Tag";
+
+function formatRatingChange(ratingChange: string | undefined): string {
+  const sign =
+    ratingChange !== undefined && parseFloat(ratingChange) > 0 ? "+" : "";
+  return `${sign}${ratingChange}`;
+}
+
+function MatchDetailTable({ matches }: { matches: MatchWithRating[] }) {
+  return (
+    <Table size="small">
+      <TableHead>
+        <TableRow>
+          <TableCell>Timestamp</TableCell>
+          <TableCell align="right">Rating</TableCell>
+          <TableCell align="right">Opponent Rating</TableCell>
+          <TableCell align="right">Winner?</TableCell>
+          <TableCell align="right">Rating Change</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {matches.map((item) => (
+          <TableRow key={item.timestamp}>
+            <TableCell component="th" scope="row">
+              {Utils.formatUTCToLocal(item.timestamp)}
+            </TableCell>
+            <TableCell align="right">
+              {Utils.displayRating(item.own_rating_value)}
+            </TableCell>
+            <TableCell align="right">
+              {Utils.displayRating(item.opponent_rating_value)}
+            </TableCell>
+            <TableCell align="right">{item.result_win ? "Y" : "N"}</TableCell>
+            <TableCell align="right">
+              {formatRatingChange(item.ratingChange)}
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
 
 function HistoryRow(props: {
   isMobile?: boolean;
@@ -46,195 +87,81 @@ function HistoryRow(props: {
       <TableContainer component={Paper}>
         <Table size="small">
           <TableBody>
-            {item.opponent_id === "0" ? (
-              <>
-                <TableRow>
-                  <TableCell sx={{ pb: 0, mb: 0 }}>
-                    <IconButton
-                      aria-label="expand row"
-                      size="small"
-                      onClick={() => setOpen(!open)}
+            <TableRow>
+              <TableCell sx={{ p: 0, m: 0 }}>
+                <IconButton
+                  aria-label="expand row"
+                  size="small"
+                  onClick={() => setOpen(!open)}
+                >
+                  {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                </IconButton>
+              </TableCell>
+              <TableCell sx={{ px: 0, mx: 0 }} width={90}>
+                {formatTimestamp(item.timestamp)}
+              </TableCell>
+              <TableCell sx={{ px: 0, mx: 0 }} width={90}>
+                {" "}
+                {Utils.displayRating(
+                  item.matches[item.matches.length - 1].own_rating_value,
+                )}
+              </TableCell>
+              <TableCell sx={{ px: 0, mx: 0 }}>
+                {item.wins} - {item.losses}
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell sx={{ px: 0, mx: 0, maxWidth: "120px" }}>
+                <Button
+                  sx={{
+                    marginLeft: "5px",
+                    justifyContent: "flex-start",
+                    minWidth: "auto",
+                  }}
+                  component={Link}
+                  to={`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`}
+                >
+                  {item.opponent_name}
+                </Button>
+                <Box>
+                  {tags?.map((e: TagResponse) => (
+                    <Tag
+                      key={e.tag}
+                      style={JSON.parse(e.style)}
+                      sx={{ fontSize: "0.9rem" }}
                     >
-                      {open ? (
-                        <KeyboardArrowUpIcon />
-                      ) : (
-                        <KeyboardArrowDownIcon />
-                      )}
-                    </IconButton>
-                  </TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }} width={90}>
-                    {formatTimestamp(item.timestamp)}
-                  </TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }} width={90}></TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }}></TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }}>
-                    {item.wins} - {item.losses}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell sx={{ px: 0, mx: 0 }} colSpan={2}>
-                    <Button
-                      component={Link}
-                      sx={{
-                        marginLeft: "5px",
-                        justifyContent: "flex-start",
-                        minWidth: "auto",
-                      }}
-                      to={``}
-                    >
-                      {item.opponent_name}
-                    </Button>
-                  </TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }}></TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }}>
-                    {item.matches[0].opponent_character}
-                  </TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }}></TableCell>
-                </TableRow>
-              </>
-            ) : (
-              <>
-                <TableRow>
-                  <TableCell sx={{ p: 0, m: 0 }}>
-                    <IconButton
-                      aria-label="expand row"
-                      size="small"
-                      onClick={() => setOpen(!open)}
-                    >
-                      {open ? (
-                        <KeyboardArrowUpIcon />
-                      ) : (
-                        <KeyboardArrowDownIcon />
-                      )}
-                    </IconButton>
-                  </TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }} width={90}>
-                    {formatTimestamp(item.timestamp)}
-                  </TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }} width={90}>
-                    {" "}
-                    {Utils.displayRating(
-                      item.matches[item.matches.length - 1].own_rating_value,
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }}>
-                    {item.wins} - {item.losses}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell sx={{ px: 0, mx: 0, maxWidth: "120px" }}>
-                    <Button
-                      sx={{
-                        marginLeft: "5px",
-                        justifyContent: "flex-start",
-                        minWidth: "auto",
-                      }}
-                      component={Link}
-                      to={`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`}
-                    >
-                      {item.opponent_name}
-                    </Button>
-                    <Box>
-                      {tags?.map((e: TagResponse) => (
-                        <Tag
-                          key={e.tag}
-                          style={JSON.parse(e.style)}
-                          sx={{ fontSize: "0.9rem" }}
-                        >
-                          {e.tag}
-                        </Tag>
-                      ))}
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    {Utils.displayRankIcon(
-                      item.matches[item.matches.length - 1]
-                        .opponent_rating_value,
-                      "32px",
-                      item.matches[item.matches.length - 1].opponent_is_legend,
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }}>
-                    {Utils.displayRating(
-                      item.matches[item.matches.length - 1]
-                        .opponent_rating_value,
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }}>
-                    {item.matches[0].opponent_character_short}
-                  </TableCell>
-                  <TableCell sx={{ px: 0, mx: 0 }}>
-                    {Utils.colorChangeForRating(item.ratingChange)}
-                  </TableCell>
-                </TableRow>
-              </>
-            )}
+                      {e.tag}
+                    </Tag>
+                  ))}
+                </Box>
+              </TableCell>
+              <TableCell>
+                {Utils.displayRankIcon(
+                  item.matches[item.matches.length - 1].opponent_rating_value,
+                  "32px",
+                  item.matches[item.matches.length - 1].opponent_is_legend,
+                )}
+              </TableCell>
+              <TableCell sx={{ px: 0, mx: 0 }}>
+                {Utils.displayRating(
+                  item.matches[item.matches.length - 1].opponent_rating_value,
+                )}
+              </TableCell>
+              <TableCell sx={{ px: 0, mx: 0 }}>
+                {item.matches[0].opponent_character_short}
+              </TableCell>
+              <TableCell sx={{ px: 0, mx: 0 }}>
+                {Utils.colorChangeForRating(item.ratingChange)}
+              </TableCell>
+            </TableRow>
+
             <TableRow id={item.timestamp}>
               <TableCell
                 style={{ paddingBottom: 0, paddingTop: 0 }}
                 colSpan={8}
               >
                 <Collapse in={open} timeout="auto" unmountOnExit>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Timestamp</TableCell>
-                        <TableCell align="right">Rating</TableCell>
-                        <TableCell align="right">Opponent Rating</TableCell>
-                        <TableCell align="right">Winner?</TableCell>
-                        <TableCell align="right">Rating Change</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {item.matches.map((item, _i) => (
-                        <TableRow key={item.timestamp}>
-                          {item.opponent_id === "0" ? (
-                            <>
-                              <TableCell component="th" scope="row">
-                                {Utils.formatUTCToLocal(item.timestamp)}
-                              </TableCell>
-                              <TableCell align="right"></TableCell>
-                              <TableCell align="right"></TableCell>
-                              <TableCell align="right">
-                                {item.result_win ? "Y" : "N"}
-                              </TableCell>
-                              <TableCell align="right">
-                                {item.ratingChange !== undefined &&
-                                parseFloat(item.ratingChange) > 0
-                                  ? "+"
-                                  : ""}
-                                {item.ratingChange}
-                              </TableCell>
-                            </>
-                          ) : (
-                            <>
-                              <TableCell component="th" scope="row">
-                                {Utils.formatUTCToLocal(item.timestamp)}
-                              </TableCell>
-                              <TableCell align="right">
-                                {Utils.displayRating(item.own_rating_value)}
-                              </TableCell>
-                              <TableCell align="right">
-                                {Utils.displayRating(
-                                  item.opponent_rating_value,
-                                )}
-                              </TableCell>
-                              <TableCell align="right">
-                                {item.result_win ? "Y" : "N"}
-                              </TableCell>
-                              <TableCell align="right">
-                                {item.ratingChange !== undefined &&
-                                parseFloat(item.ratingChange) > 0
-                                  ? "+"
-                                  : ""}
-                                {item.ratingChange}
-                              </TableCell>
-                            </>
-                          )}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <MatchDetailTable matches={item.matches} />
                 </Collapse>
               </TableCell>
             </TableRow>
@@ -255,148 +182,62 @@ function HistoryRow(props: {
               {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
             </IconButton>
           </TableCell>
-          {item.opponent_id === "0" ? (
-            <>
-              <TableCell component="th" scope="row">
-                {Utils.formatUTCToLocal(item.timestamp)}
-              </TableCell>
-              <TableCell align="right"></TableCell>
-              <TableCell>
-                <Button
-                  component={Link}
-                  sx={{ justifyContent: "flex-start", minWidth: "auto" }}
-                  to={``}
+          <TableCell component="th" scope="row">
+            {Utils.formatUTCToLocal(item.timestamp)}
+          </TableCell>
+          <TableCell align="right">
+            <Box component={"span"}>
+              {Utils.displayRating(
+                item.matches[item.matches.length - 1].own_rating_value,
+              )}
+            </Box>
+          </TableCell>
+          <TableCell>
+            <Button
+              component={Link}
+              sx={{ justifyContent: "flex-start", minWidth: "auto" }}
+              to={`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`}
+            >
+              {item.opponent_name}
+            </Button>
+            <Box>
+              {tags?.map((e: TagResponse) => (
+                <Tag
+                  key={e.tag}
+                  style={JSON.parse(e.style)}
+                  sx={{ fontSize: "0.9rem", position: "unset" }}
                 >
-                  {item.opponent_name}
-                </Button>
-              </TableCell>
-              <TableCell align="right">
-                {item.matches[0].opponent_character}
-              </TableCell>
-              <TableCell align="right"></TableCell>
-              <TableCell align="right">
-                {item.wins} - {item.losses}
-              </TableCell>
-              <TableCell align="right"></TableCell>
-              <TableCell align="right"></TableCell>
-            </>
-          ) : (
-            <>
-              <TableCell component="th" scope="row">
-                {Utils.formatUTCToLocal(item.timestamp)}
-              </TableCell>
-              <TableCell align="right">
-                <Box component={"span"}>
-                  {Utils.displayRating(
-                    item.matches[item.matches.length - 1].own_rating_value,
-                  )}
-                </Box>
-              </TableCell>
-              <TableCell>
-                <Button
-                  component={Link}
-                  sx={{ justifyContent: "flex-start", minWidth: "auto" }}
-                  to={`/player/${item.opponent_id}/${item.matches[0].opponent_character_short}`}
-                >
-                  {item.opponent_name}
-                </Button>
-                <Box>
-                  {tags?.map((e: TagResponse) => (
-                    <Tag
-                      key={e.tag}
-                      style={JSON.parse(e.style)}
-                      sx={{ fontSize: "0.9rem", position: "unset" }}
-                    >
-                      {e.tag}
-                    </Tag>
-                  ))}
-                </Box>
-              </TableCell>
-              <TableCell align="right">
-                {item.matches[0].opponent_character}
-              </TableCell>
-              <TableCell align="right">
-                <Box component={"span"}>
-                  {Utils.displayRankIcon(
-                    item.matches[item.matches.length - 1].opponent_rating_value,
-                    "32px",
-                    item.matches[item.matches.length - 1].opponent_is_legend,
-                  )}{" "}
-                  {Utils.displayRating(
-                    item.matches[item.matches.length - 1].opponent_rating_value,
-                  )}
-                </Box>
-              </TableCell>
-              <TableCell align="right">
-                {item.wins} - {item.losses}
-              </TableCell>
-              <TableCell align="right">
-                {Utils.colorChangeForRating(item.ratingChange)}
-              </TableCell>
-            </>
-          )}
+                  {e.tag}
+                </Tag>
+              ))}
+            </Box>
+          </TableCell>
+          <TableCell align="right">
+            {item.matches[0].opponent_character}
+          </TableCell>
+          <TableCell align="right">
+            <Box component={"span"}>
+              {Utils.displayRankIcon(
+                item.matches[item.matches.length - 1].opponent_rating_value,
+                "32px",
+                item.matches[item.matches.length - 1].opponent_is_legend,
+              )}{" "}
+              {Utils.displayRating(
+                item.matches[item.matches.length - 1].opponent_rating_value,
+              )}
+            </Box>
+          </TableCell>
+          <TableCell align="right">
+            {item.wins} - {item.losses}
+          </TableCell>
+          <TableCell align="right">
+            {Utils.colorChangeForRating(item.ratingChange)}
+          </TableCell>
         </TableRow>
         <TableRow id={item.timestamp}>
           <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
             <Collapse in={open} timeout="auto" unmountOnExit>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Timestamp</TableCell>
-                    <TableCell align="right">Rating</TableCell>
-                    <TableCell align="right">Opponent Rating</TableCell>
-                    <TableCell align="right">Winner?</TableCell>
-                    <TableCell align="right">Rating Change</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {item.matches.map((item, _i) => (
-                    <TableRow key={item.timestamp}>
-                      {item.opponent_id === "0" ? (
-                        <>
-                          <TableCell component="th" scope="row">
-                            {Utils.formatUTCToLocal(item.timestamp)}
-                          </TableCell>
-                          <TableCell align="right"></TableCell>
-                          <TableCell align="right"></TableCell>
-                          <TableCell align="right">
-                            {item.result_win ? "Y" : "N"}
-                          </TableCell>
-                          <TableCell align="right">
-                            {item.ratingChange !== undefined &&
-                            parseFloat(item.ratingChange) > 0
-                              ? "+"
-                              : ""}
-                            {item.ratingChange}
-                          </TableCell>
-                        </>
-                      ) : (
-                        <>
-                          <TableCell component="th" scope="row">
-                            {Utils.formatUTCToLocal(item.timestamp)}
-                          </TableCell>
-                          <TableCell align="right">
-                            {Utils.displayRating(item.own_rating_value)}
-                          </TableCell>
-                          <TableCell align="right">
-                            {Utils.displayRating(item.opponent_rating_value)}
-                          </TableCell>
-                          <TableCell align="right">
-                            {item.result_win ? "Y" : "N"}
-                          </TableCell>
-                          <TableCell align="right">
-                            {item.ratingChange !== undefined &&
-                            parseFloat(item.ratingChange) > 0
-                              ? "+"
-                              : ""}
-                            {item.ratingChange}
-                          </TableCell>
-                        </>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <MatchDetailTable matches={item.matches} />
             </Collapse>
           </TableCell>
         </TableRow>
