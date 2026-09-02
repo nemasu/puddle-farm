@@ -222,22 +222,6 @@ pub async fn get_distribution(
     ))
 }
 
-pub async fn get_latest_game_time(
-    redis: &mut crate::RedisConnection<'_>,
-) -> Result<NaiveDateTime, String> {
-    let latest_game_time = match get_string("latest_game_time", redis).await {
-        Ok(lgt) => lgt,
-        Err(_) => {
-            return Err("Failed to get latest_game_time".to_string());
-        }
-    };
-
-    let latest_game_time =
-        NaiveDateTime::parse_from_str(&latest_game_time, "%Y-%m-%d %H:%M:%S").unwrap();
-
-    Ok(latest_game_time)
-}
-
 pub async fn set_latest_game_time(
     timestamp: NaiveDateTime,
     redis: &mut crate::RedisConnection<'_>,
@@ -253,34 +237,28 @@ pub async fn set_latest_game_time(
     }
 }
 
-pub async fn clear_latest_game_time(redis: &mut crate::RedisConnection<'_>) -> Result<(), String> {
-    match redis::cmd("DEL")
-        .arg("latest_game_time")
-        .query_async::<i64>(&mut **redis)
+pub async fn get_last_successful_replay_pull(
+    redis: &mut crate::RedisConnection<'_>,
+) -> Result<i64, String> {
+    get_int("last_successful_replay_pull", redis).await
+}
+
+pub async fn set_last_successful_replay_pull(
+    redis: &mut crate::RedisConnection<'_>,
+) -> Result<(), String> {
+    let timestamp = chrono::Utc::now().timestamp();
+
+    match redis::cmd("SET")
+        .arg("last_successful_replay_pull")
+        .arg(timestamp)
+        .query_async::<String>(&mut **redis)
         .await
     {
         Ok(_) => Ok(()),
-        Err(_) => Err("Failed to clear latest_game_time".to_string()),
+        Err(error) => Err(format!(
+            "Failed to set last_successful_replay_pull: {error}"
+        )),
     }
-}
-
-pub async fn get_last_update_daily(
-    redis: &mut crate::RedisConnection<'_>,
-) -> Result<NaiveDateTime, String> {
-    let last_update_daily = match get_string("last_update_daily", redis).await {
-        Ok(lud) => lud,
-        Err(_) => {
-            // Key doesn't exist yet (fresh deployment) - return a time in the past
-            // to indicate data needs to be refreshed
-            tracing::warn!("last_update_daily not found in Redis, using default (2 days ago)");
-            return Ok(chrono::Utc::now().naive_utc() - chrono::Duration::days(2));
-        }
-    };
-
-    let last_update_daily =
-        NaiveDateTime::parse_from_str(&last_update_daily, "%Y-%m-%d %H:%M:%S").unwrap();
-
-    Ok(last_update_daily)
 }
 
 pub async fn get_free_comment(id: i64, redis: &mut crate::RedisConnection<'_>) -> Result<String, String> {

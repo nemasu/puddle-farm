@@ -20,6 +20,14 @@ diesel::table! {
 }
 
 diesel::table! {
+    hourly_player_counts (bucket_start) {
+        bucket_start -> Int8,
+        player_count -> Int8,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     player_names (id, name) {
         id -> Int8,
         name -> Text,
@@ -58,6 +66,7 @@ diesel::joinable!(player_ratings -> players (id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     games,
+    hourly_player_counts,
     player_names,
     player_ratings,
     players,

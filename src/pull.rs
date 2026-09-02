@@ -17,6 +17,29 @@ use diesel_async::scoped_futures::ScopedFutureExt;
 
 use diesel::sql_types::{BigInt, Integer};
 
+#[derive(Debug)]
+enum ReplayPullError {
+    Pull(String),
+    Database(diesel::result::Error),
+}
+
+impl std::fmt::Display for ReplayPullError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Pull(message) => formatter.write_str(message),
+            Self::Database(error) => error.fmt(formatter),
+        }
+    }
+}
+
+impl std::error::Error for ReplayPullError {}
+
+impl From<diesel::result::Error> for ReplayPullError {
+    fn from(error: diesel::result::Error) -> Self {
+        Self::Database(error)
+    }
+}
+
 define_sql_function! {
     fn coalesce(x: diesel::sql_types::Nullable<diesel::sql_types::Timestamp>, y: diesel::sql_types::Timestamp) -> diesel::sql_types::Timestamp;
 }
@@ -156,27 +179,40 @@ pub async fn pull_and_update_continuous(state: crate::AppState) {
             let mut connection = pull_state.db_pool.get().await.unwrap();
             let mut redis_connection = pull_state.redis_pool.get().await.unwrap();
 
-            if let Err(e) = connection
-                .transaction::<_, diesel::result::Error, _>(|conn| {
+            let pull_result = connection
+                .transaction::<_, ReplayPullError, _>(|conn| {
                     async move {
-                        match grab_games(conn, &mut redis_connection).await {
-                            Ok(new_games) => {
-                                info!("New games: {:?}", new_games.len());
-                            }
-                            Err(e) => {
-                                error!("grab_games failed: {e}");
-                            }
-                        };
+                        let new_games = grab_games(conn, &mut redis_connection)
+                            .await
+                            .map_err(ReplayPullError::Pull)?;
+                        info!("New games: {:?}", new_games.len());
                         Ok(())
                     }
                     .scope_boxed()
                 })
-                .await
-            {
-                error!("Replay pull loop: {e}");
-            }
+                .await;
 
-            info!("Replay pull - Done");
+            match pull_result {
+                Ok(()) => match pull_state.redis_pool.get().await {
+                    Ok(mut heartbeat_connection) => {
+                        if let Err(error) = crate::imdb::set_last_successful_replay_pull(
+                            &mut heartbeat_connection,
+                        )
+                        .await
+                        {
+                            error!(
+                                "Replay pull succeeded but its heartbeat could not be recorded: {error}"
+                            );
+                        } else {
+                            info!("Replay pull - Done");
+                        }
+                    }
+                    Err(error) => error!(
+                        "Replay pull succeeded but no Redis connection was available to record its heartbeat: {error}"
+                    ),
+                },
+                Err(error) => error!("Replay pull failed: {error}"),
+            }
         }
     });
 
@@ -281,10 +317,6 @@ async fn do_daily_update(
         .await
         .expect("Error setting last_update_daily");
 
-    //Clear latest_game_time; health check handles the brief absence via the daily_ran_recently window
-    crate::imdb::clear_latest_game_time(redis_connection)
-        .await
-        .unwrap();
     Ok(())
 }
 
@@ -642,6 +674,10 @@ async fn update_stats(
     redis_connection: &mut crate::RedisConnection<'_>,
 ) -> Result<(), String> {
     info!("Updating stats");
+
+    crate::hourly_players::update_current_and_previous(conn)
+        .await
+        .map_err(|error| format!("Error updating hourly player counts: {error}"))?;
 
     // Get total game count
     let total_games: i64 = schema::games::table
@@ -1238,7 +1274,7 @@ async fn grab_games(
         }
     }
 
-    //Set set_latest_game_time for health check
+    // Preserve the newest upstream game timestamp as data-freshness metadata.
     if let Some(last_game) = new_games.last() {
         let ts = last_game.real_timestamp.unwrap_or(last_game.timestamp);
 

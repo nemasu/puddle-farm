@@ -317,6 +317,27 @@ paths:
                 $ref: '#/components/schemas/StatsResponse'
         '404':
           description: Stats not found
+  /stats/hourly-players:
+    get:
+      summary: Get completed hourly distinct-player counts
+      parameters:
+        - in: query
+          name: range
+          required: false
+          description: History window; defaults to 30d
+          schema:
+            type: string
+            enum: [24h, 7d, 30d, 1y, all]
+            default: 30d
+      responses:
+        '200':
+          description: Chronological completed UTC hour buckets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HourlyPlayersResponse'
+        '400':
+          description: Unsupported range
   /popularity:
     get:
       summary: Get character popularity data
@@ -398,24 +419,24 @@ paths:
                 $ref: '#/components/schemas/DistributionResponse'
         '404':
           description: Distribution data not found
-  /health:
+  /ingestion/health:
     get:
-      summary: Get health status of the system
+      summary: Check replay ingestion freshness
       responses:
         '200':
-          description: System is healthy
+          description: Replay ingestion is current
           content:
             text/plain:
               schema:
                 type: string
                 example: "OK"
-        '500':
-          description: System health check failed
+        '503':
+          description: Replay pulling has stalled
           content:
             text/plain:
               schema:
                 type: string
-                example: "No New (2m) Replays!"
+                example: "No new matches. Maintenance?"
   /calc_rating:
     get:
       summary: Calculate rating changes for a match
@@ -752,6 +773,27 @@ components:
           type: integer
           format: int64
           description: Number of players in the last hour
+    HourlyPlayersResponse:
+      type: object
+      required: [points]
+      properties:
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/HourlyPlayerPoint'
+    HourlyPlayerPoint:
+      type: object
+      required: [timestamp, players]
+      properties:
+        timestamp:
+          type: integer
+          format: int64
+          description: UTC Unix timestamp at the start of the completed hour
+        players:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Distinct players observed in ranked matches during the hour
     PopularityResult:
       type: object
       properties:

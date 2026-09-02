@@ -72,7 +72,7 @@ function NavBar() {
     );
   }, [characterNames]);
 
-  const [healthMessage, setHealthMessage] = useState<string | null>(null);
+  const [ingestionMessage, setIngestionMessage] = useState<string | null>(null);
 
   const handleSearchChange = (event: {
     target: { value: SetStateAction<string> };
@@ -95,28 +95,24 @@ function NavBar() {
   };
 
   useEffect(() => {
-    const checkHealth = async () => {
+    const checkIngestionHealth = async () => {
       try {
-        const response = await fetch(`${API_ENDPOINT}/health`);
+        const response = await fetch(`${API_ENDPOINT}/ingestion/health`);
         const message = await response.text();
         if (!response.ok) {
-          setHealthMessage(message || "API health check failed."); // Set message if not OK
+          setIngestionMessage(
+            message || "Could not check whether matches are updating.",
+          );
         } else {
-          if (message.startsWith("Daily Update Running.")) {
-            setHealthMessage(
-              "Daily Update Running. Match data may be delayed.",
-            );
-          } else {
-            setHealthMessage(null);
-          }
+          setIngestionMessage(null);
         }
       } catch (error) {
-        console.error("Error fetching health status:", error);
-        setHealthMessage("Could not connect to the API."); // Set message on fetch error
+        console.error("Error checking match ingestion:", error);
+        setIngestionMessage("Could not check whether matches are updating.");
       }
     };
 
-    checkHealth();
+    checkIngestionHealth();
 
     // Read preferences
     const preferences = StorageUtils.getPreferences();
@@ -124,7 +120,7 @@ function NavBar() {
 
     // Only set interval if autoUpdate is enabled
     if (preferences.autoUpdate) {
-      intervalId = setInterval(checkHealth, 60000); // Check every 60 seconds
+      intervalId = setInterval(checkIngestionHealth, 60000); // Check every 60 seconds
     }
 
     return () => {
@@ -150,10 +146,10 @@ function NavBar() {
 
   return (
     <>
-      {healthMessage && (
+      {ingestionMessage && (
         <Alert severity="warning" sx={{ borderRadius: 0 }}>
           <AlertTitle>Warning</AlertTitle>
-          {healthMessage}
+          {ingestionMessage}
         </Alert>
       )}
       <AppBar position="static" style={{ backgroundImage: "none" }}>

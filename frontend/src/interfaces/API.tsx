@@ -117,6 +117,15 @@ export interface StatsResponse {
   one_hour_players: number; // Number of players in the last hour
 }
 
+export interface HourlyPlayerPoint {
+  timestamp: number;
+  players: number;
+}
+
+export interface HourlyPlayersResponse {
+  points: HourlyPlayerPoint[];
+}
+
 export interface PopularityResult {
   per_player: PopularityResultChar[]; // Character popularity per player
   per_character: PopularityResultChar[]; // Character popularity per character

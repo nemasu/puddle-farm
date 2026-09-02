@@ -39,6 +39,7 @@ struct AppState {
 mod db;
 mod ggst_api;
 mod handlers;
+mod hourly_players;
 mod imdb;
 mod models;
 mod pull;
@@ -550,6 +551,34 @@ struct StatsResponse {
     one_day_players: i64,
     one_hour_players: i64,
 }
+
+#[derive(Deserialize)]
+struct HourlyPlayersQuery {
+    range: Option<String>,
+}
+
+#[derive(Serialize)]
+struct HourlyPlayersResponse {
+    points: Vec<hourly_players::HourlyPlayerPoint>,
+}
+
+async fn hourly_players(
+    State(pools): State<AppState>,
+    Query(query): Query<HourlyPlayersQuery>,
+) -> Result<Json<HourlyPlayersResponse>, (StatusCode, String)> {
+    let range = hourly_players::HourlyRange::parse(query.range.as_deref())
+        .map_err(|error| (StatusCode::BAD_REQUEST, error))?;
+    let mut db = pools
+        .db_pool
+        .get()
+        .await
+        .map_err(|error| (StatusCode::SERVICE_UNAVAILABLE, error.to_string()))?;
+    let points = hourly_players::points(&mut db, range)
+        .await
+        .map_err(|error| (StatusCode::SERVICE_UNAVAILABLE, error.to_string()))?;
+    Ok(Json(HourlyPlayersResponse { points }))
+}
+
 async fn stats(State(pools): State<AppState>) -> Result<Json<StatsResponse>, (StatusCode, String)> {
     let mut redis = pools.redis_pool.get().await.unwrap();
 
@@ -806,44 +835,61 @@ async fn distribution(
     }))
 }
 
-async fn health(State(pools): State<AppState>) -> Result<String, (StatusCode, String)> {
-    let mut redis = pools.redis_pool.get().await.unwrap();
-    let now = chrono::Utc::now().timestamp();
+const REPLAY_PULL_HEALTH_TIMEOUT_SECONDS: i64 = 5 * 60;
+const INGESTION_UNHEALTHY_MESSAGE: &str = "No new matches. Maintenance?";
 
-    let last_update_daily = imdb::get_last_update_daily(&mut redis).await.unwrap();
+fn replay_pull_is_stale(now: i64, last_successful_pull: i64) -> bool {
+    now.saturating_sub(last_successful_pull) > REPLAY_PULL_HEALTH_TIMEOUT_SECONDS
+}
 
-    // If the daily task ran very recently (within 10 min), latest_game_time may be
-    // temporarily absent — treat as graceful/running state, not an error.
-    let daily_ran_recently = now - last_update_daily.and_utc().timestamp() < 600;
+#[cfg(test)]
+mod ingestion_health_tests {
+    use super::{replay_pull_is_stale, REPLAY_PULL_HEALTH_TIMEOUT_SECONDS};
 
-    let latest_game_time = match imdb::get_latest_game_time(&mut redis).await {
-        Ok(t) => Some(t),
-        Err(_) => {
-            if daily_ran_recently || now - 86400 > last_update_daily.and_utc().timestamp() {
-                return Ok(
-                    "Daily Update Running. Replays are still being collected and will show up shortly."
-                        .to_string(),
-                );
-            }
-            return Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "latest_game_time does not exist!".to_string(),
-            ));
-        }
-    };
+    #[test]
+    fn replay_pull_is_healthy_at_the_timeout_boundary() {
+        assert!(!replay_pull_is_stale(REPLAY_PULL_HEALTH_TIMEOUT_SECONDS, 0));
+    }
 
-    if now - 120 > latest_game_time.unwrap().and_utc().timestamp() {
-        return Err((
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "No New (2m) Replays!".to_string(),
+    #[test]
+    fn replay_pull_is_stale_after_the_timeout() {
+        assert!(replay_pull_is_stale(
+            REPLAY_PULL_HEALTH_TIMEOUT_SECONDS + 1,
+            0
         ));
     }
 
-    if now - 86400 > last_update_daily.and_utc().timestamp() {
-        return Ok(
-            "Daily Update Running. Replays are still being collected and will show up shortly."
-                .to_string(),
-        );
+    #[test]
+    fn replay_pull_from_the_future_is_not_stale() {
+        assert!(!replay_pull_is_stale(0, 1));
+    }
+}
+
+async fn ingestion_health(State(pools): State<AppState>) -> Result<String, (StatusCode, String)> {
+    let mut redis = pools.redis_pool.get().await.map_err(|error| {
+        tracing::warn!(error = %error, "could not check GGST ingestion health");
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            INGESTION_UNHEALTHY_MESSAGE.to_string(),
+        )
+    })?;
+    let now = chrono::Utc::now().timestamp();
+
+    let last_successful_pull = imdb::get_last_successful_replay_pull(&mut redis)
+        .await
+        .map_err(|error| {
+            tracing::warn!(error = %error, "could not read GGST ingestion heartbeat");
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                INGESTION_UNHEALTHY_MESSAGE.to_string(),
+            )
+        })?;
+
+    if replay_pull_is_stale(now, last_successful_pull) {
+        return Err((
+            StatusCode::SERVICE_UNAVAILABLE,
+            INGESTION_UNHEALTHY_MESSAGE.to_string(),
+        ));
     }
 
     Ok("OK".to_string())
@@ -1042,6 +1088,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .init();
             pull::do_daily_update_once(state).await
         }
+        Some("backfill-hourly-players") => {
+            tracing_subscriber::fmt()
+                .with_max_level(tracing::Level::INFO)
+                .init();
+            let days = args
+                .get(1)
+                .ok_or("usage: puddle-farm backfill-hourly-players <days>")?
+                .parse::<i64>()?;
+            let mut connection = state.db_pool.get().await?;
+            hourly_players::backfill(&mut connection, days).await?;
+        }
         _ => {
             // No args, run the web server
             let _guard = init_tracing("web");
@@ -1062,6 +1119,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/alias/:player_id", get(alias))
                 .route("/api/ratings/:player_id/:char_id/:duration", get(ratings))
                 .route("/api/stats", get(stats))
+                .route("/api/stats/hourly-players", get(hourly_players))
                 .route("/api/popularity", get(popularity))
                 .route("/api/matchups", get(matchups))
                 .route(
@@ -1070,7 +1128,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 )
                 .route("/api/supporters", get(supporters))
                 .route("/api/distribution", get(distribution))
-                .route("/api/health", get(health))
+                .route("/api/ingestion/health", get(ingestion_health))
                 .route("/api/avatar/:player_id", get(avatar))
                 .route("/api/comment/:player_id", get(comment))
                 .with_state(state);

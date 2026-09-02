@@ -10,6 +10,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { Suspense, use, useEffect, useState } from "react";
+import HourlyPlayersChart from "../components/HourlyPlayersChart";
 import type { StatsResponse } from "../interfaces/API";
 import { JSONParse } from "../utils/JSONParse";
 import { Utils } from "./../utils/Utils";
@@ -23,12 +24,9 @@ function fetchStats(): Promise<StatsResponse | undefined> {
     .catch(() => undefined);
 }
 
-function fetchHealth(): Promise<string> {
-  return fetch(`${API_ENDPOINT}/health`)
-    .then(async (res) => {
-      if (res.ok) return await res.text();
-      return `Error! ${await res.text()}`;
-    })
+function fetchIngestionHealth(): Promise<string> {
+  return fetch(`${API_ENDPOINT}/ingestion/health`)
+    .then((res) => res.text())
     .catch(() => "");
 }
 
@@ -122,22 +120,22 @@ const StatsTables = ({
   );
 };
 
-const HealthDisplay = ({ data }: { data: Promise<string> }) => {
-  const health = use(data);
+const IngestionHealthDisplay = ({ data }: { data: Promise<string> }) => {
+  const ingestionHealth = use(data);
 
-  if (!health) return null;
+  if (!ingestionHealth) return null;
 
   return (
     <>
-      <Box component="span">Health: </Box>
-      <Box component="span">{health}</Box>
+      <Box component="span">Match updates: </Box>
+      <Box component="span">{ingestionHealth}</Box>
     </>
   );
 };
 
 const Stats = () => {
   const [statsPromise] = useState(() => fetchStats());
-  const [healthPromise] = useState(() => fetchHealth());
+  const [ingestionHealthPromise] = useState(() => fetchIngestionHealth());
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -164,6 +162,7 @@ const Stats = () => {
           </Typography>
         </Box>
       </AppBar>
+      <HourlyPlayersChart />
       <Suspense
         fallback={
           <CircularProgress
@@ -178,7 +177,7 @@ const Stats = () => {
       </Suspense>
       <Box sx={{ m: 4 }}>
         <Suspense fallback={null}>
-          <HealthDisplay data={healthPromise} />
+          <IngestionHealthDisplay data={ingestionHealthPromise} />
         </Suspense>
       </Box>
     </>
