@@ -71,7 +71,7 @@ const SearchResults = ({ resultsPromise }: SearchResultsProps) => {
   }
 
   return (
-    <Box sx={{ m: 4, maxWidth: "700px" }}>
+    <Box sx={{ m: { xs: 1, sm: 4 }, maxWidth: "700px" }}>
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>

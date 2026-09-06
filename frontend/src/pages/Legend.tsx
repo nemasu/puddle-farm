@@ -129,7 +129,7 @@ const Legend = () => {
           </Typography>
         </Box>
       </AppBar>
-      <Box sx={{ m: 3 }}>
+      <Box sx={{ m: { xs: 1, sm: 3 } }}>
         {errorMessage && (
           <Typography color="error" align="center" sx={{ mb: 2 }}>
             {errorMessage}

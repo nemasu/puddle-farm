@@ -41,7 +41,7 @@ const StatsTables = ({
 
   return (
     <>
-      <Box sx={{ m: 4, maxWidth: "700px" }}>
+      <Box sx={{ m: { xs: 1, sm: 4 }, maxWidth: "700px" }}>
         <Typography sx={{ my: 3 }} variant="h5">
           Players
         </Typography>
@@ -78,7 +78,7 @@ const StatsTables = ({
           </Table>
         </TableContainer>
       </Box>
-      <Box sx={{ m: 4, maxWidth: "700px" }}>
+      <Box sx={{ m: { xs: 1, sm: 4 }, maxWidth: "700px" }}>
         <Typography sx={{ my: 3 }} variant="h5">
           Games
         </Typography>
