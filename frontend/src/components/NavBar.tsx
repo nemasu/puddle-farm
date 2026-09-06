@@ -24,7 +24,7 @@ import {
 import { Link } from "react-router-dom";
 import { useCharacterNames } from "../hooks/useCharacterNames";
 import { useSearchNavigation } from "../hooks/useSearchNavigation";
-import { StorageUtils } from "../utils/Storage";
+import { StorageUtils } from "../utils/storage";
 
 interface Page {
   name: string;

@@ -3,7 +3,7 @@ import { startTransition, use, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { NotFoundError } from "../errors/NotFoundError";
 import type { PlayerRankResponse, RankResponse } from "../interfaces/API";
-import { JSONParse } from "../utils/JSONParse";
+import { JSONParse } from "../utils/jsonParse";
 import type { EpochMs } from "../utils/time";
 import { parseUtcTimestamp } from "../utils/time";
 

@@ -10,8 +10,8 @@ import {
 import type React from "react";
 import { useEffect, useState } from "react";
 import type { SettingsResponse } from "../interfaces/API";
-import { type StorageOptions, StorageUtils } from "./../utils/Storage";
-import { characterNames } from "./../utils/Themes";
+import { type StorageOptions, StorageUtils } from "./../utils/storage";
+import { characterNames } from "./../utils/themes";
 
 const themes = characterNames;
 

@@ -12,7 +12,7 @@ import Typography from "@mui/material/Typography";
 import { Suspense, use, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { PlayerSearchResponse } from "../interfaces/API";
-import { JSONParse } from "../utils/JSONParse";
+import { JSONParse } from "../utils/jsonParse";
 import { Utils } from "../utils/Utils";
 
 const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;

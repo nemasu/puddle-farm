@@ -12,7 +12,7 @@ import Typography from "@mui/material/Typography";
 import { Suspense, use, useEffect, useState } from "react";
 import HourlyPlayersChart from "../components/HourlyPlayersChart";
 import type { StatsResponse } from "../interfaces/API";
-import { JSONParse } from "../utils/JSONParse";
+import { JSONParse } from "../utils/jsonParse";
 import { Utils } from "./../utils/Utils";
 
 const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;

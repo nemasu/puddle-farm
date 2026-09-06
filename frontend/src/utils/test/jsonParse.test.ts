@@ -1,4 +1,4 @@
-import { JSONParse } from "../JSONParse";
+import { JSONParse } from "../jsonParse";
 
 describe("JSONParse", () => {
   test("handles regular numbers", () => {

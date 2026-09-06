@@ -3,7 +3,7 @@ import { Suspense, use, useState } from "react";
 import { Link } from "react-router-dom";
 import { Tag } from "./../components/Tag";
 import type { Supporter, TagResponse } from "../interfaces/API";
-import { JSONParse } from "../utils/JSONParse";
+import { JSONParse } from "../utils/jsonParse";
 
 const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
 

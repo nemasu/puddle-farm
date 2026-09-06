@@ -27,7 +27,7 @@ import {
 import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import type { MatchupResponse } from "../interfaces/API";
 import type { MatchupProps, Matchups } from "../interfaces/PlayerMatchups";
-import { Utils } from "../utils/Utils";
+import { PercentChangeLabel } from "./PercentChangeLabel";
 
 const TIERS = [
   { label: "S", color: "#FFD700", minWR: 65 },
@@ -446,12 +446,9 @@ const Matchup = ({ API_ENDPOINT, char_short, player_id }: MatchupProps) => {
                 "No games played during this period."
               ) : (
                 <>
-                  {Utils.colorChangeForPercent(
-                    (
-                      (matchups.total_wins / matchups.total_games) *
-                      100
-                    ).toFixed(2),
-                  )}
+                  <PercentChangeLabel
+                    percent={(matchups.total_wins / matchups.total_games) * 100}
+                  />
                   {` ( ${matchups.total_wins} / ${matchups.total_games} )`}
                 </>
               )}
@@ -515,12 +512,9 @@ const Matchup = ({ API_ENDPOINT, char_short, player_id }: MatchupProps) => {
                 <TableBody>
                   {sortedMatchups.map((matchup) => {
                     const globalEntry = globalWRMap.get(matchup.char_short);
-                    const globalWRStr =
+                    const globalWR =
                       globalEntry && globalEntry.total_games > 0
-                        ? (
-                            (globalEntry.wins / globalEntry.total_games) *
-                            100
-                          ).toFixed(2)
+                        ? (globalEntry.wins / globalEntry.total_games) * 100
                         : null;
                     return (
                       <TableRow key={matchup.char_short}>
@@ -537,12 +531,9 @@ const Matchup = ({ API_ENDPOINT, char_short, player_id }: MatchupProps) => {
                           {matchup.char_name} ({matchup.char_short})
                         </TableCell>
                         <TableCell>
-                          {Utils.colorChangeForPercent(
-                            (
-                              (matchup.wins / matchup.total_games) *
-                              100
-                            ).toFixed(2),
-                          )}
+                          <PercentChangeLabel
+                            percent={(matchup.wins / matchup.total_games) * 100}
+                          />
                         </TableCell>
                         <TableCell>{matchup.wins}</TableCell>
                         <TableCell>
@@ -550,9 +541,11 @@ const Matchup = ({ API_ENDPOINT, char_short, player_id }: MatchupProps) => {
                         </TableCell>
                         <TableCell>{matchup.total_games}</TableCell>
                         <TableCell>
-                          {globalWRStr !== null
-                            ? Utils.colorChangeForPercent(globalWRStr)
-                            : "—"}
+                          {globalWR !== null ? (
+                            <PercentChangeLabel percent={globalWR} />
+                          ) : (
+                            "—"
+                          )}
                         </TableCell>
                       </TableRow>
                     );

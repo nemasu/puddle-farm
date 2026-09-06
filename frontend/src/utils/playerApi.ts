@@ -3,7 +3,7 @@ import type {
   PlayerResponse,
   TagResponse,
 } from "../interfaces/API";
-import { JSONParse } from "../utils/JSONParse";
+import { JSONParse } from "../utils/jsonParse";
 
 export const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT ?? "/api";
 

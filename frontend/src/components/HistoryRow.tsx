@@ -18,6 +18,7 @@ import { Link } from "react-router-dom";
 import type { TagResponse } from "../interfaces/API";
 import type { GroupedMatch, MatchWithRating } from "../interfaces/Player";
 import { Utils } from "../utils/Utils";
+import { RatingChangeLabel } from "./RatingChangeLabel";
 import { Tag } from "./Tag";
 
 function formatRatingChange(ratingChange: string | undefined): string {
@@ -151,7 +152,7 @@ function HistoryRow(props: {
                 {item.matches[0].opponent_character_short}
               </TableCell>
               <TableCell sx={{ px: 0, mx: 0 }}>
-                {Utils.colorChangeForRating(item.ratingChange)}
+                <RatingChangeLabel change={item.ratingChange} />
               </TableCell>
             </TableRow>
 
@@ -231,7 +232,7 @@ function HistoryRow(props: {
             {item.wins} - {item.losses}
           </TableCell>
           <TableCell align="right">
-            {Utils.colorChangeForRating(item.ratingChange)}
+            <RatingChangeLabel change={item.ratingChange} />
           </TableCell>
         </TableRow>
         <TableRow id={item.timestamp}>
