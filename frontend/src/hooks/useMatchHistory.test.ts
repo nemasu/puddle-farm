@@ -6,12 +6,12 @@ import type {
   PlayerSet,
 } from "../interfaces/API";
 import type { GroupedMatch } from "../interfaces/Player";
-import { groupMatches } from "../utils/Player";
+import { groupMatches } from "../utils/player";
 import { fetchHistory } from "../utils/playerApi";
 import { useMatchHistory } from "./useMatchHistory";
 
 vi.mock("../utils/playerApi");
-vi.mock("../utils/Player");
+vi.mock("../utils/player");
 
 const mockedFetchHistory = vi.mocked(fetchHistory);
 const mockedGroupMatches = vi.mocked(groupMatches);

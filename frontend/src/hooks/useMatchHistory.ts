@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import type { PlayerResponse, TagResponse } from "../interfaces/API";
 import type { GroupedMatch } from "../interfaces/Player";
-import { groupMatches } from "../utils/Player";
+import { groupMatches } from "../utils/player";
 import { fetchHistory } from "../utils/playerApi";
 import { shouldShowNext } from "../utils/playerUtils";
 import { useResettableState } from "./useResettableState";

@@ -1,8 +1,33 @@
 import { Typography } from "@mui/material";
-import { StorageUtils } from "./Storage";
+import { StorageUtils } from "./storage";
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 const VANQUISHER_PROMOTION_RP = 45000;
+
+const RATING_CHANGE_STEPS: {
+  max: number;
+  exclusive?: boolean;
+  color: string;
+}[] = [
+  { max: -10, color: "#D32F2F" },
+  { max: -2, color: "#E57373" },
+  { max: 0, exclusive: true, color: "#FF8A80" },
+  { max: 2, color: "#A8E6A3" },
+  { max: 10, color: "#4CAF50" },
+];
+const RATING_CHANGE_FALLBACK_COLOR = "#087F23";
+
+const PERCENT_CHANGE_STEPS: {
+  min: number;
+  exclusive?: boolean;
+  color: string;
+}[] = [
+  { min: 55, exclusive: true, color: "#087F23" },
+  { min: 51, exclusive: true, color: "#A8E6A3" },
+  { min: 49, color: "#A0BFF0" },
+  { min: 45, exclusive: true, color: "#FF8A80" },
+];
+const PERCENT_CHANGE_FALLBACK_COLOR = "#D32F2F";
 
 const IMPERIUS_SPRITE = {
   spriteX: 3,
@@ -104,8 +129,26 @@ const rankThresholds = [
 ];
 
 const Utils = {
-  formatNumber: (n) => numberFormatter.format(n),
-  formatRankThresholdRating: (threshold) => {
+  formatNumber: (n: number) => numberFormatter.format(n),
+  getRatingChangeColor: (change: number): string => {
+    for (const step of RATING_CHANGE_STEPS) {
+      if (step.exclusive ? change < step.max : change <= step.max) {
+        return step.color;
+      }
+    }
+    return RATING_CHANGE_FALLBACK_COLOR;
+  },
+  getPercentChangeColor: (percent: number): string => {
+    for (const step of PERCENT_CHANGE_STEPS) {
+      if (step.exclusive ? percent > step.min : percent >= step.min) {
+        return step.color;
+      }
+    }
+    return PERCENT_CHANGE_FALLBACK_COLOR;
+  },
+  formatRankThresholdRating: (
+    threshold: Pick<(typeof rankThresholds)[number], "name" | "rating">,
+  ) => {
     if (threshold.name === "Vanquisher") {
       return `${numberFormatter.format(VANQUISHER_PROMOTION_RP)} RP`;
     }
@@ -115,7 +158,7 @@ const Utils = {
     return `${numberFormatter.format(threshold.rating)} RP`;
   },
   getRankThresholds: () => rankThresholds,
-  getRankSprite: (rating) => {
+  getRankSprite: (rating: number) => {
     for (const threshold of rankThresholds) {
       if (rating >= threshold.rating) {
         return { x: threshold.spriteX, y: threshold.spriteY };
@@ -123,7 +166,7 @@ const Utils = {
     }
     return { x: 0, y: 0 };
   },
-  getRankDisplayName: (rating) => {
+  getRankDisplayName: (rating: number) => {
     for (const threshold of rankThresholds) {
       if (rating >= threshold.rating) {
         return threshold.name;
@@ -131,12 +174,12 @@ const Utils = {
     }
     return "Placement";
   },
-  getRankColor: (name) =>
+  getRankColor: (name: string) =>
     (
       rankThresholds.find((r) => r.name === name) ??
       rankThresholds[rankThresholds.length - 1]
     ).color,
-  displayRankIcon: (rating, size = "50px", isImperius = false) => {
+  displayRankIcon: (rating: number, size = "50px", isImperius = false) => {
     const base =
       Utils.getRankThresholds().find((t) => rating >= t.rating) ||
       Utils.getRankThresholds()[Utils.getRankThresholds().length - 1];
@@ -164,20 +207,20 @@ const Utils = {
       />
     );
   },
-  convertRating: (rating) => {
+  convertRating: (rating: number) => {
     if (rating > 10000000) {
       return Number(rating) - 10000000;
     }
     return Number(rating);
   },
-  displaySimpleRating: (rating) => {
+  displaySimpleRating: (rating: number) => {
     const convertedRating = Utils.convertRating(rating);
     if (convertedRating > 10000000) {
       return `${convertedRating} DR`;
     }
     return `${convertedRating} RP`;
   },
-  displayRating: (rating) => {
+  displayRating: (rating: number) => {
     const convertedRating = Utils.convertRating(rating);
     let suffix = " RP";
     if (rating > 10000000) {
@@ -186,14 +229,15 @@ const Utils = {
 
     return (
       <Typography
-        variant={"span"}
+        component="span"
+        variant="inherit"
         sx={{ display: "inline-flex", alignItems: "center", gap: "4px" }}
       >
         {convertedRating} {suffix}
       </Typography>
     );
   },
-  formatUTCToLocal: (dateTimeString) => {
+  formatUTCToLocal: (dateTimeString: string) => {
     if (dateTimeString === "Now") {
       return dateTimeString;
     }
@@ -215,185 +259,11 @@ const Utils = {
     }
     return dateTimeString;
   },
-  formatCountdown: (s) => {
+  formatCountdown: (s: number) => {
     const h = Math.floor(s / 3600);
     const m = Math.floor((s % 3600) / 60);
     const sec = s % 60;
     return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-  },
-  colorChangeForRating: (change) => {
-    if (StorageUtils.getDisableRatingColors()) {
-      return <>{change}</>;
-    }
-    if (change <= -10) {
-      // Lower than -10
-      return (
-        <Typography
-          variant={"span"}
-          sx={{
-            paddingRight: "3px",
-            display: "inline",
-            fontSize: "0.875rem",
-            color: "#D32F2F",
-          }}
-        >
-          {change}
-        </Typography>
-      );
-    } else if (change <= -2) {
-      // Between -10 and -2
-      return (
-        <Typography
-          variant={"span"}
-          sx={{
-            paddingRight: "3px",
-            display: "inline",
-            fontSize: "0.875rem",
-            color: "#E57373",
-          }}
-        >
-          {change}
-        </Typography>
-      );
-    } else if (change < 0) {
-      // Between -2 and 0
-      return (
-        <Typography
-          variant={"span"}
-          sx={{
-            paddingRight: "3px",
-            display: "inline",
-            fontSize: "0.875rem",
-            color: "#FF8A80",
-          }}
-        >
-          {change}
-        </Typography>
-      );
-    } else if (change <= 2) {
-      // Between 0 and 2
-      return (
-        <Typography
-          variant={"span"}
-          sx={{
-            paddingRight: "3px",
-            display: "inline",
-            fontSize: "0.875rem",
-            color: "#A8E6A3",
-          }}
-        >
-          +{change}
-        </Typography>
-      );
-    } else if (change <= 10) {
-      // Between 2 and 10
-      return (
-        <Typography
-          variant={"span"}
-          sx={{
-            paddingRight: "3px",
-            display: "inline",
-            fontSize: "0.875rem",
-            color: "#4CAF50",
-          }}
-        >
-          +{change}
-        </Typography>
-      );
-    } else {
-      // Greater than 10
-      return (
-        <Typography
-          variant={"span"}
-          sx={{
-            paddingRight: "3px",
-            display: "inline",
-            fontSize: "0.875rem",
-            color: "#087F23",
-          }}
-        >
-          +{change}
-        </Typography>
-      );
-    }
-  },
-  colorChangeForPercent: (percent) => {
-    if (percent > 55) {
-      // Greater than 55%
-      return (
-        <Typography
-          variant={"span"}
-          sx={{
-            paddingRight: "3px",
-            display: "inline",
-            fontSize: "0.875rem",
-            color: "#087F23",
-          }}
-        >
-          {percent}%
-        </Typography>
-      );
-    } else if (percent > 51) {
-      // Between 51 and 55 (not inclusive)
-      return (
-        <Typography
-          variant={"span"}
-          sx={{
-            paddingRight: "3px",
-            display: "inline",
-            fontSize: "0.875rem",
-            color: "#A8E6A3",
-          }}
-        >
-          {percent}%
-        </Typography>
-      );
-    } else if (percent >= 49 && percent <= 51) {
-      // Between 49 and 51 (inclusive)
-      return (
-        <Typography
-          variant={"span"}
-          sx={{
-            paddingRight: "3px",
-            display: "inline",
-            fontSize: "0.875rem",
-            color: "#A0BFF0",
-          }}
-        >
-          {percent}%
-        </Typography>
-      ); // Gold color for 49-51%
-    } else if (percent > 45) {
-      // Between 45 and 49 (not inclusive)
-      return (
-        <Typography
-          variant={"span"}
-          sx={{
-            paddingRight: "3px",
-            display: "inline",
-            fontSize: "0.875rem",
-            color: "#FF8A80",
-          }}
-        >
-          {percent}%
-        </Typography>
-      );
-    } else {
-      // Less than or equal to 45%
-      return (
-        <Typography
-          variant={"span"}
-          sx={{
-            paddingRight: "3px",
-            display: "inline",
-            fontSize: "0.875rem",
-            color: "#D32F2F",
-          }}
-        >
-          {percent}%
-        </Typography>
-      );
-    }
   },
 };
 

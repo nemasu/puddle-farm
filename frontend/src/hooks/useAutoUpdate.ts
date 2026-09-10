@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { StorageUtils } from "../utils/Storage";
+import { StorageUtils } from "../utils/storage";
 
 export function useAutoUpdate(onUpdate: () => Promise<void>): number | null {
   const [countdown, setCountdown] = useState<number | null>(null);

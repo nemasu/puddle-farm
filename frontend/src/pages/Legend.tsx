@@ -14,7 +14,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Tag } from "./../components/Tag";
-import { JSONParse } from "../utils/JSONParse";
+import { JSONParse } from "../utils/jsonParse";
 import { Utils } from "../utils/Utils";
 
 const Legend = () => {

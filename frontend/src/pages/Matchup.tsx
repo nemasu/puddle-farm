@@ -12,6 +12,7 @@ import {
   Typography,
 } from "@mui/material";
 import { Suspense, use, useState } from "react";
+import { PercentChangeLabel } from "../components/PercentChangeLabel";
 import type {
   MatchupCharResponse,
   MatchupEntry,
@@ -161,13 +162,13 @@ const MatchupTable = ({
                           : "inherit",
                     }}
                   >
-                    {matchup.total_games > 0
-                      ? Utils.colorChangeForPercent(
-                          ((matchup.wins / matchup.total_games) * 100).toFixed(
-                            2,
-                          ),
-                        )
-                      : "N/A"}
+                    {matchup.total_games > 0 ? (
+                      <PercentChangeLabel
+                        percent={(matchup.wins / matchup.total_games) * 100}
+                      />
+                    ) : (
+                      "N/A"
+                    )}
                   </TableCell>
                 ))}
               </TableRow>
@@ -194,7 +195,7 @@ const MatchupTable = ({
                     {char.charName} ({char.charShort})
                   </TableCell>
                   <TableCell align="right">
-                    {Utils.colorChangeForPercent(char.winRate.toFixed(2))}
+                    <PercentChangeLabel percent={char.winRate} />
                   </TableCell>
                 </TableRow>
               ))}
