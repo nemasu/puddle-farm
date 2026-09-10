@@ -41,7 +41,7 @@ const TopGlobalTable = ({
   } = useTopGlobalRanking(rankingPromise);
 
   return (
-    <Box sx={{ m: 3 }}>
+    <Box sx={{ m: { xs: 1, sm: 3 } }}>
       {lastUpdateMs !== null && (
         <UpdateCountdown lastUpdateMs={lastUpdateMs} intervalMs={ONE_DAY_MS} />
       )}
@@ -65,7 +65,7 @@ const TopGlobalTable = ({
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell sx={{ px: 0, mx: 0 }}></TableCell>
+              <TableCell sx={{ px: 0, mx: 0, width: 32 }}></TableCell>
               <TableCell>Player</TableCell>
               <TableCell>Char</TableCell>
               <TableCell>Rating</TableCell>
@@ -74,13 +74,21 @@ const TopGlobalTable = ({
           <TableBody>
             {ranking.map((player) => (
               <TableRow key={`${player.id}-${player.char_short}`}>
-                <TableCell sx={{ px: 0, mx: 0, textAlign: "center" }}>
+                <TableCell
+                  sx={{ px: 0, mx: 0, width: 32, textAlign: "center" }}
+                >
                   {player.rank}
                 </TableCell>
-                <TableCell>
+                <TableCell sx={{ maxWidth: { xs: 140, sm: "none" } }}>
                   <Button
                     component={Link}
-                    sx={{ justifyContent: "flex-start", minWidth: "auto" }}
+                    sx={{
+                      justifyContent: "flex-start",
+                      minWidth: "auto",
+                      whiteSpace: "normal",
+                      wordBreak: "break-word",
+                      textAlign: "left",
+                    }}
                     to={`/player/${player.id}/${player.char_short}`}
                   >
                     {player.name}

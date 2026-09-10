@@ -139,7 +139,7 @@ const PopularityContent = ({
   const popularity = use(data);
 
   return (
-    <Box sx={{ m: 5 }}>
+    <Box sx={{ m: { xs: 1, sm: 5 } }}>
       <Typography variant="h4" gutterBottom align="center">
         Popularity
       </Typography>

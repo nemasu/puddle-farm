@@ -241,7 +241,7 @@ const Distribution = () => {
   }, []);
 
   return (
-    <Box sx={{ m: 5, maxWidth: "700px" }}>
+    <Box sx={{ m: { xs: 1, sm: 5 }, maxWidth: "700px" }}>
       {loading ? (
         <CircularProgress
           size={60}
