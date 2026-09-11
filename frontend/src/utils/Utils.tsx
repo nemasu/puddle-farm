@@ -265,6 +265,11 @@ const Utils = {
     const sec = s % 60;
     return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
   },
+  formatRatingChange: (ratingChange: string | undefined): string => {
+    const sign =
+      ratingChange !== undefined && parseFloat(ratingChange) > 0 ? "+" : "";
+    return `${sign}${ratingChange}`;
+  },
 };
 
 export { Utils };
