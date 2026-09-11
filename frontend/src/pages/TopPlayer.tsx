@@ -188,7 +188,7 @@ const TopPlayer = () => {
       >
         <Box
           sx={{
-            minHeight: 100,
+            minHeight: { xs: 50, sm: 100 },
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
