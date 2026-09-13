@@ -101,7 +101,7 @@ function LabeledValue({
       >
         {label}
       </Typography>
-      <Typography variant="body2" sx={{ lineHeight: 1.2 }}>
+      <Typography component="div" variant="body2">
         {children}
       </Typography>
     </Box>
