@@ -65,8 +65,11 @@ function createCharacterTheme(config: CharacterThemeConfig): Theme {
                 props: { variant: "pageHeader" },
                 style: {
                   display: "block",
-                  fontSize: 34,
+                  fontSize: 24,
                   color: config.pageHeaderColor,
+                  "@media (min-width:600px)": {
+                    fontSize: 34,
+                  },
                 },
               },
               {
