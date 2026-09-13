@@ -136,12 +136,12 @@ const SingleActivityDot = ({key, visible, date, games, player_id}: SingleActivit
         if (games.length > 0) {
             setWinrate(games.filter(game => game.result_win).length / games.length * 100);
         } else {
-            setWinrate(-14);
+            setWinrate(-0.5); // negative winrate -> no games played
         }
     }, [visible, date, games, player_id]);
 
     return (
-        <Tooltip title={`${date.toDateString()} - ${games.length} games, ${winrate.toFixed(2)}% WR`}>
+        <Tooltip title={winrate >= 0 ? `${date.toDateString()} - ${games.length} games, ${winrate.toFixed(2)}% WR`: `${date.toDateString()} - No games played`}>
             <Box
                 key={key}
                 sx={{
