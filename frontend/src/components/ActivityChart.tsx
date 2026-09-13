@@ -1,20 +1,7 @@
 import {Box, Tooltip, Typography} from "@mui/material";
-import {ActivityChartProps} from "../interfaces/Player";
+import {ActivityChartProps, Last100GamesProps, SingleActivityDotProps} from "../interfaces/Player";
 import {useEffect, useState} from "react";
 import {API_ENDPOINT} from "../utils/playerApi";
-
-interface Last100GamesProps {
-    result_win: boolean;
-    timestamp: Date;
-}
-
-interface SingleActivityDotProps {
-    key: string;
-    visible?: boolean;
-    date: Date;
-    games: Last100GamesProps[];
-    player_id: string;
-}
 
 
 // Greatly inspired by https://codepen.io/ire/pen/Legmwo/

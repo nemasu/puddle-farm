@@ -45,3 +45,15 @@ export interface ActivityChartProps {
   char_short: string | undefined;
 }
 
+export interface Last100GamesProps {
+  result_win: boolean;
+  timestamp: Date;
+}
+
+export interface SingleActivityDotProps {
+  key: string;
+  visible?: boolean;
+  date: Date;
+  games: Last100GamesProps[];
+  player_id: string;
+}
