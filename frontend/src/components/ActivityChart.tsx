@@ -18,7 +18,6 @@ interface SingleActivityDotProps {
 
 
 // Greatly inspired by https://codepen.io/ire/pen/Legmwo/
-
 const ActivityChart = ({player_id, char_short}: ActivityChartProps) => {
     const [history, setHistory] = useState<Last100GamesProps[]>([]);
     const gap = 3;
@@ -40,27 +39,28 @@ const ActivityChart = ({player_id, char_short}: ActivityChartProps) => {
         setHistory([]);
         const fetchLast100Games = async () => {
 
-            let hiistory: Last100GamesProps[] = history;
-                const lastGamesResponse = await fetch(
-                    API_ENDPOINT +
-                    "/player/" +
-                    player_id +
-                    "/" +
-                    char_short +
-                    "/history?from=" +
-                    earliestDateUTC+
-                    `&to=${todayUTC}&count=2000`
-                )
+            let convertedHistory: Last100GamesProps[] = history;
+            const lastGamesResponse = await fetch(
+                API_ENDPOINT +
+                "/player/" +
+                player_id +
+                "/" +
+                char_short +
+                "/history?from=" +
+                earliestDateUTC +
+                `&to=${todayUTC}&count=2000`
+            )
 
-                if (lastGamesResponse.status === 200) {
-                    const lastGamesResult = await lastGamesResponse.json();
+            if (lastGamesResponse.status === 200) {
+                const lastGamesResult = await lastGamesResponse.json();
 
-                    hiistory = hiistory.concat(lastGamesResult.history.map((game: any) => ({
-                        result_win: game.result_win,
-                        timestamp: new Date(game.timestamp),
-                    })));}
+                convertedHistory = convertedHistory.concat(lastGamesResult.history.map((game: any) => ({
+                    result_win: game.result_win,
+                    timestamp: new Date(game.timestamp),
+                })));
+            }
 
-            setHistory(hiistory);
+            setHistory(convertedHistory);
         }
 
         fetchLast100Games();
@@ -69,7 +69,6 @@ const ActivityChart = ({player_id, char_short}: ActivityChartProps) => {
     return (
         <>
             <Typography sx={{fontSize: 14}}>Recent activity:</Typography>
-            {/*{history.map((game => (<Typography sx={{fontSize: 14}}>{game.timestamp.toDateString()}</Typography>)))}*/}
             <Box sx={{display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'start'}}>
                 <Box sx={{
                     fontSize: 10,
