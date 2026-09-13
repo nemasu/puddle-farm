@@ -1,4 +1,11 @@
-import { Button, CircularProgress } from "@mui/material";
+import {
+  Button,
+  CircularProgress,
+  Divider,
+  FormControlLabel,
+  FormGroup,
+  Switch,
+} from "@mui/material";
 import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
@@ -71,48 +78,58 @@ const SearchResults = ({ resultsPromise }: SearchResultsProps) => {
   }
 
   return (
-    <Box sx={{ m: { xs: 1, sm: 4 }, maxWidth: "700px" }}>
-      <TableContainer component={Paper}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Player</TableCell>
-              <TableCell>Character</TableCell>
-              <TableCell>Rating</TableCell>
+    <TableContainer component={Paper}>
+      <Table size="small">
+        <TableHead>
+          <TableRow>
+            <TableCell>Player</TableCell>
+            <TableCell>Character</TableCell>
+            <TableCell>Rating</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {players.map((player) => (
+            <TableRow key={`${player.id}-${player.char_short}`}>
+              <TableCell>
+                <Button
+                  component={Link}
+                  sx={{ justifyContent: "flex-start", minWidth: "auto" }}
+                  to={`/player/${player.id}/${player.char_short}`}
+                >
+                  {player.name}
+                </Button>
+              </TableCell>
+              <TableCell>{player.char_short}</TableCell>
+              <TableCell>
+                {Utils.displayRankIcon(player.rating, "32px")}
+                <Box component={"span"}>
+                  {Utils.displayRating(player.rating)}
+                </Box>
+              </TableCell>
             </TableRow>
-          </TableHead>
-          <TableBody>
-            {players.map((player) => (
-              <TableRow key={`${player.id}-${player.char_short}`}>
-                <TableCell>
-                  <Button
-                    component={Link}
-                    sx={{ justifyContent: "flex-start", minWidth: "auto" }}
-                    to={`/player/${player.id}/${player.char_short}`}
-                  >
-                    {player.name}
-                  </Button>
-                </TableCell>
-                <TableCell>{player.char_short}</TableCell>
-                <TableCell>
-                  {Utils.displayRankIcon(player.rating, "32px")}
-                  <Box component={"span"}>
-                    {Utils.displayRating(player.rating)}
-                  </Box>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Box>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
 };
 
 const Search = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const searchQuery = searchParams.get("q") ?? "";
   const exact = searchParams.get("exact") === "true";
+
+  const handleExactChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const isChecked = event.target.checked;
+    setSearchParams((prev) => {
+      if (isChecked) {
+        prev.set("exact", "true");
+      } else {
+        prev.delete("exact");
+      }
+      return prev;
+    });
+  };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: trigger only
   useEffect(() => {
@@ -141,11 +158,27 @@ const Search = () => {
         </Box>
       </AppBar>
 
-      <SearchResultsLoader
-        key={`${searchQuery}-${exact}`}
-        searchQuery={searchQuery}
-        exact={exact}
-      />
+      <Box component="section" sx={{ m: { xs: 1, sm: 4 } }}>
+        <Box sx={{ p: 1 }}>
+          <Typography>Search Options</Typography>
+          <FormGroup>
+            <FormControlLabel
+              control={<Switch checked={exact} onChange={handleExactChange} />}
+              label="Exact search"
+            />
+          </FormGroup>
+        </Box>
+
+        <Divider />
+
+        <Box sx={{ p: 1 }}>
+          <SearchResultsLoader
+            key={`${searchQuery}-${exact}`}
+            searchQuery={searchQuery}
+            exact={exact}
+          />
+        </Box>
+      </Box>
     </>
   );
 };
