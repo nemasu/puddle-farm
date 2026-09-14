@@ -417,6 +417,7 @@ const Matchup = ({ API_ENDPOINT, char_short, player_id }: MatchupProps) => {
                 <DialogTitle>Custom Duration</DialogTitle>
                 <DialogContent>
                   <TextField
+                    sx={{ mt: 1 }}
                     autoFocus={false}
                     label="Number of Weeks"
                     type="number"
