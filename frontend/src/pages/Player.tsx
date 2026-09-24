@@ -23,6 +23,7 @@ import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import { type MouseEvent, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import HistoryCard from "../components/HistoryCard";
 import HistoryRow from "../components/HistoryRow";
 import Matchup from "../components/PlayerMatchup";
 import RatingChart from "../components/RatingChart";
@@ -258,9 +259,8 @@ function MatchHistory({
         {tags &&
           filteredHistory.map((item) => (
             <Box sx={{ py: 0.3 }} key={`${item.timestamp}-${item.opponent_id}`}>
-              <HistoryRow
+              <HistoryCard
                 item={item}
-                isMobile={true}
                 tags={tags[item.opponent_id.toString()]}
               />
             </Box>
