@@ -318,11 +318,11 @@ const RatingChart = ({
   return (
     <>
       <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 5 }}>
-        <FormControl size="small" sx={{ minWidth: 120 }}>
+        <FormControl size="small" sx={{ minWidth: 140 }}>
           <InputLabel>Game Count</InputLabel>
           <Select
             value={duration}
-            label="Games"
+            label="Game Count"
             onChange={handleDurationChange}
           >
             {(total_games < 100
@@ -349,6 +349,7 @@ const RatingChart = ({
           <DialogTitle>Custom Game Count</DialogTitle>
           <DialogContent>
             <TextField
+              sx={{ mt: 1 }}
               autoFocus={false}
               label="Number of Games"
               type="number"
