@@ -1,6 +1,4 @@
 import MenuIcon from "@mui/icons-material/Menu";
-import SearchIcon from "@mui/icons-material/Search";
-import ZoomInIcon from "@mui/icons-material/ZoomIn";
 import {
   Alert,
   AlertTitle,
@@ -11,25 +9,49 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  TextField,
+  type SxProps,
+  type Theme,
   Toolbar,
 } from "@mui/material";
-import {
-  type MouseEvent,
-  type SetStateAction,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import { Link } from "react-router-dom";
+import { type MouseEvent, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useCharacterNames } from "../hooks/useCharacterNames";
+import { useIngestionHealth } from "../hooks/useIngestionHealth";
 import { useSearchNavigation } from "../hooks/useSearchNavigation";
-import { StorageUtils } from "../utils/storage";
+import { SearchBox } from "./SearchBox";
 
 interface Page {
   name: string;
   link?: string;
   list?: { key: string; name: string; link: string }[];
+}
+
+function CharacterMenuItems({
+  characters,
+  onItemClick,
+  itemSx,
+  boxSx,
+}: {
+  characters: { key: string; name: string; link: string }[];
+  onItemClick: () => void;
+  itemSx?: SxProps<Theme>;
+  boxSx?: SxProps<Theme>;
+}) {
+  return (
+    <>
+      {characters.map((char) => (
+        <MenuItem
+          component={Link}
+          to={char.link}
+          key={char.name}
+          sx={itemSx}
+          onClick={onItemClick}
+        >
+          <Box sx={boxSx}>{char.name}</Box>
+        </MenuItem>
+      ))}
+    </>
+  );
 }
 
 const pages: Page[] = [
@@ -45,6 +67,7 @@ const pages: Page[] = [
 ];
 
 function NavBar() {
+  const [searchParams] = useSearchParams();
   const navigateToSearch = useSearchNavigation();
 
   const [anchorElNav, setAnchorElNav] = useState<HTMLElement | null>(null);
@@ -52,10 +75,6 @@ function NavBar() {
   const [characterElNav, setCharacterElNav] = useState<HTMLElement | null>(
     null,
   );
-
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
 
   const characterNames = useCharacterNames();
 
@@ -72,63 +91,14 @@ function NavBar() {
     );
   }, [characterNames]);
 
-  const [ingestionMessage, setIngestionMessage] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const handleSearchChange = (event: {
-    target: { value: SetStateAction<string> };
-  }) => {
-    setSearchQuery(event.target.value);
+  const ingestionMessage = useIngestionHealth();
+
+  const onSearch = (q: string) => {
+    const currentExact = searchParams.get("exact") === "true";
+    navigateToSearch(q, currentExact);
   };
-
-  const handleSearchKeyDown = (event: { key: string }) => {
-    if (event.key === "Enter") {
-      navigateToSearch(searchQuery, false);
-    }
-  };
-
-  const handleSearchClick = () => {
-    navigateToSearch(searchQuery, false);
-  };
-
-  const handleExactSearchClick = () => {
-    navigateToSearch(searchQuery, true);
-  };
-
-  useEffect(() => {
-    const checkIngestionHealth = async () => {
-      try {
-        const response = await fetch(`${API_ENDPOINT}/ingestion/health`);
-        const message = await response.text();
-        if (!response.ok) {
-          setIngestionMessage(
-            message || "Could not check whether matches are updating.",
-          );
-        } else {
-          setIngestionMessage(null);
-        }
-      } catch (error) {
-        console.error("Error checking match ingestion:", error);
-        setIngestionMessage("Could not check whether matches are updating.");
-      }
-    };
-
-    checkIngestionHealth();
-
-    // Read preferences
-    const preferences = StorageUtils.getPreferences();
-    let intervalId: ReturnType<typeof setInterval> | null = null;
-
-    // Only set interval if autoUpdate is enabled
-    if (preferences.autoUpdate) {
-      intervalId = setInterval(checkIngestionHealth, 60000); // Check every 60 seconds
-    }
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, []);
 
   const handleOpenNavMenu = (event: MouseEvent<HTMLElement>) => {
     setAnchorElNav(event.currentTarget);
@@ -155,8 +125,13 @@ function NavBar() {
       <AppBar position="static" style={{ backgroundImage: "none" }}>
         <Container>
           <Toolbar variant="dense" disableGutters>
-            <Box sx={{ flexGrow: 1, display: { xs: "flex", md: "none" } }}>
-              {/* Mobile view */}
+            <Box
+              sx={{
+                flexGrow: 1,
+                display: { xs: "flex", md: "none" },
+                alignItems: "center",
+              }}
+            >
               <IconButton
                 size="large"
                 aria-label="Menu"
@@ -183,8 +158,6 @@ function NavBar() {
                 onClose={handleCloseNavMenu}
                 sx={{ display: { xs: "block", md: "none" } }}
               >
-                {" "}
-                {/* Mobile view - menu */}
                 {navPages.map((page) =>
                   //If the page has a 'list' attribute that is an array, render a submenu
                   "list" in page ? (
@@ -198,24 +171,19 @@ function NavBar() {
                         borderTop: "1px solid",
                       }}
                     >
-                      {page.list?.map((char) => (
-                        <MenuItem
-                          component={Link}
-                          to={char.link}
-                          key={char.name}
-                          sx={{ my: 1, color: "white", display: "block" }}
-                          onClick={handleCloseNavMenu}
-                        >
-                          <Box sx={{ display: { width: 80 } }}>{char.name}</Box>
-                        </MenuItem>
-                      ))}
+                      <CharacterMenuItems
+                        characters={page.list ?? []}
+                        onItemClick={handleCloseNavMenu}
+                        itemSx={{ color: "white" }}
+                        boxSx={{ width: 80 }}
+                      />
                     </Box>
                   ) : (
                     <MenuItem
                       key={page.name}
                       component={Link}
                       to={page.link ?? "/"}
-                      sx={{ my: 1, color: "white", display: "block" }}
+                      sx={{ color: "white" }}
                       onClick={handleCloseNavMenu}
                     >
                       {page.name}
@@ -223,35 +191,15 @@ function NavBar() {
                   ),
                 )}
               </Menu>
-              {/* Mobile View - Search */}
-              <TextField
-                size="small"
-                id="search_string"
-                variant="outlined"
-                label="Search..."
-                style={{ marginTop: 10 }}
-                value={searchQuery}
-                onChange={handleSearchChange}
-                onKeyDown={handleSearchKeyDown}
-              />
-              <Box>
-                <SearchIcon
-                  style={{
-                    marginTop: 5,
-                    fontSize: 25,
-                    display: "block",
-                    cursor: "pointer",
-                  }}
-                  onClick={handleSearchClick}
-                />
-                <ZoomInIcon
-                  style={{ fontSize: 25, cursor: "pointer" }}
-                  onClick={handleExactSearchClick}
+              <Box sx={{ padding: 1 }}>
+                <SearchBox
+                  query={searchQuery}
+                  onQueryChange={setSearchQuery}
+                  onSearch={onSearch}
                 />
               </Box>
             </Box>
             <Box sx={{ flexGrow: 1, display: { xs: "none", md: "flex" } }}>
-              {/* Desktop view */}
               {navPages.map((page) =>
                 //If the page has a 'list' attribute that is an array, render a submenu
                 "list" in page ? (
@@ -272,7 +220,6 @@ function NavBar() {
                     >
                       {page.name}
                     </Button>{" "}
-                    {/* Desktop view - character menu*/}
                     <Menu
                       id="menu-charbar"
                       anchorEl={characterElNav}
@@ -296,18 +243,11 @@ function NavBar() {
                           maxWidth: "450px",
                         }}
                       >
-                        {page.list?.map((char) => (
-                          <MenuItem
-                            component={Link}
-                            to={char.link}
-                            key={char.name}
-                            onClick={handleCloseCharNavMenu}
-                          >
-                            <Box sx={{ display: { width: 80 } }}>
-                              {char.name}
-                            </Box>
-                          </MenuItem>
-                        ))}
+                        <CharacterMenuItems
+                          characters={page.list ?? []}
+                          onItemClick={handleCloseCharNavMenu}
+                          boxSx={{ display: { width: 80 } }}
+                        />
                       </Box>
                     </Menu>
                   </Box>
@@ -332,35 +272,12 @@ function NavBar() {
                 ),
               )}
             </Box>
-            <Box sx={{ display: { xs: "none", md: "flex" } }}>
-              {" "}
-              {/* Desktop view - right box */}
-              {/* Desktop View - Search */}
-              <TextField
-                size="small"
-                id="search_string"
-                variant="outlined"
-                label="Search..."
-                style={{ marginTop: 10 }}
-                value={searchQuery}
-                onChange={handleSearchChange}
-                onKeyDown={handleSearchKeyDown}
+            <Box sx={{ display: { xs: "none", md: "flex" }, padding: 1 }}>
+              <SearchBox
+                query={searchQuery}
+                onQueryChange={setSearchQuery}
+                onSearch={onSearch}
               />
-              <Box>
-                <SearchIcon
-                  style={{
-                    marginTop: 5,
-                    fontSize: 25,
-                    display: "block",
-                    cursor: "pointer",
-                  }}
-                  onClick={handleSearchClick}
-                />
-                <ZoomInIcon
-                  style={{ fontSize: 25, cursor: "pointer" }}
-                  onClick={handleExactSearchClick}
-                />
-              </Box>
             </Box>
           </Toolbar>
         </Container>
