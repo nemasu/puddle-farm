@@ -55,5 +55,4 @@ export interface SingleActivityDotProps {
   visible?: boolean;
   date: Date;
   games: Last100GamesProps[];
-  player_id: string;
 }
