@@ -23,6 +23,7 @@ import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import { type MouseEvent, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import ActivityChart from "../components/ActivityChart";
 import HistoryRow from "../components/HistoryRow";
 import Matchup from "../components/PlayerMatchup";
 import RatingChart from "../components/RatingChart";
@@ -42,7 +43,6 @@ import {
   isEmptyPlayer,
 } from "../utils/playerUtils";
 import { Utils } from "./../utils/Utils";
-import ActivityChart from "../components/ActivityChart";
 
 type LinkClickHandler = (event: MouseEvent<HTMLElement>, url: string) => void;
 
@@ -430,9 +430,7 @@ function PlayerSidebar({
       </Box>
       <Box sx={{ gridArea: { xs: "sidebar", lg: "unset" } }}>
         {player && !isEmptyPlayer(player) ? (
-            <>
-              <ActivityChart player_id={player.id} char_short={char_short}/>
-            </>
+          <ActivityChart player_id={player.id} char_short={char_short} />
         ) : null}
       </Box>
     </Box>
