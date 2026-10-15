@@ -38,20 +38,22 @@ const ActivityChart = ({ player_id, char_short }: ActivityChartProps) => {
     date1.getMonth() === date2.getMonth() &&
     date1.getDate() === date2.getDate();
 
+  /** Formats a date as a YYYY-MM-DD date string. */
+  const formatDateForApi = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
   useEffect(() => {
     setHistory([]);
 
     const fetchLast100Games = async () => {
-      const lastGamesResponse = await fetch(
-        API_ENDPOINT +
-          "/player/" +
-          player_id +
-          "/" +
-          char_short +
-          "/history?from=" +
-          earliestDateUTC +
-          `&to=${todayUTC}&count=2000`,
-      );
+        const lastGamesResponse = await fetch(
+            `${API_ENDPOINT}/player/${player_id}/${char_short}/history?from=${formatDateForApi(earliestDate)}&to=${formatDateForApi(today)}&count=2000`,
+        );
 
       if (lastGamesResponse.status === 200) {
         const lastGamesResult = (await lastGamesResponse.json()) as {
