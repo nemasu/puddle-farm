@@ -1,11 +1,4 @@
-import {
-  alpha,
-  Alert,
-  Box,
-  Button,
-  Paper,
-  Typography,
-} from "@mui/material";
+import { Alert, alpha, Box, Button, Paper, Typography } from "@mui/material";
 import {
   CategoryScale,
   Chart as ChartJS,
