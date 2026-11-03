@@ -1,8 +1,8 @@
 import {
+  alpha,
   Alert,
   Box,
   Button,
-  ButtonGroup,
   Paper,
   Typography,
 } from "@mui/material";
@@ -92,18 +92,32 @@ export default function HourlyPlayersChart() {
           <Typography variant="h5">
             Hourly distinct players seen in ranked
           </Typography>
-          <ButtonGroup size="small" aria-label="Player history range">
+          <Box
+            sx={{
+              display: "flex",
+              gap: 0.5,
+            }}
+          >
             {RANGES.map(([value, label]) => (
               <Button
                 key={value}
                 aria-pressed={range === value}
-                variant={range === value ? "contained" : "outlined"}
+                variant="outlined"
+                sx={(theme) => ({
+                  "&:hover, &[aria-pressed='true']": {
+                    backgroundColor: alpha(
+                      theme.palette.primary.main,
+                      theme.palette.action.hoverOpacity,
+                    ),
+                    borderColor: "var(--variant-outlinedColor, currentColor)",
+                  },
+                })}
                 onClick={() => setRange(value)}
               >
                 {label}
               </Button>
             ))}
-          </ButtonGroup>
+          </Box>
         </Box>
         {state.status === "loading" ? (
           <Typography color="text.secondary">
