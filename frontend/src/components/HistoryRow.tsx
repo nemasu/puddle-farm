@@ -107,12 +107,18 @@ function HistoryRow(props: { item?: GroupedMatch; tags?: TagResponse[] }) {
           {item.matches[0].opponent_character}
         </TableCell>
         <TableCell align="right">
-          <Box component={"span"}>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+            }}
+          >
             {Utils.displayRankIcon(
               item.matches[item.matches.length - 1].opponent_rating_value,
               "32px",
               item.matches[item.matches.length - 1].opponent_is_legend,
-            )}{" "}
+            )}
             {Utils.displayRating(
               item.matches[item.matches.length - 1].opponent_rating_value,
             )}
