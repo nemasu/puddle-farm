@@ -23,6 +23,7 @@ import DialogContentText from "@mui/material/DialogContentText";
 import DialogTitle from "@mui/material/DialogTitle";
 import { type MouseEvent, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import ActivityChart from "../components/ActivityChart";
 import HistoryCard from "../components/HistoryCard";
 import HistoryRow from "../components/HistoryRow";
 import Matchup from "../components/PlayerMatchup";
@@ -313,11 +314,13 @@ function PlayerSidebar({
   avatar,
   comment,
   onLinkClick,
+  char_short,
 }: {
   player: PlayerResponse | null;
   avatar: string | null;
   comment: string | null;
   onLinkClick: LinkClickHandler;
+  char_short: string | undefined;
 }) {
   return (
     <Box
@@ -423,6 +426,11 @@ function PlayerSidebar({
             ))}
             <hr style={{ marginTop: 10 }} />
           </>
+        ) : null}
+      </Box>
+      <Box sx={{ gridArea: { xs: "sidebar", lg: "unset" } }}>
+        {player && !isEmptyPlayer(player) ? (
+          <ActivityChart player_id={player.id} char_short={char_short} />
         ) : null}
       </Box>
     </Box>
@@ -591,6 +599,7 @@ const Player = () => {
           avatar={avatar}
           comment={comment}
           onLinkClick={onLinkClick}
+          char_short={char_short}
         />
       </Box>
       <SyncErrorDialog syncError={syncError} onClose={clearSyncError} />
