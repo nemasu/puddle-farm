@@ -1,4 +1,4 @@
-import type { PlayerSet } from "./API";
+import type { PlayerSet, RatingsResponse } from "./API";
 
 export type MatchWithRating = PlayerSet & { ratingChange?: string };
 
@@ -8,7 +8,7 @@ export interface GroupedMatch {
   matches: MatchWithRating[];
   odds: number; // Player's odds of winning the set
   opponent_character_short: string; // Opponent's character (short name)
-  opponent_id: string; // Opponent's ID
+  opponent_id: bigint; // Opponent's ID
   opponent_name: string; // Opponent's name
   ratingChange: number; // Change in rating after this set of matches
   timestamp: string; // Timestamp of the match set
@@ -38,4 +38,5 @@ export interface RatingChartProps {
   API_ENDPOINT: string;
   latest_rating: number;
   total_games: number;
+  initialHistory?: RatingsResponse[] | null;
 }

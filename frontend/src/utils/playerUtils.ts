@@ -4,7 +4,7 @@ import type { GroupedMatch } from "../interfaces/Player";
 const DEFAULT_COUNT = 100;
 
 export function isEmptyPlayer(player: PlayerResponse): boolean {
-  return player.id === "0";
+  return player.id === 0n;
 }
 
 export function parsePlayerId(player_id: string | undefined): bigint {

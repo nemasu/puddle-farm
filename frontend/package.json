@@ -3,36 +3,47 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@emotion/cache": "11.14.0",
     "@emotion/react": "^11.14.0",
+    "@emotion/server": "11.11.0",
     "@emotion/styled": "^11.14.1",
     "@fontsource/roboto": "^5.2.10",
     "@mui/icons-material": "^9.2.0",
     "@mui/material": "^9.2.0",
+    "@mui/material-nextjs": "9.5.0",
     "chart.js": "^4.5.1",
+    "next": "16.4.6",
     "react": "^19.2.7",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.7",
-    "react-router-dom": "^7.18.1"
+    "server-only": "0.0.1"
   },
   "scripts": {
-    "start": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "check": "biome check src/",
-    "check:fix": "biome check --write src/",
+    "start": "next dev",
+    "build": "next build",
+    "preview": "next start",
+    "check": "biome check src/ tests/unit/ next.config.ts jest.config.cjs tests/setup/jest.setup.ts tests/setup/jest-environment.cjs",
+    "check:fix": "biome check --write src/ tests/unit/ next.config.ts jest.config.cjs tests/setup/jest.setup.ts tests/setup/jest-environment.cjs",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest watch"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "dev:next": "next dev",
+    "build:next": "next build",
+    "start:next": "next start",
+    "test:ssr": "node tests/integration/check-ssr.mjs",
+    "test:browser": "node tests/integration/check-browser.mjs",
+    "dev": "next dev"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.2",
     "@testing-library/react": "^16.3.2",
+    "@types/jest": "^30.0.0",
+    "@types/node": "24.19.2",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "jest": "^30.5.2",
+    "jest-environment-jsdom": "^30.5.2",
     "jsdom": "^30.0.1",
-    "typescript": "^7.0.2",
-    "vite": "^8.1.3",
-    "vite-plugin-svgr": "^5.2.0",
-    "vitest": "^4.1.10"
+    "typescript": "^7.0.2"
   }
 }

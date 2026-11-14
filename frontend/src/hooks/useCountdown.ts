@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
-import type { EpochMs } from "../utils/time";
 
 export interface UseCountdownResult {
   secondsLeft: number;
 }
 
-function computeSecondsLeft(targetTimestamp: EpochMs): number {
+function computeSecondsLeft(targetTimestamp: number): number {
   return Math.floor((targetTimestamp - Date.now()) / 1000);
 }
 
-export function useCountdown(targetTimestamp: EpochMs): UseCountdownResult {
+export function useCountdown(
+  targetTimestamp: number,
+  renderedAt?: number,
+): UseCountdownResult {
   const [secondsLeft, setSecondsLeft] = useState(() =>
-    computeSecondsLeft(targetTimestamp),
+    Math.floor((targetTimestamp - (renderedAt ?? Date.now())) / 1000),
   );
 
   useEffect(() => {

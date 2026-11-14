@@ -1,3 +1,5 @@
+"use client";
+
 import { Alert, alpha, Box, Button, Paper, Typography } from "@mui/material";
 import {
   CategoryScale,
@@ -15,6 +17,8 @@ import type {
   HourlyPlayerPoint,
   HourlyPlayersResponse,
 } from "../interfaces/API";
+import { API_ENDPOINT } from "../lib/api-endpoint";
+import { usePreferencesContext } from "./DisplayPreferences";
 
 ChartJS.register(
   CategoryScale,
@@ -24,8 +28,6 @@ ChartJS.register(
   Filler,
   Tooltip,
 );
-
-const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
 
 const RANGES = [
   ["24h", "24h"],
@@ -41,11 +43,30 @@ type LoadState =
   | { status: "loaded"; points: HourlyPlayerPoint[] }
   | { status: "failed" };
 
-export default function HourlyPlayersChart() {
+export default function HourlyPlayersChart({
+  initialPoints,
+}: {
+  initialPoints?: HourlyPlayerPoint[] | null;
+}) {
+  const preferences = usePreferencesContext()?.preferences;
   const [range, setRange] = useState<Range>("30d");
-  const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [state, setState] = useState<LoadState>(
+    initialPoints === undefined
+      ? { status: "loading" }
+      : initialPoints === null
+        ? { status: "failed" }
+        : { status: "loaded", points: initialPoints },
+  );
 
   useEffect(() => {
+    if (initialPoints !== undefined && range === "30d") {
+      setState(
+        initialPoints === null
+          ? { status: "failed" }
+          : { status: "loaded", points: initialPoints },
+      );
+      return;
+    }
     const controller = new AbortController();
     setState({ status: "loading" });
     fetch(`${API_ENDPOINT}/stats/hourly-players?range=${range}`, {
@@ -62,11 +83,24 @@ export default function HourlyPlayersChart() {
         setState({ status: "failed" });
       });
     return () => controller.abort();
-  }, [range]);
+  }, [range, initialPoints]);
 
   const points = state.status === "loaded" ? state.points : [];
+  const timeZone = preferences
+    ? preferences.useLocalTime
+      ? preferences.timeZone
+      : "UTC"
+    : undefined;
+  const tickFormatter = new Intl.DateTimeFormat(
+    undefined,
+    range === "24h"
+      ? { hour: "numeric", minute: "2-digit", timeZone }
+      : range === "7d" || range === "30d"
+        ? { month: "short", day: "numeric", timeZone }
+        : { month: "short", year: "numeric", timeZone },
+  );
   const labels = points.map(({ timestamp }) =>
-    new Date(timestamp * 1000).toLocaleString(),
+    tickFormatter.format(new Date(timestamp * 1000)),
   );
 
   return (
@@ -82,13 +116,12 @@ export default function HourlyPlayersChart() {
             mb: 2,
           }}
         >
-          <Typography variant="h5">
-            Hourly distinct players seen in ranked
-          </Typography>
+          <Typography variant="h5">Hourly Ranked Players</Typography>
           <Box
             sx={{
               display: "flex",
               gap: 0.5,
+              flexWrap: "wrap",
             }}
           >
             {RANGES.map(([value, label]) => (
@@ -150,13 +183,25 @@ export default function HourlyPlayersChart() {
                   legend: { display: false },
                   tooltip: {
                     callbacks: {
+                      title: (items) => {
+                        const point = points[items[0]?.dataIndex];
+                        return point
+                          ? new Date(point.timestamp * 1000).toLocaleString(
+                              undefined,
+                              { timeZone },
+                            )
+                          : "";
+                      },
                       label: (item: TooltipItem<"line">) =>
                         `${Number(item.raw).toLocaleString()} players`,
                     },
                   },
                 },
                 scales: {
-                  x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } },
+                  x: {
+                    grid: { display: false },
+                    ticks: { maxTicksLimit: 8, maxRotation: 0 },
+                  },
                   y: { beginAtZero: true, ticks: { precision: 0 } },
                 },
               }}

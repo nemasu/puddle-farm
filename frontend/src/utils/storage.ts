@@ -1,4 +1,6 @@
 import type { StorageOptions } from "../interfaces/Storage";
+import { writeDisplayCookie } from "../lib/display-preferences";
+import { writeThemeCookie } from "../lib/theme-preference";
 
 const STORAGE_KEYS = {
   THEME: "theme",
@@ -47,6 +49,7 @@ const Storage = {
 const StorageUtils = {
   // set theme
   setTheme: (theme: string) => {
+    writeThemeCookie(theme);
     return Storage.set(STORAGE_KEYS.THEME, theme);
   },
 
@@ -57,6 +60,7 @@ const StorageUtils = {
 
   // set useLocalTime
   setUseLocalTime: (useLocalTime: boolean | null) => {
+    writeDisplayCookie("useLocalTime", !!useLocalTime);
     if (!useLocalTime) {
       return Storage.remove(STORAGE_KEYS.useLocalTime);
     }
@@ -66,11 +70,12 @@ const StorageUtils = {
   //Get useLocalTime
   getUseLocalTime: () => {
     const value = Storage.get(STORAGE_KEYS.useLocalTime);
-    return value ? Boolean(value) : null;
+    return value === "true" ? true : null;
   },
 
   // set disableRatingColors
   setDisableRatingColors: (disableRatingColors: boolean | null) => {
+    writeDisplayCookie("disableRatingColors", !!disableRatingColors);
     if (!disableRatingColors) {
       return Storage.remove(STORAGE_KEYS.disableRatingColors);
     }
@@ -83,11 +88,12 @@ const StorageUtils = {
   //Get disableRatingColors
   getDisableRatingColors: () => {
     const value = Storage.get(STORAGE_KEYS.disableRatingColors);
-    return value ? Boolean(value) : null;
+    return value === "true" ? true : null;
   },
 
   // set autoUpdate
   setAutoUpdate: (autoUpdate: boolean | null) => {
+    writeDisplayCookie("autoUpdate", !!autoUpdate);
     if (!autoUpdate) {
       return Storage.remove(STORAGE_KEYS.autoUpdate);
     }
@@ -97,7 +103,7 @@ const StorageUtils = {
   //Get autoUpdate
   getAutoUpdate: () => {
     const value = Storage.get(STORAGE_KEYS.autoUpdate);
-    return value ? Boolean(value) : null;
+    return value === "true" ? true : null;
   },
 
   getPreferences: (): StorageOptions => {

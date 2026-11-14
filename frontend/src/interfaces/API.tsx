@@ -1,5 +1,5 @@
 export interface PlayerResponse {
-  id: string; // Player's ID
+  id: bigint; // Player's ID
   name: string; // Player's name
   ratings: PlayerResponsePlayer[]; // Player's ratings for each character
   platform: string; // Player's platform (PS, XB, PC)
@@ -22,7 +22,7 @@ export interface PlayerResponsePlayer {
 
 export interface TopDefeated {
   timestamp: string;
-  id: string;
+  id: bigint;
   name: string;
   char_short: string;
   value: number;
@@ -52,7 +52,7 @@ export interface PlayerSet {
   floor: string;
   opponent_name: string;
   opponent_platform: string;
-  opponent_id: string;
+  opponent_id: bigint;
   opponent_character: string;
   opponent_character_short: string;
   opponent_rating_value: number;
@@ -69,7 +69,7 @@ export interface RankResponse {
 
 export interface PlayerRankResponse {
   rank: number; // Player's rank
-  id: string; // Player's ID
+  id: bigint; // Player's ID
   name: string; // Player's name
   rating: number; // Player's rating
   deviation: number; // Player's rating deviation
@@ -84,7 +84,7 @@ export interface SearchResponse {
 }
 
 export interface PlayerSearchResponse {
-  id: string; // Player's ID
+  id: bigint; // Player's ID
   name: string; // Player's name
   rating: number; // Player's rating
   deviation: number; // Player's rating deviation
@@ -93,7 +93,7 @@ export interface PlayerSearchResponse {
 }
 
 export interface SettingsResponse {
-  id: string; // Player's ID
+  id: bigint; // Player's ID
   name: string; // Player's name
   status: string; // Player's status (Public, Private, Cheater)
 }
@@ -159,7 +159,7 @@ export interface MatchupEntry {
 }
 
 export interface Supporter {
-  id: string;
+  id: bigint;
   name: string;
   tags: TagResponse[];
 }

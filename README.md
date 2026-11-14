@@ -106,7 +106,11 @@ npm install
 npm run build
 ```
 
-Then copy `frontend/dist/*` to your web server's root.
+The frontend uses Next.js with a Node.js server. Run `npm run preview` from
+`frontend` after building
+(default port 3000). SSR reads Rust through `GGST_API_INTERNAL_URL` (default
+`http://127.0.0.1:8001`); nginx sends `/api` to Rust and other requests to Next.js.
+See `frontend/README.md` for configuration and verification.
 
 There is an nginx configuration example available: `nginx.conf.example`.
 
@@ -120,6 +124,7 @@ sudo cp systemd/* /etc/systemd/system/
 sudo systemctl enable pf-x.service
 sudo systemctl enable pf-web.service
 sudo systemctl enable pf-pull.service
+sudo systemctl enable pf-frontend.service
 
 sudo systemctl enable nginx.service
 ```

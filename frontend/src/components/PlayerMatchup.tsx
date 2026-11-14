@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Box,
   Button,
@@ -25,7 +27,7 @@ import {
   Typography,
 } from "@mui/material";
 import { type ChangeEvent, useEffect, useMemo, useState } from "react";
-import type { MatchupResponse } from "../interfaces/API";
+import type { MatchupEntry, MatchupResponse } from "../interfaces/API";
 import type { MatchupProps, Matchups } from "../interfaces/PlayerMatchups";
 import { PercentChangeLabel } from "./PercentChangeLabel";
 
@@ -39,15 +41,39 @@ const TIERS = [
 
 const MIN_GAMES = 5;
 
-const Matchup = ({ API_ENDPOINT, char_short, player_id }: MatchupProps) => {
+function withTotals(data: Matchups | null): Matchups | null {
+  if (!data) return null;
+  return {
+    ...data,
+    total_wins: data.matchups.reduce((sum, item) => sum + item.wins, 0),
+    total_games: data.matchups.reduce((sum, item) => sum + item.total_games, 0),
+  };
+}
+function globalMap(entries: MatchupEntry[] | null | undefined) {
+  return new Map(
+    (entries ?? []).map((entry) => [
+      entry.char_short,
+      { wins: entry.wins, total_games: entry.total_games },
+    ]),
+  );
+}
+const Matchup = ({
+  API_ENDPOINT,
+  char_short,
+  player_id,
+  initialData,
+  initialGlobal,
+}: MatchupProps) => {
   const [orderBy, setOrderBy] = useState<string | null>(null);
   const [order, setOrder] = useState<"asc" | "desc" | undefined>(undefined);
   const [duration, setDuration] = useState<string>("12");
-  const [matchups, setMatchups] = useState<Matchups | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [matchups, setMatchups] = useState<Matchups | null>(() =>
+    withTotals(initialData ?? null),
+  );
+  const [loading, setLoading] = useState<boolean>(initialData === undefined);
   const [globalWRMap, setGlobalWRMap] = useState<
     Map<string, { wins: number; total_games: number }>
-  >(new Map());
+  >(() => globalMap(initialGlobal));
   const [customWeeks, setCustomWeeks] = useState<string>("");
   const [tempWeeks, setTempWeeks] = useState<string>("");
   const [openDialog, setOpenDialog] = useState(false);
@@ -80,61 +106,66 @@ const Matchup = ({ API_ENDPOINT, char_short, player_id }: MatchupProps) => {
   };
 
   useEffect(() => {
+    if (initialData !== undefined && duration === "12") {
+      setMatchups(withTotals(initialData));
+      setGlobalWRMap(globalMap(initialGlobal));
+      setLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+    let active = true;
     const fetchMatchups = async () => {
-      if (duration === undefined || duration === "") {
-        return;
-      }
-
+      if (!duration) return;
       setLoading(true);
       try {
-        const [playerRes, globalRes] = await Promise.all([
-          fetch(
-            API_ENDPOINT +
-              "/matchups/" +
-              player_id +
-              "/" +
-              char_short +
-              "/" +
-              duration,
-          ),
-          fetch(`${API_ENDPOINT}/matchups`),
-        ]);
-
-        if (playerRes.status === 200) {
-          const matchups_result = await playerRes.json();
-          if (matchups_result !== null) {
-            let total_wins = 0;
-            let total_games = 0;
-            for (const mkey in matchups_result.matchups) {
-              total_wins += matchups_result.matchups[mkey].wins;
-              total_games += matchups_result.matchups[mkey].total_games;
-            }
-            matchups_result.total_wins = total_wins;
-            matchups_result.total_games = total_games;
-            setMatchups(matchups_result);
-          }
-        }
-
-        if (globalRes.status === 200) {
-          const globalData: MatchupResponse = await globalRes.json();
-          const charEntry = globalData.data_all.find(
-            (c) => c.char_short === char_short,
-          );
-          const map = new Map<string, { wins: number; total_games: number }>();
-          charEntry?.matchups.forEach((m) => {
-            map.set(m.char_short, { wins: m.wins, total_games: m.total_games });
-          });
-          setGlobalWRMap(map);
+        const personal = fetch(
+          `${API_ENDPOINT}/matchups/${player_id}/${char_short}/${duration}`,
+          { signal: controller.signal },
+        ).then(async (response) => {
+          if (!response.ok)
+            throw new Error(`Matchups returned HTTP ${response.status}`);
+          return response.json() as Promise<Matchups>;
+        });
+        const globals =
+          initialGlobal !== undefined
+            ? Promise.resolve(initialGlobal)
+            : fetch(`${API_ENDPOINT}/matchups`, {
+                signal: controller.signal,
+              }).then(async (response) => {
+                if (!response.ok) return null;
+                const data: MatchupResponse = await response.json();
+                return (
+                  data.data_all.find((entry) => entry.char_short === char_short)
+                    ?.matchups ?? null
+                );
+              });
+        const [data, entries] = await Promise.all([personal, globals]);
+        if (active) {
+          setMatchups(withTotals(data));
+          setGlobalWRMap(globalMap(entries));
         }
       } catch (error) {
-        console.error("Error fetching matchups:", error);
+        if (active) {
+          console.error("Error fetching matchups:", error);
+          setMatchups(null);
+        }
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
-
-    fetchMatchups();
-  }, [duration, char_short, player_id, API_ENDPOINT]);
+    void fetchMatchups();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [
+    duration,
+    char_short,
+    player_id,
+    API_ENDPOINT,
+    initialData,
+    initialGlobal,
+  ]);
 
   const handleRequestSort = (property: string) => {
     const isAsc = orderBy === property && order === "asc";
@@ -378,6 +409,7 @@ const Matchup = ({ API_ENDPOINT, char_short, player_id }: MatchupProps) => {
               display: "flex",
               alignItems: "center",
               gap: 2,
+              flexWrap: "wrap",
               marginTop: 10,
               marginBottom: 2,
             }}

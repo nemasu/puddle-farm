@@ -1,0 +1,16 @@
+[Unit]
+Description=Puddle Farm - Next.js Frontend
+After=network.target pf-web.service
+
+[Service]
+Type=simple
+User=user
+WorkingDirectory=/home/user/puddle-farm/frontend
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=GGST_API_INTERNAL_URL=http://127.0.0.1:8001
+ExecStart=/usr/bin/npm run preview -- -H 127.0.0.1
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

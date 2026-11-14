@@ -1,0 +1,51 @@
+# Puddle Farm frontend
+
+Next.js App Router serves the interface with the Rust backend. The frontend runs
+at `/`, and browser API requests use `/api`.
+
+## Development
+
+```sh
+npm ci
+GGST_API_INTERNAL_URL=http://127.0.0.1:8001 npm start
+```
+
+Open http://localhost:3000. The development server proxies `/api` to Rust.
+Server-side API requests use `GGST_API_INTERNAL_URL` with the `/api` prefix.
+`NEXT_PUBLIC_GGST_API_ENDPOINT` configures the browser API URL at build time.
+
+## Verification
+
+All tests live in `tests/`. Unit/component tests in `tests/unit/` mirror `src/`
+and use Jest through `next/jest`; shared Jest setup lives in `tests/setup/`.
+Integration runners, API fixtures, and Chrome/server helpers live in
+`tests/integration/`; they inspect production HTML and browser behavior,
+including native forms and JavaScript-disabled pages.
+
+```sh
+npm run typecheck
+npm run check
+npm test
+npm run build
+npm run test:ssr
+npm run test:browser  # Requires local Chrome; CHROME_BIN selects the binary.
+```
+
+## Production
+
+```sh
+npm run build
+npm run preview
+```
+
+The nginx example routes `/api` to Rust and pages/assets to Next.js on port 3000.
+Standalone output is available in `.next/standalone`; copy `public` and
+`.next/static` alongside the generated server when deploying that artifact.
+`/health` reports process health without API calls or page rendering.
+Next.js supplies response security headers and streamed SSR responses.
+
+Pages fetch initial data on the server. Chart controls, search/navigation, match
+expansion, and settings use focused client components. Theme and display cookies
+seed SSR preferences, including local time/time zone, rating colors, and
+auto-update. Browser initialization imports localStorage preferences when their
+cookies are absent. Builds do not contact the backend.

@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { API_ENDPOINT } from "../lib/api-endpoint";
 import { StorageUtils } from "../utils/storage";
 
-const API_ENDPOINT = import.meta.env.VITE_API_ENDPOINT;
-
-export function useIngestionHealth(): string | null {
-  const [message, setMessage] = useState<string | null>(null);
+export function useIngestionHealth(
+  initialMessage?: string | null,
+  autoUpdate?: boolean,
+): string | null {
+  const [message, setMessage] = useState<string | null>(initialMessage ?? null);
 
   useEffect(() => {
     const check = async () => {
@@ -22,13 +24,17 @@ export function useIngestionHealth(): string | null {
       }
     };
 
-    check();
+    if (initialMessage === undefined) {
+      check();
+    } else {
+      setMessage(initialMessage);
+    }
 
-    if (!StorageUtils.getAutoUpdate()) return;
+    if (!(autoUpdate ?? StorageUtils.getAutoUpdate())) return;
 
     const intervalId = setInterval(check, 60000);
     return () => clearInterval(intervalId);
-  }, []);
+  }, [initialMessage, autoUpdate]);
 
   return message;
 }

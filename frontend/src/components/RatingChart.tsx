@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Box,
   Button,
@@ -14,50 +16,35 @@ import {
   Typography,
 } from "@mui/material";
 import {
-  type ChangeEvent,
-  type ComponentType,
-  useEffect,
-  useState,
-} from "react";
+  CategoryScale,
+  Chart as ChartJS,
+  Legend,
+  LinearScale,
+  LineElement,
+  PointElement,
+  Title,
+  Tooltip,
+} from "chart.js";
+import { type ChangeEvent, useEffect, useState } from "react";
+import { Line } from "react-chartjs-2";
 import type { RatingsResponse } from "../interfaces/API";
 import type { LineChartData, RatingChartProps } from "../interfaces/Player";
+import {
+  DEFAULT_DISPLAY_PREFERENCES,
+  formatDisplayTime,
+} from "../lib/display-preferences";
 import { Utils } from "../utils/Utils";
+import { usePreferencesContext } from "./DisplayPreferences";
 
-// biome-ignore lint/suspicious/noImplicitAnyLet: dynamic chart.js import assigned after module loads
-let ChartJS,
+ChartJS.register(
   CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
   Title,
   Tooltip,
-  Legend;
-import("chart.js").then((module) => {
-  ChartJS = module.Chart;
-  CategoryScale = module.CategoryScale;
-  LinearScale = module.LinearScale;
-  PointElement = module.PointElement;
-  LineElement = module.LineElement;
-  Title = module.Title;
-  Tooltip = module.Tooltip;
-  Legend = module.Legend;
-
-  ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
-    Tooltip,
-    Legend,
-  );
-});
-
-// biome-ignore lint/suspicious/noExplicitAny: dynamic react-chartjs-2 import, Line type unavailable at module level
-let Line: ComponentType<any>;
-import("react-chartjs-2").then((module) => {
-  Line = module.Line;
-});
+  Legend,
+);
 
 const RatingChart = ({
   player_id,
@@ -65,11 +52,20 @@ const RatingChart = ({
   API_ENDPOINT,
   latest_rating,
   total_games,
+  initialHistory,
 }: RatingChartProps) => {
+  const preferences = usePreferencesContext()?.preferences;
+  const hasPreferences = preferences !== undefined;
+  const displayLocalTime = preferences?.useLocalTime;
+  const displayTimeZone = preferences?.timeZone;
   const [lineChartData, setLineChartData] = useState<LineChartData | null>(
     null,
   );
-  const [duration, setDuration] = useState<string>("100");
+  const initialDuration = String(
+    initialHistory === undefined ? 100 : Math.min(100, total_games),
+  );
+  const [duration, setDuration] = useState<string>(initialDuration);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [customGames, setCustomGames] = useState<string>("");
   const [tempGames, setTempGames] = useState<string>("");
   const [openDialog, setOpenDialog] = useState(false);
@@ -131,6 +127,8 @@ const RatingChart = ({
   };
 
   useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
     const fetchChartData = async () => {
       if (duration === undefined || duration === "") {
         return;
@@ -141,169 +139,189 @@ const RatingChart = ({
       }
 
       setNoPreVanquisherData(false);
+      setLoadError(null);
 
       const apiDuration = showPreVanquisher ? total_games : duration;
       const query = showPreVanquisher ? "?pre_vanquisher=true" : "";
-      const rating_history_response = await fetch(
-        API_ENDPOINT +
-          "/ratings/" +
-          player_id +
-          "/" +
-          char_short +
-          "/" +
-          apiDuration +
-          query,
-      );
-      if (rating_history_response.status === 200) {
-        const rating_history_result = await rating_history_response.json();
+      let rating_history_result: RatingsResponse[] | null;
+      if (
+        initialHistory !== undefined &&
+        duration === initialDuration &&
+        !showPreVanquisher
+      ) {
+        rating_history_result =
+          initialHistory === null ? null : [...initialHistory];
+      } else {
+        const response = await fetch(
+          `${API_ENDPOINT}/ratings/${player_id}/${char_short}/${apiDuration}${query}`,
+          { signal: controller.signal },
+        );
+        if (!response.ok)
+          throw new Error(`Rating history returned HTTP ${response.status}`);
+        rating_history_result = await response.json();
+      }
+      if (!active) return;
+      if (rating_history_result === null) {
+        setLoadError("Rating history is unavailable. Please try again later.");
+        return;
+      }
+      if (char_short != null) {
+        rating_history_result.reverse();
 
-        if (rating_history_result !== null && char_short !== null) {
-          rating_history_result.reverse();
-
-          if (!showPreVanquisher) {
-            //Add current rating to the end
-            rating_history_result.push({
-              timestamp: "Now",
-              rating: latest_rating,
-            });
-          }
-
-          const durationLimit = parseInt(duration, 10);
-          const displayData: RatingsResponse[] = showPreVanquisher
-            ? rating_history_result
-                .filter((item: RatingsResponse) => item.rating <= 10000000)
-                .slice(-durationLimit)
-            : rating_history_result;
-
-          if (showPreVanquisher && displayData.length === 0) {
-            setNoPreVanquisherData(true);
-            setLineChartData(null);
-            return;
-          }
-          setNoPreVanquisherData(false);
-
-          const hasVanquisher = displayData.some(
-            (item: RatingsResponse) => item.rating > 10000000,
-          );
-          const hasNormal = displayData.some(
-            (item: RatingsResponse) => item.rating <= 10000000,
-          );
-
-          const convertedRatings = displayData.map((item: RatingsResponse) =>
-            Utils.convertRating(item.rating),
-          );
-          const minRating = Math.min(...convertedRatings);
-          const maxRating = Math.max(...convertedRatings);
-
-          const allThresholds = Utils.getRankThresholds();
-          const maxRawRating = Math.max(
-            ...displayData.map((item: RatingsResponse) => item.rating),
-          );
-          const currentRankIndex = allThresholds.findIndex(
-            (t) => maxRawRating >= t.rating,
-          );
-          const rawNextRank =
-            currentRankIndex > 0 ? allThresholds[currentRankIndex - 1] : null;
-
-          // Diamond 3 promotes to Vanquisher at 45,000 RP, not at the 10,000,000 magic number.
-          const VANQUISHER_PROMOTION_RP = 45000;
-          const nextRankLine =
-            rawNextRank === null
-              ? null
-              : rawNextRank.rating >= 10000000 && !hasVanquisher
-                ? {
-                    name: rawNextRank.name,
-                    color: rawNextRank.color,
-                    convertedRating: VANQUISHER_PROMOTION_RP,
-                  }
-                : {
-                    name: rawNextRank.name,
-                    color: rawNextRank.color,
-                    convertedRating: Utils.convertRating(rawNextRank.rating),
-                  };
-
-          if (!showPreVanquisher) {
-            // if the user has less than 100 games, select his total game number
-            if (total_games < 100) {
-              setDuration(total_games.toString());
-            }
-
-            // Clamp duration to total_games if not in available options (on character change for example)
-            const items =
-              total_games < 100
-                ? [total_games]
-                : [...Array(Math.floor(total_games / 100)).keys()]
-                    .map((i) => (i + 1) * 100)
-                    .concat(total_games % 100 === 0 ? [] : [total_games]);
-            const currentDuration = parseInt(duration, 10);
-            if (
-              !items.includes(currentDuration) &&
-              currentDuration !== parseInt(tempGames, 10)
-            ) {
-              // second check keep custom game count working
-              setDuration(total_games.toString());
-            }
-          }
-
-          const lineChartData = {
-            labels: displayData.map((item: RatingsResponse) =>
-              Utils.formatUTCToLocal(item.timestamp),
-            ),
-            datasets: [
-              {
-                label: "Rating",
-                data: convertedRatings,
-                borderColor: "rgb(75, 192, 192)",
-                backgroundColor: "rgba(75, 192, 192, 0.2)",
-                pointRadius: 3,
-                borderWidth: 2,
-              },
-            ]
-              .concat(
-                allThresholds
-                  .filter((rank) => {
-                    if (rawNextRank && rank.rating === rawNextRank.rating)
-                      return false;
-                    const rankIsVanquisher = rank.rating > 10000000;
-                    if (rankIsVanquisher && !hasVanquisher) return false;
-                    if (!rankIsVanquisher && !hasNormal) return false;
-                    const cr = Utils.convertRating(rank.rating);
-                    return cr <= maxRating && cr >= minRating;
-                  })
-                  .map((rank) => ({
-                    label: rank.name,
-                    data: displayData.map(() =>
-                      Utils.convertRating(rank.rating),
-                    ),
-                    borderColor: rank.color,
-                    backgroundColor: rank.color,
-                    pointRadius: 0,
-                    borderWidth: 1,
-                  })),
-              )
-              .concat(
-                nextRankLine
-                  ? [
-                      {
-                        label: nextRankLine.name,
-                        data: displayData.map(
-                          () => nextRankLine.convertedRating,
-                        ),
-                        borderColor: nextRankLine.color,
-                        backgroundColor: nextRankLine.color,
-                        pointRadius: 0,
-                        borderWidth: 1,
-                      },
-                    ]
-                  : [],
-              ),
-          };
-
-          setLineChartData(lineChartData);
+        if (!showPreVanquisher) {
+          //Add current rating to the end
+          rating_history_result.push({
+            timestamp: "Now",
+            rating: latest_rating,
+          });
         }
+
+        const durationLimit = parseInt(duration, 10);
+        const displayData: RatingsResponse[] = showPreVanquisher
+          ? rating_history_result
+              .filter((item: RatingsResponse) => item.rating <= 10000000)
+              .slice(-durationLimit)
+          : rating_history_result;
+
+        if (showPreVanquisher && displayData.length === 0) {
+          setNoPreVanquisherData(true);
+          setLineChartData(null);
+          return;
+        }
+        setNoPreVanquisherData(false);
+
+        const hasVanquisher = displayData.some(
+          (item: RatingsResponse) => item.rating > 10000000,
+        );
+        const hasNormal = displayData.some(
+          (item: RatingsResponse) => item.rating <= 10000000,
+        );
+
+        const convertedRatings = displayData.map((item: RatingsResponse) =>
+          Utils.convertRating(item.rating),
+        );
+        const minRating = Math.min(...convertedRatings);
+        const maxRating = Math.max(...convertedRatings);
+
+        const allThresholds = Utils.getRankThresholds();
+        const maxRawRating = Math.max(
+          ...displayData.map((item: RatingsResponse) => item.rating),
+        );
+        const currentRankIndex = allThresholds.findIndex(
+          (t) => maxRawRating >= t.rating,
+        );
+        const rawNextRank =
+          currentRankIndex > 0 ? allThresholds[currentRankIndex - 1] : null;
+
+        // Diamond 3 promotes to Vanquisher at 45,000 RP, not at the 10,000,000 magic number.
+        const VANQUISHER_PROMOTION_RP = 45000;
+        const nextRankLine =
+          rawNextRank === null
+            ? null
+            : rawNextRank.rating >= 10000000 && !hasVanquisher
+              ? {
+                  name: rawNextRank.name,
+                  color: rawNextRank.color,
+                  convertedRating: VANQUISHER_PROMOTION_RP,
+                }
+              : {
+                  name: rawNextRank.name,
+                  color: rawNextRank.color,
+                  convertedRating: Utils.convertRating(rawNextRank.rating),
+                };
+
+        if (!showPreVanquisher) {
+          // if the user has less than 100 games, select his total game number
+          if (total_games < 100) {
+            setDuration(total_games.toString());
+          }
+
+          // Clamp duration to total_games if not in available options (on character change for example)
+          const items =
+            total_games < 100
+              ? [total_games]
+              : [...Array(Math.floor(total_games / 100)).keys()]
+                  .map((i) => (i + 1) * 100)
+                  .concat(total_games % 100 === 0 ? [] : [total_games]);
+          const currentDuration = parseInt(duration, 10);
+          if (
+            !items.includes(currentDuration) &&
+            currentDuration !== parseInt(tempGames, 10)
+          ) {
+            // second check keep custom game count working
+            setDuration(total_games.toString());
+          }
+        }
+
+        const lineChartData = {
+          labels: displayData.map((item: RatingsResponse) =>
+            hasPreferences
+              ? formatDisplayTime(item.timestamp, {
+                  ...DEFAULT_DISPLAY_PREFERENCES,
+                  useLocalTime: !!displayLocalTime,
+                  timeZone: displayTimeZone ?? "UTC",
+                })
+              : Utils.formatUTCToLocal(item.timestamp),
+          ),
+          datasets: [
+            {
+              label: "Rating",
+              data: convertedRatings,
+              borderColor: "rgb(75, 192, 192)",
+              backgroundColor: "rgba(75, 192, 192, 0.2)",
+              pointRadius: 3,
+              borderWidth: 2,
+            },
+          ]
+            .concat(
+              allThresholds
+                .filter((rank) => {
+                  if (rawNextRank && rank.rating === rawNextRank.rating)
+                    return false;
+                  const rankIsVanquisher = rank.rating > 10000000;
+                  if (rankIsVanquisher && !hasVanquisher) return false;
+                  if (!rankIsVanquisher && !hasNormal) return false;
+                  const cr = Utils.convertRating(rank.rating);
+                  return cr <= maxRating && cr >= minRating;
+                })
+                .map((rank) => ({
+                  label: rank.name,
+                  data: displayData.map(() => Utils.convertRating(rank.rating)),
+                  borderColor: rank.color,
+                  backgroundColor: rank.color,
+                  pointRadius: 0,
+                  borderWidth: 1,
+                })),
+            )
+            .concat(
+              nextRankLine
+                ? [
+                    {
+                      label: nextRankLine.name,
+                      data: displayData.map(() => nextRankLine.convertedRating),
+                      borderColor: nextRankLine.color,
+                      backgroundColor: nextRankLine.color,
+                      pointRadius: 0,
+                      borderWidth: 1,
+                    },
+                  ]
+                : [],
+            ),
+        };
+
+        setLineChartData(lineChartData);
       }
     };
-    fetchChartData();
+    void fetchChartData().catch((error) => {
+      if (active) {
+        console.error("Could not load rating history:", error);
+        setLoadError("Rating history is unavailable. Please try again later.");
+      }
+    });
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, [
     player_id,
     char_short,
@@ -313,11 +331,24 @@ const RatingChart = ({
     showPreVanquisher,
     total_games,
     tempGames,
+    initialHistory,
+    initialDuration,
+    hasPreferences,
+    displayLocalTime,
+    displayTimeZone,
   ]);
 
   return (
     <>
-      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mt: 5 }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 2,
+          mt: 5,
+          flexWrap: "wrap",
+        }}
+      >
         <FormControl size="small" sx={{ minWidth: 140 }}>
           <InputLabel>Game Count</InputLabel>
           <Select
@@ -381,7 +412,11 @@ const RatingChart = ({
         )}
       </Box>
 
-      {showPreVanquisher && noPreVanquisherData ? (
+      {loadError ? (
+        <Typography role="alert" color="error">
+          {loadError}
+        </Typography>
+      ) : showPreVanquisher && noPreVanquisherData ? (
         <Typography>No pre-Vanquisher data available.</Typography>
       ) : lineChartData ? (
         <Line options={lineChartOptions} data={lineChartData} />
