@@ -211,9 +211,11 @@ export function PlayerContent({
               </LinkButton>
             )}
           </Box>
-          <Suspense fallback={null}>
-            <Aliases player={player} />
-          </Suspense>
+          <Box sx={{ minHeight: 56, display: "flow-root" }}>
+            <Suspense fallback={null}>
+              <Aliases player={player} />
+            </Suspense>
+          </Box>
         </Box>
       </AppBar>
       <Box
@@ -294,10 +296,14 @@ export function PlayerContent({
             minWidth: 0,
           }}
         >
-          <Box sx={{ gridArea: { xs: "avatar", lg: "unset" } }}>
-            <Suspense fallback={null}>
-              <Comment id={player.id} />
-            </Suspense>
+          <Box
+            sx={{ gridArea: { xs: "avatar", lg: "unset" }, minHeight: 326.5 }}
+          >
+            <Box sx={{ minHeight: 64, display: "flow-root" }}>
+              <Suspense fallback={null}>
+                <Comment id={player.id} />
+              </Suspense>
+            </Box>
             <PlayerAvatar key={player.id} playerId={player.id} />
           </Box>
           <Box sx={{ gridArea: { xs: "sidebar", lg: "unset" } }}>

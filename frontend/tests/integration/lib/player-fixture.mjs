@@ -17,7 +17,9 @@ export function respondPlayerFixture(url, response, state) {
     const body = path.includes("/alias/") ? JSON.stringify(["Player <SSR>", "Old Alias"]) : "Hello <comment>";
     if (state.slowProfile) {
       state.pendingProfile++;
-      setTimeout(() => { state.pendingProfile--; response.end(body); }, 500);
+      const finish = () => { state.pendingProfile--; response.end(body); };
+      if (state.profileResponses) state.profileResponses.push(finish);
+      else setTimeout(finish, 500);
     } else response.end(body);
     return true;
   }

@@ -4,6 +4,40 @@ import { writeFile } from "node:fs/promises";
 const id = "9007199254740993";
 
 export async function checkPlayerBrowser({ call, evaluate, waitFor, navigate, requests }, { state, baseURL }) {
+  for (const width of [1280, 390]) {
+    await call("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: width < 600 });
+    state.slowProfile = true;
+    state.profileResponses = [];
+    try {
+      await call("Page.navigate", { url: `${baseURL}/player/${id}/SO/2/0` });
+      await waitFor(`document.querySelector('main h1')?.textContent === 'Player <SSR>' && !!document.querySelector('main img[alt="Player Avatar"]') && !!document.querySelector('main canvas') && document.querySelector('main').textContent.includes('Matchup Table')`);
+      await evaluate('document.fonts.ready.then(() => true)');
+      const measure = () => evaluate(`(() => {
+        const avatar = document.querySelector('main img[alt="Player Avatar"]');
+        const frame = avatar ? avatar.parentElement : document.querySelector('[data-avatar-frame]');
+        frame.setAttribute('data-avatar-frame', '');
+        const rect = frame.getBoundingClientRect();
+        const characters = frame.parentElement.nextElementSibling.getBoundingClientRect();
+        const heading = document.querySelector('main h2').getBoundingClientRect();
+        return [rect.width, rect.height, rect.top + scrollY, characters.top + scrollY, heading.top + scrollY, frame.parentElement.getBoundingClientRect().height];
+      })()`);
+      const before = await measure();
+      assert.ok(before[0] > 0 && Math.abs(before[0] - before[1]) < 1, "avatar reserves a square before loading");
+      assert.equal(before[0], 256, "avatar retains its intrinsic size");
+      assert.equal(before[5], 326.5, "profile reserves its measured combined height");
+      assert.ok(state.pendingProfile > 0, "profile must still be pending for the layout comparison");
+      for (const finish of state.profileResponses.splice(0)) finish();
+      await waitFor('document.querySelector("main").textContent.includes("Hello <comment>") && document.querySelector("main").textContent.includes("Old Alias")');
+      assert.deepEqual(await measure(), before, `profile arrival must preserve layout at ${width}px`);
+      await evaluate('document.querySelector(\'main img[alt="Player Avatar"]\').dispatchEvent(new Event("error"))');
+      await waitFor('!document.querySelector(\'main img[alt="Player Avatar"]\')');
+      assert.deepEqual(await measure(), before, `avatar failure must preserve layout at ${width}px`);
+    } finally {
+      for (const finish of state.profileResponses.splice(0)) finish();
+      delete state.profileResponses;
+      state.slowProfile = false;
+    }
+  }
   await call("Emulation.setDeviceMetricsOverride", { width: 1280, height: 1000, deviceScaleFactor: 1, mobile: false });
   const before = requests.length;
   await navigate(`${baseURL}/player/${id}/SO/2/0`);
