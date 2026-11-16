@@ -1,6 +1,10 @@
 export function respondPublicFixture(url, response, state) {
   const path = url.pathname;
   if (!["/api/stats", "/api/stats/hourly-players", "/api/popularity", "/api/distribution", "/api/supporters"].includes(path)) return false;
+  if (path === "/api/stats/hourly-players" && state.hourlyResponses) {
+    state.hourlyResponses.push(() => respondPublicFixture(url,response,{...state,hourlyResponses:null}));
+    return true;
+  }
   if (state.mode === "failure") { response.writeHead(503).end("Unavailable"); return true; }
   const timestamp = "2026-11-13 10:00:00";
   const empty = state.mode === "empty";

@@ -8,18 +8,24 @@ import {
   TableHead,
   TableRow,
 } from "@mui/material";
+import { getClassicMessages } from "../../lib/i18n/classic";
+import { characterLabel } from "../../lib/ladder-characters";
 import type { RankingEntry } from "../../lib/rankings";
+import { getRequestPresentation } from "../../lib/server/site-preferences";
 import { Utils } from "../../utils/Utils";
+import { AppLink as Link } from "../AppLink";
 import { Tag } from "../Tag";
 import { LinkButton } from "./LinkButton";
 
-export function RankingTable({
+export async function RankingTable({
   ranks,
   legend = false,
 }: {
   ranks: RankingEntry[];
   legend?: boolean;
 }) {
+  const { language } = await getRequestPresentation();
+  const messages = getClassicMessages(language);
   return (
     <TableContainer component={Paper}>
       <Table
@@ -29,9 +35,9 @@ export function RankingTable({
         <TableHead>
           <TableRow>
             <TableCell sx={{ px: 0, mx: 0, width: 32 }} />
-            <TableCell>Player</TableCell>
-            <TableCell>Char</TableCell>
-            <TableCell>Rating</TableCell>
+            <TableCell>{messages.ladder.player}</TableCell>
+            <TableCell>{messages.ladder.character}</TableCell>
+            <TableCell>{messages.ladder.rating}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -63,7 +69,17 @@ export function RankingTable({
                   </Tag>
                 ))}
               </TableCell>
-              <TableCell>{player.char_short}</TableCell>
+              <TableCell>
+                <Link href={`/top/${encodeURIComponent(player.char_short)}`}>
+                  {language === "ja"
+                    ? characterLabel(
+                        player.char_short,
+                        player.char_short,
+                        language,
+                      )
+                    : player.char_short}
+                </Link>
+              </TableCell>
               <TableCell>
                 <Box
                   component="span"
@@ -88,7 +104,7 @@ export function RankingTable({
           {ranks.length === 0 && (
             <TableRow>
               <TableCell colSpan={4}>
-                {legend ? "No Legend players found." : "No players found."}
+                {legend ? messages.ladder.empty : messages.ladder.emptyRanking}
               </TableCell>
             </TableRow>
           )}

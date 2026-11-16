@@ -9,8 +9,12 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
+import { getClassicMessages } from "../../lib/i18n/classic";
+import { characterLabel } from "../../lib/ladder-characters";
 import { getSearchResults } from "../../lib/server/search";
+import { getRequestPresentation } from "../../lib/server/site-preferences";
 import { Utils } from "../../utils/Utils";
+import { AppLink as Link } from "../AppLink";
 import { LinkButton } from "./LinkButton";
 
 export async function SearchResults({
@@ -20,6 +24,8 @@ export async function SearchResults({
   query: string;
   exact: boolean;
 }) {
+  const { language } = await getRequestPresentation();
+  const messages = getClassicMessages(language);
   let players: Awaited<ReturnType<typeof getSearchResults>>;
   try {
     players = await getSearchResults(query, exact);
@@ -27,14 +33,14 @@ export async function SearchResults({
     console.error("Could not load search results:", error);
     return (
       <Typography role="alert" color="error" align="center" sx={{ m: 4 }}>
-        Could not load search results. Please try again later.
+        {messages.ladder.searchError}
       </Typography>
     );
   }
   if (!players.length)
     return (
       <Typography align="center" sx={{ m: 4 }}>
-        No results found.
+        {messages.ladder.searchEmpty}
       </Typography>
     );
   return (
@@ -42,9 +48,9 @@ export async function SearchResults({
       <Table size="small" aria-label="Search results">
         <TableHead>
           <TableRow>
-            <TableCell>Player</TableCell>
-            <TableCell>Character</TableCell>
-            <TableCell>Rating</TableCell>
+            <TableCell>{messages.ladder.player}</TableCell>
+            <TableCell>{messages.ladder.character}</TableCell>
+            <TableCell>{messages.ladder.rating}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -64,7 +70,17 @@ export async function SearchResults({
                   {player.name}
                 </LinkButton>
               </TableCell>
-              <TableCell>{player.char_short}</TableCell>
+              <TableCell>
+                <Link href={`/top/${encodeURIComponent(player.char_short)}`}>
+                  {language === "ja"
+                    ? characterLabel(
+                        player.char_short,
+                        player.char_short,
+                        language,
+                      )
+                    : player.char_short}
+                </Link>
+              </TableCell>
               <TableCell>
                 <Box
                   component="span"

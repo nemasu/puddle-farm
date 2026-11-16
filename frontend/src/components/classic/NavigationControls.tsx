@@ -15,12 +15,14 @@ import {
   type Theme,
   Toolbar,
 } from "@mui/material";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type MouseEvent, useMemo, useState } from "react";
 import { useIngestionHealth } from "../../hooks/useIngestionHealth";
+import { getMessages } from "../../lib/i18n";
 import { CLASSIC_NAVIGATION } from "../../lib/navigation";
 import { buildSearchPath } from "../../lib/search";
+import type { Language } from "../../lib/site-preferences";
+import { AppLink as Link } from "../AppLink";
 import { useDisplayPreferences } from "../DisplayPreferences";
 import { SearchBox } from "../SearchBox";
 
@@ -41,6 +43,7 @@ function CharacterMenuItems({
         <MenuItem
           component={Link}
           href={char.link}
+          prefetch={false}
           key={char.name}
           sx={itemSx}
           onClick={onItemClick}
@@ -55,10 +58,13 @@ function CharacterMenuItems({
 function NavigationControls({
   characterNames,
   initialIngestionMessage,
+  language,
 }: {
+  language: Language;
   characterNames: Record<string, string>;
   initialIngestionMessage: string | null;
 }) {
+  const messages = getMessages(language);
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -76,10 +82,12 @@ function NavigationControls({
           link: `/top/${charShort}`,
         }))
       : [];
-    return CLASSIC_NAVIGATION.map((page) =>
-      page.name === "Characters" ? { ...page, list: characterList } : page,
-    );
-  }, [characterNames]);
+    return CLASSIC_NAVIGATION.map((page) => ({
+      ...page,
+      name: messages.navigation[page.key],
+      ...(page.key === "characters" ? { list: characterList } : {}),
+    }));
+  }, [characterNames, messages]);
 
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") ?? "");
 
@@ -112,13 +120,13 @@ function NavigationControls({
     <>
       {ingestionMessage && (
         <Alert severity="warning" sx={{ borderRadius: 0 }}>
-          <AlertTitle>Warning</AlertTitle>
+          <AlertTitle>{messages.common.warning}</AlertTitle>
           {ingestionMessage}
         </Alert>
       )}
       <AppBar position="static" style={{ backgroundImage: "none" }}>
         <Container>
-          <Toolbar variant="dense" disableGutters>
+          <Toolbar variant="dense" disableGutters sx={{ flexWrap: "wrap" }}>
             <Box
               sx={{
                 flexGrow: 1,
@@ -128,7 +136,7 @@ function NavigationControls({
             >
               <IconButton
                 size="large"
-                aria-label="Menu"
+                aria-label={messages.common.menu}
                 aria-controls="menu-appbar"
                 aria-haspopup="true"
                 onClick={handleOpenNavMenu}
@@ -187,6 +195,7 @@ function NavigationControls({
               </Menu>
               <Box sx={{ padding: 1 }}>
                 <SearchBox
+                  language={language}
                   action="/search"
                   exact={searchParams.get("exact") === "true"}
                   query={searchQuery}
@@ -195,7 +204,13 @@ function NavigationControls({
                 />
               </Box>
             </Box>
-            <Box sx={{ flexGrow: 1, display: { xs: "none", md: "flex" } }}>
+            <Box
+              sx={{
+                flexGrow: 1,
+                flexWrap: "wrap",
+                display: { xs: "none", md: "flex" },
+              }}
+            >
               {navPages.map((page) =>
                 //If the page has a 'list' attribute that is an array, render a submenu
                 "list" in page ? (
@@ -208,6 +223,8 @@ function NavigationControls({
                         my: 1,
                         color: "white",
                         display: "block",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
                         textTransform: "none",
                         fontSize: "1rem",
                         fontWeight: 400,
@@ -257,6 +274,8 @@ function NavigationControls({
                       my: 1,
                       color: "white",
                       display: "block",
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
                       textTransform: "none",
                       fontSize: "1rem",
                       fontWeight: 400,
@@ -270,6 +289,7 @@ function NavigationControls({
             </Box>
             <Box sx={{ display: { xs: "none", md: "flex" }, padding: 1 }}>
               <SearchBox
+                language={language}
                 action="/search"
                 exact={searchParams.get("exact") === "true"}
                 query={searchQuery}

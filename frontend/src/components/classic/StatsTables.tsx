@@ -8,11 +8,20 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import type { StatsResponse } from "../../interfaces/API";
+import { getClassicMessages } from "../../lib/i18n/classic";
+import type { Language } from "../../lib/site-preferences";
 import { Utils } from "../../utils/Utils";
 
 import { PlayerDateTime } from "./PlayerFormatting";
-export function StatsTables({ data }: { data: StatsResponse }) {
+export function StatsTables({
+  data,
+  language = "en",
+}: {
+  data: StatsResponse;
+  language?: Language;
+}) {
   const stats = data;
+  const messages = getClassicMessages(language).stats;
 
   if (!stats) return null;
 
@@ -20,18 +29,18 @@ export function StatsTables({ data }: { data: StatsResponse }) {
     <>
       <Box sx={{ m: { xs: 1, sm: 4 }, maxWidth: "700px" }}>
         <Typography sx={{ my: 3 }} variant="h5">
-          Ranked Players
+          {messages.players}
         </Typography>
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Last Checked</TableCell>
-                <TableCell>Total</TableCell>
-                <TableCell>Past Month</TableCell>
-                <TableCell>Past Week</TableCell>
-                <TableCell>Past Day</TableCell>
-                <TableCell>Past Hour</TableCell>
+                <TableCell>{messages.checked}</TableCell>
+                <TableCell>{messages.total}</TableCell>
+                <TableCell>{messages.month}</TableCell>
+                <TableCell>{messages.week}</TableCell>
+                <TableCell>{messages.day}</TableCell>
+                <TableCell>{messages.hour}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -59,18 +68,18 @@ export function StatsTables({ data }: { data: StatsResponse }) {
       </Box>
       <Box sx={{ m: { xs: 1, sm: 4 }, maxWidth: "700px" }}>
         <Typography sx={{ my: 3 }} variant="h5">
-          Ranked Games
+          {messages.games}
         </Typography>
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Last Checked</TableCell>
-                <TableCell>Total</TableCell>
-                <TableCell>Past Month</TableCell>
-                <TableCell>Past Week</TableCell>
-                <TableCell>Past Day</TableCell>
-                <TableCell>Past Hour</TableCell>
+                <TableCell>{messages.checked}</TableCell>
+                <TableCell>{messages.total}</TableCell>
+                <TableCell>{messages.month}</TableCell>
+                <TableCell>{messages.week}</TableCell>
+                <TableCell>{messages.day}</TableCell>
+                <TableCell>{messages.hour}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -93,9 +102,7 @@ export function StatsTables({ data }: { data: StatsResponse }) {
             </TableBody>
           </Table>
         </TableContainer>
-        <Typography sx={{ my: 10 }}>
-          Statistics are updated once an hour.
-        </Typography>
+        <Typography sx={{ my: 10 }}>{messages.updated}</Typography>
       </Box>
     </>
   );

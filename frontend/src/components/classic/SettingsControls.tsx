@@ -8,6 +8,8 @@ import {
   Switch,
   Typography,
 } from "@mui/material";
+import { getMessages } from "../../lib/i18n";
+import type { Language } from "../../lib/site-preferences";
 import { StorageUtils } from "../../utils/storage";
 import {
   characterNames,
@@ -16,23 +18,24 @@ import {
 } from "../../utils/themes";
 import { usePreferencesContext } from "../DisplayPreferences";
 
-export function DisplaySettingsControls() {
+export function DisplaySettingsControls({
+  language = "en",
+}: {
+  language?: Language;
+}) {
+  const messages = getMessages(language).settings;
   const context = usePreferencesContext();
   if (!context) return null;
   return (
     <FormGroup>
       {[
-        [
-          "useLocalTime",
-          "Local Time",
-          "Display timestamps in your local timezone instead of UTC",
-        ],
+        ["useLocalTime", messages.localTime, messages.localTimeDescription],
         [
           "disableRatingColors",
-          "Plain Rating Change",
-          "Disable color for rating changes",
+          messages.plainRatings,
+          messages.plainRatingsDescription,
         ],
-        ["autoUpdate", "Auto Update", "Refresh player page every 120 seconds."],
+        ["autoUpdate", messages.autoUpdate, messages.autoUpdateDescription],
       ].map(([key, label, description]) => (
         <FormControlLabel
           key={key}

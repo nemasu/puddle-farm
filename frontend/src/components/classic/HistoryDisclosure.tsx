@@ -11,20 +11,25 @@ import {
   TableRow,
 } from "@mui/material";
 import { type ReactNode, useState } from "react";
+import { getClassicMessages } from "../../lib/i18n/classic";
+import type { Language } from "../../lib/site-preferences";
 
 export function HistoryDisclosure({
   summary,
   children,
   card = false,
+  language = "en",
 }: {
   summary: ReactNode;
   children: ReactNode;
   card?: boolean;
+  language?: Language;
 }) {
+  const messages = getClassicMessages(language).player;
   const [open, setOpen] = useState(false);
   const toggle = (
     <IconButton
-      aria-label="expand row"
+      aria-label={language === "ja" ? messages.details : "expand row"}
       aria-expanded={open}
       size="small"
       onClick={() => setOpen(!open)}
@@ -39,7 +44,9 @@ export function HistoryDisclosure({
       </Collapse>
       <noscript>
         <details>
-          <summary>Match details</summary>
+          <summary>
+            {language === "ja" ? messages.details : "Match details"}
+          </summary>
           {children}
         </details>
       </noscript>

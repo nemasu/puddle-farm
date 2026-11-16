@@ -16,9 +16,18 @@ import { useRouter } from "next/navigation";
 import { useCallback, useTransition } from "react";
 import { useAutoUpdate } from "../../hooks/useAutoUpdate";
 import { useRatingSync } from "../../hooks/useRatingSync";
+import { getMessages } from "../../lib/i18n";
+import type { Language } from "../../lib/site-preferences";
 import { usePreferencesContext } from "../DisplayPreferences";
 
-export function PlayerSync({ playerId }: { playerId: bigint }) {
+export function PlayerSync({
+  playerId,
+  language = "en",
+}: {
+  playerId: bigint;
+  language?: Language;
+}) {
+  const messages = getMessages(language).player;
   const router = useRouter();
   const [pending, transition] = useTransition();
   const refresh = useCallback(async () => {
@@ -28,9 +37,9 @@ export function PlayerSync({ playerId }: { playerId: bigint }) {
     useRatingSync(playerId, refresh);
   return (
     <>
-      <Tooltip title="Sync ratings from game">
+      <Tooltip title={messages.sync}>
         <IconButton
-          aria-label="Sync ratings from game"
+          aria-label={messages.sync}
           onClick={handleRatingSync}
           disabled={pending || syncLoading}
           size="small"
@@ -44,7 +53,7 @@ export function PlayerSync({ playerId }: { playerId: bigint }) {
         onClose={clearSyncError}
         aria-labelledby="sync-error-title"
       >
-        <DialogTitle id="sync-error-title">Rating Sync Error</DialogTitle>
+        <DialogTitle id="sync-error-title">{messages.syncError}</DialogTitle>
         <DialogContent>
           <DialogContentText>{syncError}</DialogContentText>
         </DialogContent>
@@ -58,7 +67,12 @@ export function PlayerSync({ playerId }: { playerId: bigint }) {
   );
 }
 
-export function PlayerAutoRefresh() {
+export function PlayerAutoRefresh({
+  language = "en",
+}: {
+  language?: Language;
+} = {}) {
+  const messages = getMessages(language).player;
   const router = useRouter();
   const [, transition] = useTransition();
   const refresh = useCallback(async () => {
@@ -68,7 +82,7 @@ export function PlayerAutoRefresh() {
   const countdown = useAutoUpdate(refresh, preferences?.preferences.autoUpdate);
   return countdown === null ? null : (
     <Typography variant="h6" gutterBottom>
-      Auto-update in: {countdown} seconds
+      {messages.autoUpdate} {countdown} {messages.seconds}
     </Typography>
   );
 }

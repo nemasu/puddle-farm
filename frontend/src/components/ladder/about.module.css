@@ -1,0 +1,100 @@
+.info {
+  margin: 0 0 40px;
+  border: 3px solid #111;
+  background: white;
+  box-shadow: 6px 6px var(--cyan);
+}
+.info > div {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  border-bottom: 1px solid #bdbdb6;
+}
+.info > div:last-child {
+  border-bottom: 0;
+}
+.info dt {
+  padding: 22px;
+  background: #111;
+  color: white;
+  font-weight: 900;
+}
+.info dd {
+  margin: 0;
+  padding: 22px;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+.info p {
+  margin: 0 0 12px;
+}
+.supporters {
+  border: 3px solid #111;
+  padding: 22px;
+  background: white;
+  box-shadow: 6px 6px var(--red);
+  margin-bottom: 40px;
+}
+.supporters h2,
+.guideTitle {
+  font: 400 1.6rem var(--display);
+  margin: 0 0 16px;
+}
+.supporters ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.supporters li {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.tag {
+  background: #111;
+  border: 1px solid currentColor;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+}
+.guide {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  margin: 22px 0;
+}
+.guide li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 3px solid #111;
+  padding: 10px;
+  background: white;
+  font-size: 0.8rem;
+}
+.guide small {
+  display: block;
+  color: #666660;
+}
+@media (max-width: 650px) {
+  .info > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .info dt,
+  .info dd,
+  .supporters {
+    padding: 16px;
+  }
+  .guide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.supporters :global(.credits-list) li {
+  display: list-item;
+}

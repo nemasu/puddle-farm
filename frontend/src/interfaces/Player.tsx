@@ -1,3 +1,4 @@
+import type { Language } from "../lib/site-preferences";
 import type { PlayerSet, RatingsResponse } from "./API";
 
 export type MatchWithRating = PlayerSet & { ratingChange?: string };
@@ -38,5 +39,6 @@ export interface RatingChartProps {
   API_ENDPOINT: string;
   latest_rating: number;
   total_games: number;
+  language?: Language;
   initialHistory?: RatingsResponse[] | null;
 }

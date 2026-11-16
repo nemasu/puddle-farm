@@ -33,6 +33,7 @@ import {
   DEFAULT_DISPLAY_PREFERENCES,
   formatDisplayTime,
 } from "../lib/display-preferences";
+import { getMessages } from "../lib/i18n";
 import { Utils } from "../utils/Utils";
 import { usePreferencesContext } from "./DisplayPreferences";
 
@@ -53,7 +54,9 @@ const RatingChart = ({
   latest_rating,
   total_games,
   initialHistory,
+  language = "en",
 }: RatingChartProps) => {
+  const messages = getMessages(language).player;
   const preferences = usePreferencesContext()?.preferences;
   const hasPreferences = preferences !== undefined;
   const displayLocalTime = preferences?.useLocalTime;
@@ -113,8 +116,8 @@ const RatingChart = ({
       title: {
         display: true,
         text: showPreVanquisher
-          ? "Pre-Vanquisher Rating History"
-          : `Rating History (${duration} games)`,
+          ? messages.preHistory
+          : `${messages.chart} (${duration} ${messages.games})`,
       },
     },
     scales: {
@@ -162,7 +165,7 @@ const RatingChart = ({
       }
       if (!active) return;
       if (rating_history_result === null) {
-        setLoadError("Rating history is unavailable. Please try again later.");
+        setLoadError(messages.chartError);
         return;
       }
       if (char_short != null) {
@@ -256,16 +259,20 @@ const RatingChart = ({
         const lineChartData = {
           labels: displayData.map((item: RatingsResponse) =>
             hasPreferences
-              ? formatDisplayTime(item.timestamp, {
-                  ...DEFAULT_DISPLAY_PREFERENCES,
-                  useLocalTime: !!displayLocalTime,
-                  timeZone: displayTimeZone ?? "UTC",
-                })
-              : Utils.formatUTCToLocal(item.timestamp),
+              ? item.timestamp === "Now"
+                ? messages.now
+                : formatDisplayTime(item.timestamp, {
+                    ...DEFAULT_DISPLAY_PREFERENCES,
+                    useLocalTime: !!displayLocalTime,
+                    timeZone: displayTimeZone ?? "UTC",
+                  })
+              : item.timestamp === "Now"
+                ? messages.now
+                : Utils.formatUTCToLocal(item.timestamp),
           ),
           datasets: [
             {
-              label: "Rating",
+              label: messages.rating,
               data: convertedRatings,
               borderColor: "rgb(75, 192, 192)",
               backgroundColor: "rgba(75, 192, 192, 0.2)",
@@ -315,7 +322,7 @@ const RatingChart = ({
     void fetchChartData().catch((error) => {
       if (active) {
         console.error("Could not load rating history:", error);
-        setLoadError("Rating history is unavailable. Please try again later.");
+        setLoadError(messages.chartError);
       }
     });
     return () => {
@@ -336,6 +343,7 @@ const RatingChart = ({
     hasPreferences,
     displayLocalTime,
     displayTimeZone,
+    messages,
   ]);
 
   return (
@@ -350,10 +358,10 @@ const RatingChart = ({
         }}
       >
         <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>Game Count</InputLabel>
+          <InputLabel>{messages.gameCount}</InputLabel>
           <Select
             value={duration}
-            label="Game Count"
+            label={messages.gameCount}
             onChange={handleDurationChange}
           >
             {(total_games < 100
@@ -367,7 +375,7 @@ const RatingChart = ({
               </MenuItem>
             ))}
             <MenuItem value={customGames} onClick={handleOpenDialog}>
-              Custom...
+              {messages.custom}
             </MenuItem>
           </Select>
         </FormControl>
@@ -377,12 +385,12 @@ const RatingChart = ({
           onClose={handleCloseDialog}
           disableScrollLock={true}
         >
-          <DialogTitle>Custom Game Count</DialogTitle>
+          <DialogTitle>{messages.customGames}</DialogTitle>
           <DialogContent>
             <TextField
               sx={{ mt: 1 }}
               autoFocus={false}
-              label="Number of Games"
+              label={messages.numberGames}
               type="number"
               value={tempGames}
               onChange={handleTempGamesChange}
@@ -390,8 +398,8 @@ const RatingChart = ({
             />
           </DialogContent>
           <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button onClick={handleApplyCustomGames}>Apply</Button>
+            <Button onClick={handleCloseDialog}>{messages.cancel}</Button>
+            <Button onClick={handleApplyCustomGames}>{messages.apply}</Button>
           </DialogActions>
         </Dialog>
 
@@ -405,9 +413,7 @@ const RatingChart = ({
               setShowPreVanquisher((v) => !v);
             }}
           >
-            {showPreVanquisher
-              ? "Show Vanquisher History"
-              : "Show Pre-Vanquisher History"}
+            {showPreVanquisher ? messages.showHistory : messages.showPreHistory}
           </Button>
         )}
       </Box>
@@ -417,11 +423,11 @@ const RatingChart = ({
           {loadError}
         </Typography>
       ) : showPreVanquisher && noPreVanquisherData ? (
-        <Typography>No pre-Vanquisher data available.</Typography>
+        <Typography>{messages.noPreHistory}</Typography>
       ) : lineChartData ? (
         <Line options={lineChartOptions} data={lineChartData} />
       ) : (
-        <Typography>Loading...</Typography>
+        <Typography>{messages.loading}</Typography>
       )}
     </>
   );

@@ -36,7 +36,9 @@ export async function withNextFixture(check) {
       return;
     }
     if (url.pathname === "/api/characters") {
-      response.end(JSON.stringify([["SO", "Sol Badguy"], ["KY", "Ky Kiske"]]));
+      const send = () => response.end(JSON.stringify(state.characterNames ?? [["SO", "Sol Badguy"], ["KY", "Ky Kiske"]]));
+      if (state.characterResponses) state.characterResponses.push(send);
+      else send();
       return;
     }
     if (respondPublicFixture(url, response, state)) return;
@@ -69,16 +71,22 @@ export async function withNextFixture(check) {
     const ranks = Array.from({ length: 5 }, (_, index) => ({
       id: isLegend ? String(76561198000000001n + BigInt(index)) : String(9007199254740993n + BigInt(index)),
       rank: index + 1, name: isLegend ? `SSR <Player>${index ? ` ${index + 1}` : ""}` : `Ranked <Player> ${index + 1}`,
-      char_short: character, char_long: character === "SO" ? "Sol Badguy" : "Ky Kiske",
+      char_short: isLegend && index % 2 ? "KY" : character,
+      char_long: isLegend && index % 2 ? "Ky Kiske" : character === "SO" ? "Sol Badguy" : "Ky Kiske",
       rating: 10001800 - index * 100, is_legend: index === 0,
       tags: index === 0 ? [{ tag: "Supporter", style: '{"color":"red"}' }] : [],
     }));
-    response.end(numericIds({ ranks: state.mode === "empty" ? [] : ranks.slice(offset, offset + count), last_update: lastUpdate }));
+    const body = numericIds({ ranks: state.mode === "empty" ? [] : ranks.slice(offset, offset + count), last_update: lastUpdate });
+    if (state.rankingResponses && url.pathname.includes("/top_char/")) state.rankingResponses.push(() => response.end(body));
+    else response.end(body);
   });
   const fixturePort = await listen(fixture);
   const reservation = createServer();
   const appPort = await listen(reservation);
   await new Promise((resolve) => reservation.close(resolve));
+  const healthReservation = createServer();
+  const healthPort = await listen(healthReservation);
+  await new Promise((resolve) => healthReservation.close(resolve));
   let logs = "";
   const image = process.env.GGST_TEST_CONTAINER_IMAGE;
   const engine = process.env.GGST_CONTAINER_ENGINE ?? "podman";
@@ -88,10 +96,11 @@ export async function withNextFixture(check) {
   const args = image ? [
     "run", "--rm", "--name", containerName, "--network=host",
     "--read-only", "--user=1000:1000", "--cap-drop=ALL", "--security-opt=no-new-privileges",
-    "--memory=512m", "--cpus=1",
+    "--memory=1g", "--cpus=2",
     "--tmpfs=/tmp:rw,nosuid,nodev,mode=1777",
     "--tmpfs=/app/.next/cache:rw,nosuid,nodev,mode=1777",
     "--env", `PORT=${appPort}`, "--env", "HOSTNAME=0.0.0.0",
+    "--env", `FRONTEND_HEALTH_PORT=${healthPort}`, "--env", "FRONTEND_WORKERS=2",
     "--env", `GGST_API_INTERNAL_URL=${apiOrigin}`, image,
   ] : ["node_modules/next/dist/bin/next", "start", "-H", "127.0.0.1", "-p", String(appPort)];
   const server = spawn(command, args, {
@@ -120,14 +129,17 @@ export async function withNextFixture(check) {
       if (server.exitCode !== null) throw new Error(`Next.js exited early:\n${logs}`);
       try {
         const response = await fetch(`${baseURL}/favicon.ico`, { signal: AbortSignal.timeout(1000) });
-        if (response.ok) { ready = true; break; }
+        if (response.ok) {
+          const health = image ? await fetch(`http://127.0.0.1:${healthPort}/health`, { signal: AbortSignal.timeout(1000) }) : null;
+          if (!image || health.ok) { ready = true; break; }
+        }
         await delay(100);
       } catch { await delay(100); }
     }
     if (!ready) throw new Error(`Next.js did not start:\n${logs}`);
     // Kubernetes probes do not depend on image-format HEALTHCHECK metadata.
     if (image) await execute(engine, ["exec", containerName, "node", "-e",
-      "fetch('http://127.0.0.1:' + process.env.PORT + '/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]);
+      "fetch('http://127.0.0.1:' + process.env.FRONTEND_HEALTH_PORT + '/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]);
     await check({ state, baseURL });
   } catch (error) {
     console.error(logs);

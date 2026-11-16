@@ -7,6 +7,11 @@ export function respondPlayerFixture(url, response, state) {
     else { state.playerSyncs++; response.end("OK"); }
     return true;
   }
+  const pendingCore = /^\/api\/player\/\d+$/.test(path) ? state.playerResponses : path.endsWith("/history") ? state.historyResponses : null;
+  if (pendingCore) {
+    pendingCore.push(() => respondPlayerFixture(url, response, { ...state, playerResponses: null, historyResponses: null }));
+    return true;
+  }
   if (state.mode === "failure") { response.writeHead(503).end("Unavailable"); return true; }
   if (path.startsWith("/api/avatar/")) {
     response.setHeader("Content-Type", "image/png");
@@ -71,7 +76,7 @@ export function respondPlayerFixture(url, response, state) {
       { char_name: "Sol Badguy", char_short: "SO", matchups },
       { char_name: "Ky Kiske", char_short: "KY", matchups: [{ char_name: "Ky Kiske", char_short: "KY", wins: 5, total_games: 10 }, { char_name: "Sol Badguy", char_short: "SO", wins: 4, total_games: 10 }] },
     ];
-    endMatchups(JSON.stringify({ data_all: characters, data_vanq: characters, last_update: "2026-11-13 10:00:00" }));
+    endMatchups(JSON.stringify(state.globalMatchupData ?? { data_all: characters, data_vanq: characters, last_update: "2026-11-13 10:00:00" }));
   }
   else endMatchups(JSON.stringify({ matchups: state.mode === "empty" ? [] : matchups }));
   return true;

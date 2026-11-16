@@ -1,9 +1,11 @@
 import { Box, Typography } from "@mui/material";
 import { redirect } from "next/navigation";
+import { getClassicMessages } from "../../lib/i18n/classic";
 import type { Pagination } from "../../lib/pagination";
 import { computeShowNext } from "../../lib/rankings";
 import { ApiError } from "../../lib/server/api";
 import { getRanking } from "../../lib/server/rankings";
+import { getRequestPresentation } from "../../lib/server/site-preferences";
 import { ONE_DAY_MS } from "../../utils/time";
 import { RankingPagination } from "./RankingPagination";
 import { RankingTable } from "./RankingTable";
@@ -16,6 +18,8 @@ export async function RankingContent({
   pagination: Pagination;
   character?: string;
 }) {
+  const { language } = await getRequestPresentation();
+  const messages = getClassicMessages(language);
   let result: Awaited<ReturnType<typeof getRanking>>;
   try {
     result = await getRanking(pagination, character);
@@ -25,7 +29,7 @@ export async function RankingContent({
     console.error("Could not load the leaderboard:", error);
     return (
       <Typography role="alert" color="error" align="center" sx={{ m: 3 }}>
-        Could not load the leaderboard. Please try again later.
+        {messages.ladder.error}
       </Typography>
     );
   }
@@ -44,6 +48,8 @@ export async function RankingContent({
           includeHours
           updateAt={result.lastUpdateMs + ONE_DAY_MS}
           renderedAt={Date.now()}
+          label={messages.ladder.nextUpdate}
+          updating={messages.ladder.updating}
         />
       )}
       <RankingPagination {...paginationProps} position="top" />

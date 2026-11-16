@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { API_ENDPOINT } from "../../lib/api-endpoint";
 
-export function PlayerAvatar({ playerId }: { playerId: bigint }) {
+export function PlayerAvatar({
+  playerId,
+  alt = "Player Avatar",
+}: {
+  playerId: bigint;
+  alt?: string;
+}) {
   const [failed, setFailed] = useState(false);
   return (
     <div
@@ -18,7 +24,7 @@ export function PlayerAvatar({ playerId }: { playerId: bigint }) {
         // biome-ignore lint/performance/noImgElement: direct API image, without server blob URLs or duplicate requests.
         <img
           src={`${API_ENDPOINT}/avatar/${playerId}`}
-          alt="Player Avatar"
+          alt={alt}
           loading="lazy"
           onError={() => setFailed(true)}
           style={{

@@ -1,9 +1,11 @@
 import { Box, Button, TextField } from "@mui/material";
+import { getClassicMessages } from "../../lib/i18n/classic";
 import { type Pagination, rankingPath } from "../../lib/pagination";
 import { computePageInput, computePrevPage } from "../../lib/rankings";
+import { getRequestPresentation } from "../../lib/server/site-preferences";
 import { LinkButton } from "./LinkButton";
 
-export function RankingPagination({
+export async function RankingPagination({
   base,
   pagination,
   showNext,
@@ -14,11 +16,19 @@ export function RankingPagination({
   showNext: boolean;
   position: "top" | "bottom";
 }) {
+  const { language } = await getRequestPresentation();
+  const messages = getClassicMessages(language);
   const { count, offset } = pagination;
   return (
     <Box
       component="nav"
-      aria-label={`${position} pagination`}
+      aria-label={
+        language === "ja"
+          ? position === "top"
+            ? messages.ladder.topPagination
+            : messages.ladder.bottomPagination
+          : `${position} pagination`
+      }
       sx={{
         display: "flex",
         flexWrap: "wrap",
@@ -28,11 +38,11 @@ export function RankingPagination({
       }}
     >
       <LinkButton href={rankingPath(base, computePrevPage(count, offset))}>
-        Prev
+        {messages.ladder.prev}
       </LinkButton>
       {showNext && Number.isSafeInteger(offset + count) && (
         <LinkButton href={rankingPath(base, { count, offset: offset + count })}>
-          Next
+          {messages.ladder.next}
         </LinkButton>
       )}
       <Box
@@ -45,7 +55,7 @@ export function RankingPagination({
           key={`${count}-${offset}`}
           id={`page-${position}`}
           name="page"
-          label="Page"
+          label={messages.ladder.page}
           size="small"
           type="number"
           defaultValue={computePageInput(count, offset)}
@@ -54,12 +64,12 @@ export function RankingPagination({
               min: 1,
               step: 1,
               required: true,
-              "aria-label": `Page (${position})`,
+              "aria-label": `${messages.ladder.page} (${position})`,
             },
           }}
           sx={{ width: 80, mx: 1 }}
         />
-        <Button type="submit">Go</Button>
+        <Button type="submit">{messages.ladder.go}</Button>
       </Box>
     </Box>
   );

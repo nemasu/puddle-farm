@@ -1,27 +1,37 @@
+import { characterLabel } from "../../lib/ladder-characters";
 import { CLASSIC_NAVIGATION } from "../../lib/navigation";
-import { readApiResponse } from "../../lib/server/api";
 import { getCharacters } from "../../lib/server/characters";
+import { getIngestionStatus } from "../../lib/server/ingestion";
+import { getRequestPresentation } from "../../lib/server/site-preferences";
 import NavigationControls from "./NavigationControls";
 
 export async function Navigation() {
-  const [characterNames, initialMessage] = await Promise.all([
+  const { language, messages } = await getRequestPresentation();
+  const [rawCharacters, initialMessage] = await Promise.all([
     loadCharacters(),
-    loadIngestionStatus(),
+    getIngestionStatus(messages.common.ingestionError),
   ]);
+  const characterNames = Object.fromEntries(
+    Object.entries(rawCharacters).map(([short, name]) => [
+      short,
+      language === "ja" ? characterLabel(short, name, language) : name,
+    ]),
+  );
   return (
     <>
       <NavigationControls
+        language={language}
         characterNames={characterNames}
         initialIngestionMessage={initialMessage}
       />
       <noscript>
         <nav
-          aria-label="Navigation without JavaScript"
+          aria-label={messages.common.noScriptNavigation}
           style={{ padding: "12px" }}
         >
           {CLASSIC_NAVIGATION.filter((page) => page.link).map((page) => (
             <a
-              key={page.name}
+              key={page.key}
               href={`${page.link}`}
               style={{
                 color: "inherit",
@@ -29,11 +39,11 @@ export async function Navigation() {
                 margin: "4px 8px",
               }}
             >
-              {page.name}
+              {messages.navigation[page.key]}
             </a>
           ))}
           <details>
-            <summary>Characters</summary>
+            <summary>{messages.navigation.characters}</summary>
             {Object.entries(characterNames).map(([short, name]) => (
               <a
                 key={short}
@@ -50,9 +60,9 @@ export async function Navigation() {
           </details>
           <form action="/search" method="get">
             <label>
-              Search Player Names <input name="q" type="search" />
+              {messages.common.searchPlayers} <input name="q" type="search" />
             </label>
-            <button type="submit">Search</button>
+            <button type="submit">{messages.common.search}</button>
           </form>
         </nav>
       </noscript>
@@ -67,15 +77,4 @@ async function loadCharacters(): Promise<Record<string, string>> {
     console.error("Could not load the character menu:", error);
   }
   return {};
-}
-
-async function loadIngestionStatus(): Promise<string | null> {
-  try {
-    const response = await readApiResponse("/ingestion/health");
-    return response.ok
-      ? null
-      : response.body || "Could not check whether matches are updating.";
-  } catch {
-    return "Could not check whether matches are updating.";
-  }
 }

@@ -29,6 +29,8 @@ import {
 import { type ChangeEvent, useEffect, useMemo, useState } from "react";
 import type { MatchupEntry, MatchupResponse } from "../interfaces/API";
 import type { MatchupProps, Matchups } from "../interfaces/PlayerMatchups";
+import { getMessages } from "../lib/i18n";
+import { characterLabel } from "../lib/ladder-characters";
 import { PercentChangeLabel } from "./PercentChangeLabel";
 
 const TIERS = [
@@ -63,7 +65,9 @@ const Matchup = ({
   player_id,
   initialData,
   initialGlobal,
+  language = "en",
 }: MatchupProps) => {
+  const messages = getMessages(language).player;
   const [orderBy, setOrderBy] = useState<string | null>(null);
   const [order, setOrder] = useState<"asc" | "desc" | undefined>(undefined);
   const [duration, setDuration] = useState<string>("12");
@@ -294,7 +298,7 @@ const Matchup = ({
                     return (
                       <Tooltip
                         key={m.char_short}
-                        title={`${m.char_name}: ${wr.toFixed(1)}% (${m.wins}/${m.total_games})`}
+                        title={`${characterLabel(m.char_short, m.char_name, language)}: ${wr.toFixed(1)}% (${m.wins}/${m.total_games})`}
                         arrow
                       >
                         <Box
@@ -355,7 +359,7 @@ const Matchup = ({
               {tooFewGames.map((m) => (
                 <Tooltip
                   key={m.char_short}
-                  title={`${m.char_name}: ${m.total_games} game${m.total_games === 1 ? "" : "s"} (too few)`}
+                  title={`${characterLabel(m.char_short, m.char_name, language)}: ${m.total_games} game${m.total_games === 1 ? "" : "s"} (${messages.fewGames})`}
                   arrow
                 >
                   <Box
@@ -385,19 +389,18 @@ const Matchup = ({
           color="text.secondary"
           sx={{ mt: 1, display: "block" }}
         >
-          Tiers based on personal win rate: S≥65%, A≥55%, B≥45%, C≥35%,
-          D&lt;35%. ? = fewer than {MIN_GAMES} games.
+          {messages.tierNote}
         </Typography>
       </Box>
     );
-  }, [matchups]);
+  }, [matchups, language, messages]);
 
   if (loading) {
-    return <Typography>Loading...</Typography>;
+    return <Typography>{messages.loading}</Typography>;
   }
 
   if (!matchups) {
-    return <Typography>No data available</Typography>;
+    return <Typography>{messages.noData}</Typography>;
   }
 
   return (
@@ -414,7 +417,7 @@ const Matchup = ({
               marginBottom: 2,
             }}
           >
-            <Typography variant="h6">Matchup Table</Typography>
+            <Typography variant="h6">{messages.matchups}</Typography>
             <ToggleButtonGroup
               value={viewMode}
               exclusive
@@ -423,22 +426,22 @@ const Matchup = ({
               }}
               size="small"
             >
-              <ToggleButton value="table">Table</ToggleButton>
-              <ToggleButton value="tierlist">Tier List</ToggleButton>
+              <ToggleButton value="table">{messages.table}</ToggleButton>
+              <ToggleButton value="tierlist">{messages.tierList}</ToggleButton>
             </ToggleButtonGroup>
             <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Duration</InputLabel>
+              <InputLabel>{messages.duration}</InputLabel>
               <Select
                 value={duration}
-                label="Duration"
+                label={messages.duration}
                 onChange={handleDurationChange}
               >
-                <MenuItem value="4">1 Month</MenuItem>
-                <MenuItem value="12">3 Months</MenuItem>
-                <MenuItem value="24">6 Months</MenuItem>
-                <MenuItem value="520">All Time</MenuItem>
+                <MenuItem value="4">{messages.month}</MenuItem>
+                <MenuItem value="12">{messages.threeMonths}</MenuItem>
+                <MenuItem value="24">{messages.sixMonths}</MenuItem>
+                <MenuItem value="520">{messages.allTime}</MenuItem>
                 <MenuItem value={customWeeks} onClick={handleOpenDialog}>
-                  Custom...
+                  {messages.custom}
                 </MenuItem>
               </Select>
               <Dialog
@@ -446,12 +449,12 @@ const Matchup = ({
                 onClose={handleCloseDialog}
                 disableScrollLock={true}
               >
-                <DialogTitle>Custom Duration</DialogTitle>
+                <DialogTitle>{messages.customDuration}</DialogTitle>
                 <DialogContent>
                   <TextField
                     sx={{ mt: 1 }}
                     autoFocus={false}
-                    label="Number of Weeks"
+                    label={messages.numberWeeks}
                     type="number"
                     value={tempWeeks}
                     onChange={handleTempWeeksChange}
@@ -459,24 +462,28 @@ const Matchup = ({
                   />
                 </DialogContent>
                 <DialogActions>
-                  <Button onClick={handleCloseDialog}>Cancel</Button>
-                  <Button onClick={handleApplyCustomWeeks}>Apply</Button>
+                  <Button onClick={handleCloseDialog}>{messages.cancel}</Button>
+                  <Button onClick={handleApplyCustomWeeks}>
+                    {messages.apply}
+                  </Button>
                 </DialogActions>
               </Dialog>
             </FormControl>
           </Box>
           <Typography variant="body1">
             {duration === "520"
-              ? "This includes all games played."
-              : `This includes all games played in the past ${duration} week${duration === "1" ? "" : "s"}.`}
+              ? messages.allGames
+              : language === "en"
+                ? `This includes all games played in the past ${duration} week${duration === "1" ? "" : "s"}.`
+                : `${messages.pastWeeks} ${duration}`}
           </Typography>
           <Typography sx={{ p: 2 }} variant="body1">
-            Win Rate
+            {messages.winRate}
           </Typography>
           <Box component={Paper} sx={{ maxWidth: 350 }}>
             <Typography sx={{ p: 2 }} variant="body1">
               {matchups.total_games === 0 ? (
-                "No games played during this period."
+                messages.noGames
               ) : (
                 <>
                   <PercentChangeLabel
@@ -498,7 +505,7 @@ const Matchup = ({
                         direction={orderBy === "character" ? order : "asc"}
                         onClick={() => handleRequestSort("character")}
                       >
-                        Character
+                        {messages.character}
                       </TableSortLabel>
                     </TableCell>
                     <TableCell sx={{ position: "sticky", top: 0, zIndex: 1 }}>
@@ -507,7 +514,7 @@ const Matchup = ({
                         direction={orderBy === "winrate" ? order : "asc"}
                         onClick={() => handleRequestSort("winrate")}
                       >
-                        WR
+                        {messages.shortWR}
                       </TableSortLabel>
                     </TableCell>
                     <TableCell sx={{ position: "sticky", top: 0, zIndex: 1 }}>
@@ -516,7 +523,7 @@ const Matchup = ({
                         direction={orderBy === "wins" ? order : "asc"}
                         onClick={() => handleRequestSort("wins")}
                       >
-                        Wins
+                        {messages.wins}
                       </TableSortLabel>
                     </TableCell>
                     <TableCell sx={{ position: "sticky", top: 0, zIndex: 1 }}>
@@ -525,7 +532,7 @@ const Matchup = ({
                         direction={orderBy === "losses" ? order : "asc"}
                         onClick={() => handleRequestSort("losses")}
                       >
-                        Losses
+                        {messages.losses}
                       </TableSortLabel>
                     </TableCell>
                     <TableCell sx={{ position: "sticky", top: 0, zIndex: 1 }}>
@@ -534,11 +541,11 @@ const Matchup = ({
                         direction={orderBy === "total" ? order : "asc"}
                         onClick={() => handleRequestSort("total")}
                       >
-                        Total
+                        {messages.total}
                       </TableSortLabel>
                     </TableCell>
                     <TableCell sx={{ position: "sticky", top: 0, zIndex: 1 }}>
-                      Global WR
+                      {messages.globalWR}
                     </TableCell>
                   </TableRow>
                 </TableHead>
@@ -561,7 +568,12 @@ const Matchup = ({
                             zIndex: 1,
                           }}
                         >
-                          {matchup.char_name} ({matchup.char_short})
+                          {characterLabel(
+                            matchup.char_short,
+                            matchup.char_name,
+                            language,
+                          )}{" "}
+                          ({matchup.char_short})
                         </TableCell>
                         <TableCell>
                           <PercentChangeLabel

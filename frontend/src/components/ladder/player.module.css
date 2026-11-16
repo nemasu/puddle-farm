@@ -1,0 +1,516 @@
+.hero {
+  position: relative;
+  overflow: hidden;
+  background: #111;
+  color: #fff;
+  border-bottom: 5px solid var(--red);
+  isolation: isolate;
+}
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(#484848 1px, transparent 1px) 0 0 / 9px 9px;
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  width: 23%;
+  inset: 0 17% 0 auto;
+  z-index: -1;
+  background: var(--red);
+  transform: skewX(-15deg);
+  opacity: 0.6;
+}
+.heroInner {
+  max-width: 1600px;
+  margin: auto;
+  padding: 55px var(--gutter) 35px;
+  position: relative;
+}
+.eyebrow {
+  color: var(--cyan);
+  font-size: 0.8rem;
+  letter-spacing: 3px;
+  font-weight: 900;
+}
+.hero h1 {
+  max-width: 70%;
+  margin: 12px 0;
+  font: 400 clamp(2rem, 5vw, 4.2rem) / 1.2 var(--display);
+  overflow-wrap: anywhere;
+  background: white;
+  color: #111;
+  display: inline-block;
+  padding: 4px 18px;
+  transform: skewX(-5deg);
+}
+.art {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  right: 0;
+  z-index: -1;
+  opacity: 0.75;
+}
+.art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: var(--focus-x) var(--focus-y);
+}
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  margin-right: 5px;
+  border: 1px solid currentColor;
+  font-size: 0.75rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.aliasSlot {
+  min-height: 56px;
+  max-width: 70%;
+  display: flow-root;
+}
+.aliases {
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+.heroStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+  max-width: 780px;
+}
+.heroStats > div,
+.tiles > div {
+  border: 3px solid #111;
+  box-shadow: 5px 5px var(--cyan);
+  background: #fff;
+  color: #111;
+  padding: 14px 16px;
+  position: relative;
+}
+.heroStats > div > span,
+.tiles > div > span {
+  display: block;
+  color: #666660;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+.heroStats b,
+.tiles b {
+  display: block;
+  font: 400 1.65rem / 1.4 var(--display);
+  overflow-wrap: anywhere;
+}
+.heroStats > div:first-child {
+  padding-right: 65px;
+}
+.heroStats > div:first-child > div {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.content {
+  max-width: 1600px;
+  margin: auto;
+  padding: 28px var(--gutter) 65px;
+}
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 35px;
+}
+.tiles small {
+  display: block;
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+.label {
+  font: 400 1.2rem var(--display);
+}
+.characters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+.characters a {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: 2px solid #111;
+  padding: 10px 15px;
+  background: #fff;
+  text-decoration: none;
+}
+.characters a[aria-current] {
+  background: #111;
+  color: #fff;
+  box-shadow: 4px 4px var(--red);
+}
+.characters small {
+  display: block;
+  font-size: 0.75rem;
+}
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 24px;
+  align-items: start;
+}
+.main {
+  min-width: 0;
+}
+.selected {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.selected h2 {
+  font: 400 1.4rem var(--display);
+  margin: 5px 0;
+}
+.records {
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+  margin-bottom: 20px;
+}
+.panel {
+  background: #fff;
+  border: 3px solid #111;
+  box-shadow: 6px 6px var(--cyan);
+  margin-bottom: 28px;
+  padding: 18px;
+  min-width: 0;
+}
+.panel h2 {
+  font: 400 1.4rem var(--display);
+  margin: 0 0 20px;
+}
+.chart {
+  min-height: 420px;
+}
+.matchups {
+  min-height: 640px;
+}
+.chart :global(.MuiBox-root),
+.matchups > :global(.MuiBox-root) {
+  margin-top: 15px;
+}
+.matchups :global(.MuiTableCell-root) {
+  padding: 10px 8px;
+}
+.matchups :global(.MuiTableCell-body) {
+  background: #fff;
+  color: #111;
+}
+.scroll {
+  overflow-x: auto;
+}
+.scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.scroll th,
+.scroll td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid #bdbdb6;
+}
+.scroll th {
+  background: #111;
+  color: #fff;
+}
+.pagination {
+  display: flex;
+  gap: 10px;
+  margin: 12px 0;
+}
+.pagination a {
+  border: 2px solid #111;
+  padding: 4px 14px;
+  text-decoration: none;
+  font-weight: 900;
+}
+.pagination a:hover {
+  background: #111;
+  color: #fff;
+}
+.historyGroups {
+  display: grid;
+  gap: 10px;
+}
+.match {
+  border: 1px solid #bdbdb6;
+}
+.match summary {
+  padding: 12px;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.5fr) minmax(60px, 0.6fr);
+  gap: 12px;
+  align-items: center;
+  border-left: 5px solid var(--red);
+}
+.match summary::before {
+  content: "+";
+  position: absolute;
+  margin-left: -10px;
+  font-size: 0.65rem;
+}
+.match[open] summary {
+  background: #f1f1ed;
+  border-bottom: 1px solid #bdbdb6;
+}
+.match[open] summary::before {
+  content: "−";
+}
+.matchTime {
+  font-size: 0.75rem;
+}
+.match summary small {
+  display: block;
+  font-size: 0.75rem;
+}
+.opponent {
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+.result {
+  text-align: right;
+  font-weight: 900;
+}
+.matchBody {
+  padding: 12px;
+}
+.profile {
+  border: 3px solid #111;
+  background: #fff;
+  box-shadow: 6px 6px var(--red);
+}
+.profileFrame {
+  min-height: 326.5px;
+  padding: 0 10px;
+}
+.commentSlot {
+  min-height: 64px;
+  display: flow-root;
+}
+.comment {
+  background: #f1f1ed;
+  padding: 10px;
+  margin: 10px 0;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1000px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .profile {
+    width: 300px;
+    max-width: 100%;
+  }
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .heroInner {
+    padding-top: 32px;
+  }
+  .art {
+    left: 25%;
+    opacity: 0.45;
+  }
+  .hero h1 {
+    max-width: 100%;
+  }
+  .aliasSlot {
+    max-width: 100%;
+  }
+  .heroStats {
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .heroStats > div:first-child {
+    grid-column: 1 / -1;
+  }
+  .tiles {
+    gap: 12px;
+  }
+  .tiles > div,
+  .heroStats > div {
+    padding: 10px;
+  }
+  .heroStats b,
+  .tiles b {
+    font-size: 1.3rem;
+  }
+  .panel {
+    padding: 12px;
+  }
+  .panel h2 {
+    font-size: 1.2rem;
+  }
+  .match summary {
+    grid-template-columns: minmax(0, 1fr) minmax(55px, 0.4fr);
+    gap: 6px;
+    padding: 10px;
+  }
+  .matchTime {
+    grid-column: 1 / -1;
+  }
+  .matchTime small {
+    display: inline;
+    margin-left: 10px;
+  }
+  .chart {
+    min-height: 320px;
+  }
+}
+
+.winRates {
+  display: grid;
+  gap: 18px;
+}
+.winRateRow {
+  display: grid;
+  grid-template-columns: minmax(100px, 170px) minmax(0, 1fr) 128px;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.85rem;
+}
+.winRateRow a {
+  overflow-wrap: anywhere;
+  font-weight: 800;
+}
+.winRateRow b {
+  text-align: right;
+}
+.winRateRow small {
+  color: #666660;
+}
+.winRateTrack {
+  height: 16px;
+  background: #eee;
+  border: 2px solid #111;
+}
+
+.winRateTrack {
+  width: 100%;
+  appearance: none;
+  border-radius: 0;
+}
+.winRateTrack::-webkit-meter-bar {
+  background: #eee;
+  border: 0;
+  border-radius: 0;
+}
+.winRateTrack::-webkit-meter-optimum-value {
+  background: var(--win-color);
+  border-radius: 0;
+}
+.winRateTrack::-moz-meter-bar {
+  background: var(--win-color);
+}
+
+.winRateViewport {
+  height: 320px;
+  overflow: auto;
+  padding-right: 8px;
+}
+
+.winRateSort {
+  border: 0;
+  padding: 0;
+  margin: 0 0 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 18px;
+}
+.winRateSort button {
+  padding: 6px 10px;
+  border: 2px solid #111;
+  background: white;
+  color: #111;
+  cursor: pointer;
+  font: 700 0.75rem var(--body);
+}
+.winRateSort button[aria-pressed="true"] {
+  background: #111;
+  color: white;
+}
+
+.winRateCharacter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  text-decoration: none;
+}
+.winRateCharacter img {
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.winRates .winRateCharacter > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.winRateStats {
+  text-align: right;
+  min-width: 0;
+}
+.winRateStats b,
+.winRateStats small {
+  display: block;
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .winRateRow {
+    grid-template-columns: minmax(65px, 1fr) minmax(25px, 1fr) 85px;
+    gap: 6px;
+  }
+  .winRateCharacter {
+    gap: 4px;
+    font-size: 0.75rem;
+  }
+  .winRateCharacter img {
+    width: 28px;
+    height: 34px;
+  }
+  .winRateStats {
+    font-size: 0.75rem;
+  }
+  .winRateStats small {
+    font-size: 0.6rem;
+  }
+}
+
+.match[data-result="win"] summary {
+  border-left-color: #4caf50;
+}
+
+.opponent .badge {
+  background: #111;
+  font-size: 0.65rem;
+  margin: 2px 4px;
+  vertical-align: middle;
+}

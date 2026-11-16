@@ -11,24 +11,38 @@ import {
 } from "@mui/material";
 import type { PlayerResponse, TagResponse } from "../../interfaces/API";
 import type { GroupedMatch, MatchWithRating } from "../../interfaces/Player";
+import { getClassicMessages } from "../../lib/i18n/classic";
+import { characterLabel } from "../../lib/ladder-characters";
 import type { Pagination } from "../../lib/pagination";
 import { getPlayerHistory } from "../../lib/server/player";
+import type { Language } from "../../lib/site-preferences";
 import { Utils } from "../../utils/Utils";
+import { AppLink as Link } from "../AppLink";
 import { Tag } from "../Tag";
 import { HistoryDisclosure } from "./HistoryDisclosure";
 import { LinkButton } from "./LinkButton";
 import { PlayerDateTime, PlayerRatingChange } from "./PlayerFormatting";
 
-function MatchDetails({ matches }: { matches: MatchWithRating[] }) {
+function MatchDetails({
+  matches,
+  language = "en",
+}: {
+  matches: MatchWithRating[];
+  language?: Language;
+}) {
+  const messages = getClassicMessages(language).player;
   return (
-    <Table size="small" aria-label="Individual matches">
+    <Table
+      size="small"
+      aria-label={language === "ja" ? messages.details : "Individual matches"}
+    >
       <TableHead>
         <TableRow>
-          <TableCell>Timestamp</TableCell>
-          <TableCell align="right">Rating</TableCell>
-          <TableCell align="right">Opponent Rating</TableCell>
-          <TableCell align="right">Winner?</TableCell>
-          <TableCell align="right">Rating Change</TableCell>
+          <TableCell>{messages.timestamp}</TableCell>
+          <TableCell align="right">{messages.rating}</TableCell>
+          <TableCell align="right">{messages.opponentRating}</TableCell>
+          <TableCell align="right">{messages.result}</TableCell>
+          <TableCell align="right">{messages.change}</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
@@ -43,7 +57,15 @@ function MatchDetails({ matches }: { matches: MatchWithRating[] }) {
             <TableCell align="right">
               {Utils.displayRating(match.opponent_rating_value)}
             </TableCell>
-            <TableCell align="right">{match.result_win ? "Y" : "N"}</TableCell>
+            <TableCell align="right">
+              {language === "ja"
+                ? match.result_win
+                  ? messages.win
+                  : messages.loss
+                : match.result_win
+                  ? "Y"
+                  : "N"}
+            </TableCell>
             <TableCell align="right">
               {Utils.formatRatingChange(match.ratingChange)}
             </TableCell>
@@ -92,10 +114,12 @@ function HistoryGroup({
   group,
   tags,
   card,
+  language = "en",
 }: {
   group: GroupedMatch;
   tags?: TagResponse[];
   card?: boolean;
+  language?: Language;
 }) {
   const oldest = group.matches[group.matches.length - 1];
   const summary = card ? (
@@ -121,7 +145,17 @@ function HistoryGroup({
           {group.wins} - {group.losses}
         </Typography>
         <Typography variant="body2">
-          {group.opponent_character_short}
+          <Link
+            href={`/top/${encodeURIComponent(group.opponent_character_short)}`}
+          >
+            {language === "ja"
+              ? characterLabel(
+                  group.opponent_character_short,
+                  group.opponent_character_short,
+                  language,
+                )
+              : group.opponent_character_short}
+          </Link>
         </Typography>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
           {Utils.displayRankIcon(
@@ -145,7 +179,19 @@ function HistoryGroup({
       <TableCell>
         <Opponent group={group} tags={tags} />
       </TableCell>
-      <TableCell align="right">{group.matches[0].opponent_character}</TableCell>
+      <TableCell align="right">
+        <Link
+          href={`/top/${encodeURIComponent(group.opponent_character_short)}`}
+        >
+          {language === "ja"
+            ? characterLabel(
+                group.opponent_character_short,
+                group.matches[0].opponent_character,
+                language,
+              )
+            : group.matches[0].opponent_character}
+        </Link>
+      </TableCell>
       <TableCell align="right">
         <Box
           sx={{
@@ -171,9 +217,9 @@ function HistoryGroup({
     </>
   );
   return (
-    <HistoryDisclosure card={card} summary={summary}>
+    <HistoryDisclosure card={card} summary={summary} language={language}>
       <Box sx={{ overflowX: "auto" }}>
-        <MatchDetails matches={group.matches} />
+        <MatchDetails matches={group.matches} language={language} />
       </Box>
     </HistoryDisclosure>
   );
@@ -184,21 +230,26 @@ function HistoryPagination({
   character,
   pagination,
   showNext,
+  language = "en",
 }: {
   id: bigint;
   character: string;
   pagination: Pagination;
   showNext: boolean;
+  language?: Language;
 }) {
+  const messages = getClassicMessages(language).ladder;
   const { count, offset } = pagination;
   const base = `/player/${id}/${encodeURIComponent(character)}/${count}`;
   return (
     <Box sx={{ mx: { xs: 1, lg: 3 }, my: 2 }}>
       <LinkButton href={`${base}/${Math.max(0, offset - count)}`}>
-        Prev
+        {messages.prev}
       </LinkButton>
       {showNext && Number.isSafeInteger(offset + count) && (
-        <LinkButton href={`${base}/${offset + count}`}>Next</LinkButton>
+        <LinkButton href={`${base}/${offset + count}`}>
+          {messages.next}
+        </LinkButton>
       )}
     </Box>
   );
@@ -208,11 +259,14 @@ export async function PlayerHistory({
   player,
   character,
   pagination,
+  language = "en",
 }: {
   player: PlayerResponse;
   character: string;
   pagination: Pagination;
+  language?: Language;
 }) {
+  const messages = getClassicMessages(language).player;
   let data: Awaited<ReturnType<typeof getPlayerHistory>>;
   try {
     data = await getPlayerHistory(player, character, pagination);
@@ -220,7 +274,7 @@ export async function PlayerHistory({
     console.error("Could not load player history:", error);
     return (
       <Typography role="alert" color="error">
-        Could not load match history. Please try again later.
+        {messages.historyError}
       </Typography>
     );
   }
@@ -230,17 +284,19 @@ export async function PlayerHistory({
       character={character}
       pagination={pagination}
       showNext={data.showNext}
+      language={language}
     />
   );
   return (
-    <section aria-label="Match history">
+    <section aria-label={messages.history}>
       {navigation}
-      {!data.groups.length && <Typography>No matches found.</Typography>}
+      {!data.groups.length && <Typography>{messages.emptyHistory}</Typography>}
       <Box sx={{ display: { xs: "block", lg: "none" } }}>
         {data.groups.map((group) => (
           <HistoryGroup
             key={`${group.timestamp}-${group.opponent_id}`}
             group={group}
+            language={language}
             tags={data.tags[group.opponent_id.toString()]}
             card
           />
@@ -248,21 +304,21 @@ export async function PlayerHistory({
       </Box>
       <Box sx={{ display: { xs: "none", lg: "block" } }}>
         <TableContainer component={Paper}>
-          <Table size="small" aria-label="Match history">
+          <Table size="small" aria-label={messages.history}>
             <TableHead>
               <TableRow>
                 <TableCell />
-                <TableCell width="170px">Timestamp</TableCell>
+                <TableCell width="170px">{messages.timestamp}</TableCell>
                 <TableCell width="120px" align="right">
-                  Rating
+                  {messages.rating}
                 </TableCell>
-                <TableCell>Opponent</TableCell>
-                <TableCell align="right">Character</TableCell>
+                <TableCell>{messages.opponent}</TableCell>
+                <TableCell align="right">{messages.character}</TableCell>
                 <TableCell width="120px" align="right">
-                  Rating
+                  {messages.rating}
                 </TableCell>
-                <TableCell align="right">Result</TableCell>
-                <TableCell align="right">Change</TableCell>
+                <TableCell align="right">{messages.result}</TableCell>
+                <TableCell align="right">{messages.change}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -270,6 +326,7 @@ export async function PlayerHistory({
                 <HistoryGroup
                   key={`${group.timestamp}-${group.opponent_id}`}
                   group={group}
+                  language={language}
                   tags={data.tags[group.opponent_id.toString()]}
                 />
               ))}

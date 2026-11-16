@@ -18,6 +18,8 @@ import type {
   HourlyPlayersResponse,
 } from "../interfaces/API";
 import { API_ENDPOINT } from "../lib/api-endpoint";
+import { getMessages } from "../lib/i18n";
+import type { Design, Language } from "../lib/site-preferences";
 import { usePreferencesContext } from "./DisplayPreferences";
 
 ChartJS.register(
@@ -45,9 +47,14 @@ type LoadState =
 
 export default function HourlyPlayersChart({
   initialPoints,
+  language = "en",
+  design = "classic",
 }: {
   initialPoints?: HourlyPlayerPoint[] | null;
+  language?: Language;
+  design?: Design;
 }) {
+  const messages = getMessages(language).stats;
   const preferences = usePreferencesContext()?.preferences;
   const [range, setRange] = useState<Range>("30d");
   const [state, setState] = useState<LoadState>(
@@ -92,7 +99,7 @@ export default function HourlyPlayersChart({
       : "UTC"
     : undefined;
   const tickFormatter = new Intl.DateTimeFormat(
-    undefined,
+    language,
     range === "24h"
       ? { hour: "numeric", minute: "2-digit", timeZone }
       : range === "7d" || range === "30d"
@@ -104,8 +111,8 @@ export default function HourlyPlayersChart({
   );
 
   return (
-    <Box sx={{ m: 4, maxWidth: "1000px" }}>
-      <Paper sx={{ p: { xs: 2, sm: 3 } }}>
+    <Box sx={{ m: design === "ladder" ? 0 : 4, maxWidth: "1000px" }}>
+      <Paper sx={{ p: design === "ladder" ? 0 : { xs: 2, sm: 3 } }}>
         <Box
           sx={{
             alignItems: { xs: "flex-start", sm: "center" },
@@ -116,7 +123,7 @@ export default function HourlyPlayersChart({
             mb: 2,
           }}
         >
-          <Typography variant="h5">Hourly Ranked Players</Typography>
+          <Typography variant="h5">{messages.hourly}</Typography>
           <Box
             sx={{
               display: "flex",
@@ -140,74 +147,80 @@ export default function HourlyPlayersChart({
                 })}
                 onClick={() => setRange(value)}
               >
-                {label}
+                {language === "en"
+                  ? label
+                  : {
+                      "24h": messages.range24h,
+                      "7d": messages.range7d,
+                      "30d": messages.range30d,
+                      "1y": messages.range1y,
+                      all: messages.all,
+                    }[value]}
               </Button>
             ))}
           </Box>
         </Box>
-        {state.status === "loading" ? (
-          <Typography color="text.secondary">
-            Loading player history…
-          </Typography>
-        ) : state.status === "failed" ? (
-          <Alert severity="error">Could not load hourly player history.</Alert>
-        ) : points.length === 0 ? (
-          <Typography color="text.secondary">
-            No hourly player history is available for this range.
-          </Typography>
-        ) : (
-          <Box sx={{ height: { xs: 260, sm: 360 }, position: "relative" }}>
-            <Line
-              data={{
-                labels,
-                datasets: [
-                  {
-                    label: "Players",
-                    data: points.map(({ players }) => players),
-                    borderColor: "#ef5350",
-                    backgroundColor: "rgba(239, 83, 80, 0.22)",
-                    borderWidth: 2,
-                    fill: true,
-                    pointRadius: 0,
-                    pointHoverRadius: 4,
-                    stepped: "before",
-                    tension: 0,
-                  },
-                ],
-              }}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: { intersect: false, mode: "index" },
-                plugins: {
-                  legend: { display: false },
-                  tooltip: {
-                    callbacks: {
-                      title: (items) => {
-                        const point = points[items[0]?.dataIndex];
-                        return point
-                          ? new Date(point.timestamp * 1000).toLocaleString(
-                              undefined,
-                              { timeZone },
-                            )
-                          : "";
+        <Box sx={{ minHeight: { xs: 260, sm: 360 } }} aria-live="polite">
+          {state.status === "loading" ? (
+            <Typography color="text.secondary">{messages.loading}</Typography>
+          ) : state.status === "failed" ? (
+            <Alert severity="error">{messages.hourlyError}</Alert>
+          ) : points.length === 0 ? (
+            <Typography color="text.secondary">{messages.empty}</Typography>
+          ) : (
+            <Box sx={{ height: { xs: 260, sm: 360 }, position: "relative" }}>
+              <Line
+                data={{
+                  labels,
+                  datasets: [
+                    {
+                      label: messages.chartPlayers,
+                      data: points.map(({ players }) => players),
+                      borderColor: "#ef5350",
+                      backgroundColor: "rgba(239, 83, 80, 0.22)",
+                      borderWidth: 2,
+                      fill: true,
+                      pointRadius: 0,
+                      pointHoverRadius: 4,
+                      stepped: "before",
+                      tension: 0,
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  interaction: { intersect: false, mode: "index" },
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      callbacks: {
+                        title: (items) => {
+                          const point = points[items[0]?.dataIndex];
+                          return point
+                            ? new Date(point.timestamp * 1000).toLocaleString(
+                                language,
+                                { timeZone },
+                              )
+                            : "";
+                        },
+                        label: (item: TooltipItem<"line">) =>
+                          `${Number(item.raw).toLocaleString(language)} ${language === "en" ? "players" : messages.chartPlayers}`,
                       },
-                      label: (item: TooltipItem<"line">) =>
-                        `${Number(item.raw).toLocaleString()} players`,
                     },
                   },
-                },
-                scales: {
-                  x: {
-                    grid: { display: false },
-                    ticks: { maxTicksLimit: 8, maxRotation: 0 },
+                  scales: {
+                    x: {
+                      grid: { display: false },
+                      ticks: { maxTicksLimit: 8, maxRotation: 0 },
+                    },
+                    y: { beginAtZero: true, ticks: { precision: 0 } },
                   },
-                  y: { beginAtZero: true, ticks: { precision: 0 } },
-                },
-              }}
-            />
-          </Box>
-        )}
+                }}
+              />
+            </Box>
+          )}
+        </Box>
       </Paper>
     </Box>
   );

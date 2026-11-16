@@ -1,11 +1,14 @@
 import { AppBar, Container, Link, Toolbar } from "@mui/material";
+import { getMessages } from "../lib/i18n";
+import type { Language } from "../lib/site-preferences";
 
-function GameNavBar() {
+function GameNavBar({ language }: { language: Language }) {
+  const messages = getMessages(language).common;
   return (
     <AppBar
       component="nav"
       position="static"
-      aria-label="Games"
+      aria-label={messages.games}
       elevation={0}
       style={{ backgroundImage: "none" }}
     >
@@ -23,7 +26,7 @@ function GameNavBar() {
             href="https://discord.gg/vY4mE8exXB"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Join the Puddle Farm Discord"
+            aria-label={messages.discord}
             color="inherit"
             sx={{ display: "inline-flex", ml: "auto", p: 0.5 }}
           >
@@ -38,7 +41,7 @@ function GameNavBar() {
             href="https://patreon.com/nemasu"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Support Puddle Farm on Patreon"
+            aria-label={messages.patreon}
             color="inherit"
             sx={{ display: "inline-flex", p: 0.5 }}
           >

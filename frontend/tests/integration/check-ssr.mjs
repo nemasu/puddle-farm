@@ -1,9 +1,20 @@
 // Run after npm run build. These assertions inspect HTML without browser scripts.
+import {checkJapaneseSsr} from "./lib/japanese.mjs";
+import {checkReviewFixes} from "./lib/review-fixes.mjs";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { JSDOM } from "jsdom";
 import { withNextFixture } from "./lib/fixture.mjs";
 import { checkPublicSsr } from "./lib/public-ssr.mjs";
+import { checkLadderAboutSsr } from "./lib/ladder-about.mjs";
+import { checkLadderDistributionSsr } from "./lib/ladder-distribution.mjs";
+import { checkLadderMatchupsSsr } from "./lib/ladder-matchups.mjs";
+import { checkLadderPopularitySsr } from "./lib/ladder-popularity.mjs";
+import { checkLadderStatsSsr } from "./lib/ladder-stats.mjs";
+import { checkLadderPlayerSsr } from "./lib/ladder-player.mjs";
+import { checkLadderRankingsSsr } from "./lib/ladder-rankings.mjs";
+import { checkLadderSsr } from "./lib/ladder.mjs";
+import { checkSitePreferencesSsr } from "./lib/site-preferences.mjs";
 import { checkMatchupStreaming } from "./lib/matchup-streaming.mjs";
 
 await withNextFixture(async ({ state, baseURL }) => {
@@ -37,6 +48,18 @@ await withNextFixture(async ({ state, baseURL }) => {
     assert.equal(response.status, 307, `redirect status for ${path}`);
     assert.equal(response.headers.get("Location"), location, path);
   }
+
+  await checkReviewFixes({read,state,baseURL});
+  await checkSitePreferencesSsr({ read });
+  await checkJapaneseSsr({read,state});
+  await checkLadderSsr({ read, state, baseURL });
+  await checkLadderRankingsSsr({ read, state });
+  await checkLadderPlayerSsr({read,state,baseURL});
+  await checkLadderStatsSsr({read,state,baseURL});
+  await checkLadderPopularitySsr({read,state});
+  await checkLadderMatchupsSsr({read,state,baseURL});
+  await checkLadderDistributionSsr({read,state});
+  await checkLadderAboutSsr({read,state});
 
   const document = await page("");
   assert.match(document.querySelector("main table").textContent, /SSR <Player>/);

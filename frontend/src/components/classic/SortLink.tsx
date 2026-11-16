@@ -1,8 +1,8 @@
 "use client";
 
 import TableSortLabel from "@mui/material/TableSortLabel";
-import Link from "next/link";
 import type { ReactNode } from "react";
+import { AppLink as Link } from "../AppLink";
 
 export function SortLink({
   href,

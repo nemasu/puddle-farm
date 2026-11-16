@@ -5,31 +5,50 @@ import {
   DisplaySettingsControls,
   ThemeControls,
 } from "../../components/classic/SettingsControls";
+import { SiteSettings } from "../../components/classic/SiteSettings";
+import { SettingsPresentation } from "../../components/ladder/SettingsPresentation";
+import { getRequestPresentation } from "../../lib/server/site-preferences";
 import { THEME_COOKIE } from "../../lib/theme-preference";
 import { SettingsExtras } from "../../site";
 
-export const metadata: Metadata = {
-  title: "Settings | Puddle Farm",
-  description: "Preferences for the Guilty Gear Strive tracker.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { messages } = await getRequestPresentation();
+  return {
+    title: `${messages.settings.title} | Puddle Farm`,
+    description: messages.settings.description,
+  };
+}
 
 export default async function SettingsPage() {
+  const presentation = await getRequestPresentation();
+  const { messages } = presentation;
   const theme = (await cookies()).get(THEME_COOKIE)?.value;
   return (
-    <Box sx={{ m: 2 }}>
-      <Paper elevation={2} sx={{ p: 3, my: 1 }}>
-        <Typography component="h1" variant="h6" gutterBottom>
-          Display Settings
-        </Typography>
-        <DisplaySettingsControls />
-      </Paper>
-      <Paper elevation={2} sx={{ p: 3, my: 1 }}>
-        <Typography variant="h6" gutterBottom>
-          Themes
-        </Typography>
-        <ThemeControls initialTheme={theme} />
-      </Paper>
-      <SettingsExtras />
-    </Box>
+    <SettingsPresentation
+      language={presentation.language}
+      design={presentation.design}
+    >
+      <Box sx={{ m: 2 }}>
+        <Paper elevation={2} sx={{ p: 3, my: 1 }}>
+          <Typography component="h1" variant="h6" gutterBottom>
+            {messages.settings.presentation}
+          </Typography>
+          <SiteSettings preferences={presentation} />
+        </Paper>
+        <Paper elevation={2} sx={{ p: 3, my: 1 }}>
+          <Typography component="h2" variant="h6" gutterBottom>
+            {messages.settings.display}
+          </Typography>
+          <DisplaySettingsControls language={presentation.language} />
+        </Paper>
+        <Paper elevation={2} sx={{ p: 3, my: 1 }}>
+          <Typography component="h2" variant="h6" gutterBottom>
+            {messages.settings.themes}
+          </Typography>
+          <ThemeControls initialTheme={theme} />
+        </Paper>
+        <SettingsExtras />
+      </Box>
+    </SettingsPresentation>
   );
 }

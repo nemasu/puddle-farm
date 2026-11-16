@@ -1,18 +1,19 @@
 import { Box, Button, Typography } from "@mui/material";
+import { getMessages } from "../../lib/i18n";
+import type { Language } from "../../lib/site-preferences";
 import { FooterExtras } from "../../site";
 
-export function Footer() {
+export function Footer({ language }: { language: Language }) {
+  const messages = getMessages(language).footer;
   return (
     <footer>
-      <Typography align="center">
-        Puddle Farm is an open source project. Feel free to contribute!
-      </Typography>
+      <Typography align="center">{messages.contribute}</Typography>
       <Box sx={{ minHeight: 100, textAlign: "center" }}>
         <Button
           href="https://github.com/nemasu/puddle-farm"
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Puddle Farm on GitHub"
+          aria-label={messages.github}
         >
           {/* biome-ignore lint/performance/noImgElement: static SVG brand mark. */}
           <img
@@ -25,7 +26,7 @@ export function Footer() {
         </Button>
       </Box>
       <Box sx={{ minHeight: 100, textAlign: "center" }}>
-        <Button href="/terms">Terms &amp; Privacy</Button>
+        <Button href="/terms">{messages.terms}</Button>
         <FooterExtras />
       </Box>
       <Box
@@ -36,7 +37,7 @@ export function Footer() {
           color: "text.secondary",
         }}
       >
-        This site is not endorsed by or affiliated with Arc System Works.
+        {messages.disclaimer}
       </Box>
     </footer>
   );

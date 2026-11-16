@@ -1,8 +1,10 @@
+import type { Language } from "../lib/site-preferences";
 import type { MatchupEntry } from "./API";
 export interface MatchupProps {
   API_ENDPOINT: string;
   char_short: string | undefined;
   player_id: bigint;
+  language?: Language;
   initialData?: Matchups | null;
   initialGlobal?: MatchupEntry[] | null;
 }

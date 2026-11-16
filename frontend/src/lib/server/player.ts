@@ -55,17 +55,19 @@ export async function getPlayerChartData(
   );
 }
 
-export async function getPlayerMatchupData(id: bigint, character: string) {
-  const [personal, global] = await Promise.all([
-    optionalJson<Matchups>(
-      `/matchups/${id}/${encodeURIComponent(character)}/12`,
-    ),
-    optionalJson<MatchupResponse>("/matchups"),
-  ]);
-  return {
-    personal,
-    global:
-      global?.data_all.find((entry) => entry.char_short === character)
-        ?.matchups ?? null,
-  };
-}
+export const getPlayerMatchupData = cache(
+  async (id: bigint, character: string) => {
+    const [personal, global] = await Promise.all([
+      optionalJson<Matchups>(
+        `/matchups/${id}/${encodeURIComponent(character)}/12`,
+      ),
+      optionalJson<MatchupResponse>("/matchups"),
+    ]);
+    return {
+      personal,
+      global:
+        global?.data_all.find((entry) => entry.char_short === character)
+          ?.matchups ?? null,
+    };
+  },
+);

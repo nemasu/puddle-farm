@@ -1,0 +1,180 @@
+.columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 26px;
+  align-items: start;
+}
+.panel {
+  min-width: 0;
+  padding: 20px;
+  border: 3px solid #111;
+  background: white;
+  box-shadow: 6px 6px var(--cyan);
+}
+.panel:nth-child(2) {
+  box-shadow: 6px 6px var(--red);
+}
+.panel h2 {
+  margin: 0 0 15px;
+  font: 400 1.4rem / 1.4 var(--display);
+}
+.explanation {
+  font-size: 0.85rem;
+  color: #666660;
+  margin: 0 0 20px;
+}
+.sample {
+  font-size: 0.8rem;
+}
+.tableWrap {
+  overflow-x: auto;
+}
+.tableWrap table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.tableWrap th,
+.tableWrap td {
+  padding: 12px 8px;
+  border-bottom: 1px solid #bdbdb6;
+  text-align: right;
+}
+.tableWrap th:first-child {
+  text-align: left;
+}
+.tableWrap thead {
+  background: #111;
+  color: white;
+  font-size: 0.8rem;
+}
+.tableWrap thead a {
+  text-decoration: none;
+}
+.tableWrap tbody th {
+  width: 48%;
+}
+.tableWrap tbody td:nth-child(2) {
+  min-width: 90px;
+}
+.tableWrap tbody tr:nth-child(even) {
+  background: #f1f1ed;
+}
+.character {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 0.85rem;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.character img {
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.character:hover {
+  text-decoration: underline;
+}
+.percent {
+  font-size: 0.9rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.track {
+  display: block;
+  height: 6px;
+  background: #ddd;
+  margin-top: 7px;
+}
+.track > span {
+  display: block;
+  width: var(--share);
+  height: 100%;
+  background: var(--red);
+}
+@media (max-width: 950px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 25px;
+  }
+  .explanation,
+  .sample {
+    min-height: 0;
+  }
+}
+@media (max-width: 560px) {
+  .panel {
+    padding: 12px;
+  }
+  .panel h2 {
+    font-size: 1.15rem;
+  }
+  .tableWrap th,
+  .tableWrap td {
+    padding: 10px 5px;
+    font-size: 0.75rem;
+  }
+  .character {
+    font-size: 0.8rem;
+    gap: 5px;
+  }
+  .character img {
+    width: 30px;
+    height: 36px;
+  }
+  .tableWrap tbody td:nth-child(2) {
+    min-width: 64px;
+  }
+}
+
+.overview {
+  margin: 0 0 40px;
+}
+.pickBars {
+  display: grid;
+  gap: 16px;
+}
+.pickRow {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) 80px;
+  gap: 16px;
+  align-items: center;
+  font-size: 0.9rem;
+}
+.pickName {
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+.pickRow b {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.pickTrack {
+  display: block;
+  height: 22px;
+  background: white;
+  border: 2px solid #111;
+}
+.pickTrack > span {
+  display: block;
+  height: 100%;
+  background: var(--red);
+}
+.detailsLink {
+  display: inline-block;
+  margin-top: 24px;
+  font-weight: 800;
+}
+.detailsTitle {
+  font: 400 1.6rem var(--display);
+  scroll-margin-top: 100px;
+}
+@media (max-width: 560px) {
+  .pickRow {
+    grid-template-columns: minmax(65px, 1fr) minmax(0, 2fr) 62px;
+    gap: 8px;
+    font-size: 0.8rem;
+  }
+  .pickTrack {
+    height: 18px;
+  }
+}

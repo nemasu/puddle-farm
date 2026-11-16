@@ -1,4 +1,9 @@
-import { nextSortState, sortPopularityData } from "../../../src/lib/popularity";
+import {
+  nextSortState,
+  parsePopularitySort,
+  popularitySortHref,
+  sortPopularityData,
+} from "../../../src/lib/popularity";
 
 describe("nextSortState", () => {
   test("unsorted -> character click -> reversed", () => {
@@ -98,5 +103,56 @@ describe("sortPopularityData", () => {
     sortPopularityData(items, { column: "popularity", direction: "desc" });
     sortPopularityData(items, { column: "character", direction: "reversed" });
     expect(items).toEqual(original);
+  });
+});
+
+describe("popularity URL sorting", () => {
+  test.each([undefined, "invalid", "character-asc", "popularity-reversed"])(
+    "ignores unsupported sort %s",
+    (value) => {
+      expect(parsePopularitySort(value)).toBeNull();
+    },
+  );
+  test("parses supported sorts", () => {
+    expect(parsePopularitySort("character-reversed")).toEqual({
+      column: "character",
+      direction: "reversed",
+    });
+    expect(parsePopularitySort("popularity-desc")).toEqual({
+      column: "popularity",
+      direction: "desc",
+    });
+    expect(parsePopularitySort("popularity-asc")).toEqual({
+      column: "popularity",
+      direction: "asc",
+    });
+  });
+  test("changing one panel preserves the other and encoded query values", () => {
+    const url = popularitySortHref(
+      { characterSort: "character-reversed", q: ["솔 & /?", "ignored"] },
+      "player",
+      "popularity",
+    );
+    const parsed = new URL(url, "https://example.com");
+    expect(parsed.pathname).toBe("/popularity");
+    expect(parsed.searchParams.get("characterSort")).toBe("character-reversed");
+    expect(parsed.searchParams.get("playerSort")).toBe("popularity-desc");
+    expect(parsed.searchParams.get("q")).toBe("솔 & /?");
+  });
+  test("cycles back to API order without dropping the other panel", () => {
+    expect(
+      popularitySortHref(
+        { playerSort: "popularity-asc", characterSort: "popularity-desc" },
+        "player",
+        "popularity",
+      ),
+    ).toBe("/popularity?characterSort=popularity-desc");
+    expect(
+      popularitySortHref(
+        { characterSort: "character-reversed" },
+        "character",
+        "character",
+      ),
+    ).toBe("/popularity");
   });
 });

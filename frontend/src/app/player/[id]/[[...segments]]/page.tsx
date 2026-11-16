@@ -2,9 +2,12 @@ import { Typography } from "@mui/material";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { PlayerContent } from "../../../../components/classic/PlayerContent";
+import { LadderPlayerContent } from "../../../../components/ladder/PlayerContent";
+import { getPageCopy } from "../../../../lib/i18n/classic";
 import { parsePlayerRoute } from "../../../../lib/player";
 import { ApiError } from "../../../../lib/server/api";
 import { getPlayer } from "../../../../lib/server/player";
+import { getRequestPresentation } from "../../../../lib/server/site-preferences";
 import {
   findCharData,
   findHighestRatedChar,
@@ -16,10 +19,15 @@ type Props = { params: Promise<{ id: string; segments?: string[] }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const route = await params;
   const parsed = parsePlayerRoute(route.id, route.segments);
+  const presentation = await getRequestPresentation();
   const base = {
-    title: "Player | Guilty Gear Strive | Puddle Farm",
-    description:
-      "Guilty Gear Strive player ratings, match history, and matchup statistics.",
+    title: getPageCopy(
+      presentation,
+      "Player | Guilty Gear Strive | Puddle Farm",
+      (messages) =>
+        `${messages.player.title} | Guilty Gear Strive | Puddle Farm`,
+    ),
+    description: presentation.messages.player.description,
   };
   if (!parsed) return base;
   try {
@@ -40,6 +48,7 @@ export default async function PlayerPage({ params }: Props) {
   const parsed = parsePlayerRoute(route.id, route.segments);
   if (!parsed) notFound();
   const { id, character, pagination } = parsed;
+  const presentation = await getRequestPresentation();
   let player: Awaited<ReturnType<typeof getPlayer>>;
   try {
     player = await getPlayer(id);
@@ -48,7 +57,11 @@ export default async function PlayerPage({ params }: Props) {
     console.error("Could not load player:", error);
     return (
       <Typography role="alert" color="error" sx={{ m: 3 }}>
-        Could not load this player. Please try again later.
+        {getPageCopy(
+          presentation,
+          "Could not load this player. Please try again later.",
+          (messages) => messages.player.error,
+        )}
       </Typography>
     );
   }
@@ -56,12 +69,23 @@ export default async function PlayerPage({ params }: Props) {
   if (!character && player.ratings.length)
     redirect(`/player/${id}/${findHighestRatedChar(player.ratings)}`);
   const selected = character ? findCharData(player.ratings, character) : null;
+  if (presentation.design === "ladder")
+    return (
+      <LadderPlayerContent
+        player={player}
+        selected={selected}
+        character={character}
+        pagination={pagination}
+        language={presentation.language}
+      />
+    );
   return (
     <PlayerContent
       player={player}
       selected={selected}
       character={character}
       pagination={pagination}
+      language={presentation.language}
     />
   );
 }

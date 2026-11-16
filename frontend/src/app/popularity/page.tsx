@@ -14,30 +14,32 @@ import type { Metadata } from "next";
 import { LoadFailure } from "../../components/classic/LoadFailure";
 import { PlayerDateTime } from "../../components/classic/PlayerFormatting";
 import { SortLink } from "../../components/classic/SortLink";
+import { LadderPopularityContent } from "../../components/ladder/PopularityContent";
 import type { PopularityResult } from "../../interfaces/API";
+import { getClassicMessages, getPageCopy } from "../../lib/i18n/classic";
+import { characterLabel } from "../../lib/ladder-characters";
 import { firstParam, type PageSearchParams } from "../../lib/pagination";
 import {
-  nextSortState,
-  type SortState,
+  parsePopularitySort,
+  popularitySortHref,
   sortPopularityData,
 } from "../../lib/popularity";
 import { readJson } from "../../lib/server/api";
+import { getCharacters } from "../../lib/server/characters";
+import { getRequestPresentation } from "../../lib/server/site-preferences";
 import { Utils } from "../../utils/Utils";
 
-export const metadata: Metadata = {
+const classicMetadata: Metadata = {
   title: "Character Popularity | Guilty Gear Strive | Puddle Farm",
   description: "Guilty Gear Strive character popularity in ranked play.",
 };
 
-function parseSort(value?: string): SortState {
-  return value === "character-reversed"
-    ? { column: "character", direction: "reversed" }
-    : value === "popularity-asc" || value === "popularity-desc"
-      ? {
-          column: "popularity",
-          direction: value === "popularity-asc" ? "asc" : "desc",
-        }
-      : null;
+export async function generateMetadata(): Promise<Metadata> {
+  const presentation = await getRequestPresentation();
+  return getPageCopy<Metadata>(presentation, classicMetadata, (messages) => ({
+    title: `${messages.popularity.title} | Puddle Farm`,
+    description: messages.popularity.description,
+  }));
 }
 
 export default async function PopularityPage({
@@ -46,16 +48,30 @@ export default async function PopularityPage({
   searchParams: Promise<PageSearchParams>;
 }) {
   const query = await searchParams;
-  let data: PopularityResult | null;
-  try {
-    data = await readJson<PopularityResult>("/popularity");
-  } catch {
-    data = null;
-  }
+  const presentation = await getRequestPresentation();
+  const japanese = presentation.language === "ja";
+  const messages = getClassicMessages(presentation.language).popularity;
+  const [data, names] = await Promise.all([
+    readJson<PopularityResult>("/popularity").catch(() => null),
+    japanese && presentation.design === "classic"
+      ? getCharacters().catch(() => ({}))
+      : Promise.resolve({}),
+  ]);
+  const codes = new Map(
+    Object.entries(names).map(([short, name]) => [name, short]),
+  );
+  if (presentation.design === "ladder")
+    return (
+      <LadderPopularityContent
+        data={data}
+        query={query}
+        language={presentation.language}
+      />
+    );
   return (
     <Box sx={{ m: { xs: 1, sm: 5 } }}>
       <Typography component="h1" variant="h4" gutterBottom align="center">
-        Popularity
+        {japanese ? messages.title : "Popularity"}
       </Typography>
       {!data ? (
         <LoadFailure subject="popularity statistics" />
@@ -63,23 +79,15 @@ export default async function PopularityPage({
         <>
           {(["player", "character"] as const).map((kind) => {
             const key = `${kind}Sort`;
-            const state = parseSort(firstParam(query[key]));
+            const state = parsePopularitySort(firstParam(query[key]));
             const entries =
               kind === "player" ? data.per_player : data.per_character;
             const total =
               kind === "player"
                 ? data.per_player_total
                 : data.per_character_total;
-            const sortHref = (column: "character" | "popularity") => {
-              const next = nextSortState(state, column);
-              const params = new URLSearchParams();
-              for (const [name, value] of Object.entries(query))
-                if (firstParam(value) !== undefined)
-                  params.set(name, firstParam(value) ?? "");
-              if (next) params.set(key, `${next.column}-${next.direction}`);
-              else params.delete(key);
-              return `/popularity${params.size ? `?${params}` : ""}`;
-            };
+            const sortHref = (column: "character" | "popularity") =>
+              popularitySortHref(query, kind, column);
             return (
               <section key={kind} aria-label={`Popularity per ${kind}`}>
                 <Typography
@@ -87,11 +95,23 @@ export default async function PopularityPage({
                   component="h2"
                   sx={{ fontWeight: "bold", mb: 1 }}
                 >
-                  Character Popularity Per{" "}
-                  {kind === "player" ? "Player" : "Character"} (Past Month)
+                  {japanese ? (
+                    `${kind === "player" ? messages.perPlayer : messages.perCharacter}（${messages.period}）`
+                  ) : (
+                    <>
+                      Character Popularity Per{" "}
+                      {kind === "player" ? "Player" : "Character"} (Past Month)
+                    </>
+                  )}
                 </Typography>
                 <Typography sx={{ mb: 4 }}>
-                  {kind === "player" ? (
+                  {japanese ? (
+                    kind === "player" ? (
+                      messages.playerExplanation
+                    ) : (
+                      messages.characterExplanation
+                    )
+                  ) : kind === "player" ? (
                     <>
                       This table shows the popularity of each character for each
                       player in the last month.
@@ -124,7 +144,7 @@ export default async function PopularityPage({
                               state?.column === "character" ? "desc" : "asc"
                             }
                           >
-                            Character
+                            {messages.character}
                           </SortLink>
                         </TableCell>
                         <TableCell>
@@ -137,7 +157,7 @@ export default async function PopularityPage({
                                 : "desc"
                             }
                           >
-                            Popularity
+                            {japanese ? messages.title : "Popularity"}
                           </SortLink>
                         </TableCell>
                       </TableRow>
@@ -155,7 +175,13 @@ export default async function PopularityPage({
                               zIndex: 1,
                             }}
                           >
-                            {row.name}
+                            {japanese
+                              ? characterLabel(
+                                  codes.get(row.name) ?? "",
+                                  row.name,
+                                  "ja",
+                                )
+                              : row.name}
                           </TableCell>
                           <TableCell>
                             <Tooltip
@@ -181,15 +207,19 @@ export default async function PopularityPage({
                   <Typography>No popularity data available.</Typography>
                 )}
                 <Box sx={{ mb: 4 }}>
-                  Total games per {kind}:{" "}
-                  {Utils.formatNumber(kind === "player" ? total : total * 2)}
+                  {japanese
+                    ? kind === "player"
+                      ? messages.samplePlayers
+                      : messages.sampleSelections
+                    : `Total games per ${kind}`}
+                  : {Utils.formatNumber(kind === "player" ? total : total * 2)}
                 </Box>
               </section>
             );
           })}
-          <Typography>Statistics are updated once a day.</Typography>
+          <Typography>{messages.updated}</Typography>
           <Typography>
-            Last updated: <PlayerDateTime value={data.last_update} />
+            {messages.checked}: <PlayerDateTime value={data.last_update} />
           </Typography>
         </>
       )}

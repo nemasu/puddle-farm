@@ -1,11 +1,16 @@
-export const CLASSIC_NAVIGATION: { name: string; link?: string }[] = [
-  { name: "Legend", link: "/" },
-  { name: "Top", link: "/top_global" },
-  { name: "Characters" },
-  { name: "Popularity", link: "/popularity" },
-  { name: "Matchup", link: "/matchup" },
-  { name: "Distribution", link: "/distribution" },
-  { name: "About", link: "/about" },
-  { name: "Settings", link: "/settings" },
-  { name: "Stats", link: "/stats" },
+import type { Messages } from "./i18n/en";
+
+export const CLASSIC_NAVIGATION: {
+  key: keyof Messages["navigation"];
+  link?: string;
+}[] = [
+  { key: "legend", link: "/" },
+  { key: "top", link: "/top_global" },
+  { key: "characters" },
+  { key: "popularity", link: "/popularity" },
+  { key: "matchup", link: "/matchup" },
+  { key: "distribution", link: "/distribution" },
+  { key: "about", link: "/about" },
+  { key: "settings", link: "/settings" },
+  { key: "stats", link: "/stats" },
 ];

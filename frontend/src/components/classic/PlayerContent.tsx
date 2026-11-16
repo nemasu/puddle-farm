@@ -5,6 +5,8 @@ import type {
   PlayerResponsePlayer,
 } from "../../interfaces/API";
 import { API_ENDPOINT } from "../../lib/api-endpoint";
+import { getClassicMessages } from "../../lib/i18n/classic";
+import { characterLabel } from "../../lib/ladder-characters";
 import type { Pagination } from "../../lib/pagination";
 import {
   getPlayerChartData,
@@ -12,6 +14,7 @@ import {
   getPlayerMatchupData,
   optionalJson,
 } from "../../lib/server/player";
+import type { Language } from "../../lib/site-preferences";
 import { Utils } from "../../utils/Utils";
 import Matchup from "../PlayerMatchup";
 import RatingChart from "../RatingChart";
@@ -22,14 +25,21 @@ import { PlayerAutoRefresh, PlayerSync } from "./PlayerControls";
 import { PlayerDateTime } from "./PlayerFormatting";
 import { PlayerHistory } from "./PlayerHistory";
 
-async function Aliases({ player }: { player: PlayerResponse }) {
+async function Aliases({
+  player,
+  language = "en",
+}: {
+  player: PlayerResponse;
+  language?: Language;
+}) {
+  const messages = getClassicMessages(language).player;
   const aliases =
     (await optionalJson<string[]>(`/alias/${player.id}`))?.filter(
       (name) => name !== player.name,
     ) ?? [];
   return aliases.length ? (
     <Box sx={{ textAlign: "center", fontSize: 17, m: 1 }}>
-      <Typography variant="platform">AKA</Typography>
+      <Typography variant="platform">{messages.aliases}</Typography>
       {aliases.map((name) => (
         <Typography
           key={name}
@@ -64,33 +74,49 @@ async function Comment({ id }: { id: bigint }) {
 function CharacterStats({
   player,
   selected,
+  language = "en",
 }: {
   player: PlayerResponse;
   selected: PlayerResponsePlayer;
+  language?: Language;
 }) {
+  const messages = getClassicMessages(language).player;
   return (
     <>
       <Typography component="h2" variant="h5" sx={{ my: 2 }}>
-        {selected.character} Rating: {Utils.displayRating(selected.rating)} (
-        {selected.match_count} games)
-        <PlayerSync playerId={player.id} />
+        {language === "ja"
+          ? characterLabel(selected.char_short, selected.character, language)
+          : selected.character}{" "}
+        {messages.rating}: {Utils.displayRating(selected.rating)} (
+        {selected.match_count} {messages.games})
+        <PlayerSync
+          playerId={player.id}
+          language={language === "ja" ? "ja" : "en"}
+        />
         {selected.top_char !== 0 && (
           <LinkButton href={`/top/${selected.char_short}`} sx={{ ml: 1 }}>
             <Typography variant="char_rank" component="span">
-              #{selected.top_char} {selected.character}
+              #{selected.top_char}{" "}
+              {language === "ja"
+                ? characterLabel(
+                    selected.char_short,
+                    selected.character,
+                    language,
+                  )
+                : selected.character}
             </Typography>
           </LinkButton>
         )}
       </Typography>
       {selected.top_rating.value !== 0 && (
         <Typography>
-          Top Rating: {Utils.displayRating(selected.top_rating.value)} (
+          {messages.peak}: {Utils.displayRating(selected.top_rating.value)} (
           <PlayerDateTime value={selected.top_rating.timestamp} />)
         </Typography>
       )}
       {selected.top_defeated.value !== 0 && (
         <Typography>
-          Top Defeated:{" "}
+          {messages.bestWin}:{" "}
           <LinkButton
             href={`/player/${selected.top_defeated.id}/${encodeURIComponent(selected.top_defeated.char_short)}`}
             sx={{ fontSize: 16 }}
@@ -108,12 +134,15 @@ function CharacterStats({
 async function ChartSection({
   player,
   selected,
+  language = "en",
 }: {
   player: PlayerResponse;
   selected: PlayerResponsePlayer;
+  language?: Language;
 }) {
+  const messages = getClassicMessages(language).player;
   if (selected.match_count <= 0)
-    return <Typography>No rating history available.</Typography>;
+    return <Typography>{messages.noChart}</Typography>;
   const initialHistory = await getPlayerChartData(
     player.id,
     selected.char_short,
@@ -128,6 +157,7 @@ async function ChartSection({
       latest_rating={selected.rating}
       total_games={selected.match_count}
       initialHistory={initialHistory}
+      language={language === "ja" ? "ja" : "en"}
     />
   );
 }
@@ -135,9 +165,11 @@ async function ChartSection({
 async function MatchupSection({
   player,
   selected,
+  language = "en",
 }: {
   player: PlayerResponse;
   selected: PlayerResponsePlayer;
+  language?: Language;
 }) {
   const data = await getPlayerMatchupData(player.id, selected.char_short);
   return (
@@ -148,6 +180,7 @@ async function MatchupSection({
       API_ENDPOINT={API_ENDPOINT}
       initialData={data.personal}
       initialGlobal={data.global}
+      language={language === "ja" ? "ja" : "en"}
     />
   );
 }
@@ -157,12 +190,15 @@ export function PlayerContent({
   selected,
   character,
   pagination,
+  language = "en",
 }: {
   player: PlayerResponse;
   selected: PlayerResponsePlayer | null;
   character?: string;
   pagination: Pagination;
+  language?: Language;
 }) {
+  const messages = getClassicMessages(language).player;
   return (
     <>
       <AppBar
@@ -206,14 +242,15 @@ export function PlayerContent({
             {player.top_global !== 0 && (
               <LinkButton href="/top_global" sx={{ ml: 1 }}>
                 <Typography variant="global_rank" component="span">
-                  #{player.top_global} Overall
+                  #{player.top_global}{" "}
+                  {language === "ja" ? messages.overall : "Overall"}
                 </Typography>
               </LinkButton>
             )}
           </Box>
           <Box sx={{ minHeight: 56, display: "flow-root" }}>
             <Suspense fallback={null}>
-              <Aliases player={player} />
+              <Aliases player={player} language={language} />
             </Suspense>
           </Box>
         </Box>
@@ -237,54 +274,81 @@ export function PlayerContent({
         <Box sx={{ gridArea: "main", minWidth: 0 }}>
           {selected && character ? (
             <>
-              <CharacterStats player={player} selected={selected} />
-              <PlayerAutoRefresh key={`${player.id}-${character}`} />
+              <CharacterStats
+                player={player}
+                selected={selected}
+                language={language}
+              />
+              <PlayerAutoRefresh
+                key={`${player.id}-${character}`}
+                language={language === "ja" ? "ja" : "en"}
+              />
               <PlayerHistory
                 player={player}
                 character={character}
                 pagination={pagination}
+                language={language}
               />
               <Suspense
-                fallback={<Typography>Loading rating history...</Typography>}
+                fallback={
+                  <Typography>
+                    {language === "ja"
+                      ? messages.loadingChart
+                      : "Loading rating history..."}
+                  </Typography>
+                }
               >
                 <ChartSection
                   key={`${player.id}-${character}`}
                   player={player}
                   selected={selected}
+                  language={language}
                 />
               </Suspense>
               <noscript>
                 <Typography>
-                  Rating charts require JavaScript. Ratings and match history
-                  are available above.
+                  {language === "ja"
+                    ? "グラフの表示にはJavaScriptが必要です。レーティングと対戦履歴は上で確認できます。"
+                    : "Rating charts require JavaScript. Ratings and match history are available above."}
                 </Typography>
               </noscript>
               <Suspense
                 key={`${player.id}-${character}-matchups`}
                 fallback={
                   <>
-                    <Typography>Loading matchup statistics...</Typography>
+                    <Typography>
+                      {language === "ja"
+                        ? messages.loadingMatchups
+                        : "Loading matchup statistics..."}
+                    </Typography>
                     <noscript>
                       <Typography>
-                        JavaScript is needed to display streamed player matchup
-                        statistics. View{" "}
+                        {language === "ja"
+                          ? messages.matchupsNoscript
+                          : "JavaScript is needed to display streamed player matchup statistics. View"}{" "}
                         <LinkButton href="/matchup">
-                          character matchup statistics
+                          {language === "ja"
+                            ? messages.matchups
+                            : "character matchup statistics"}
                         </LinkButton>{" "}
-                        without JavaScript.
+                        {language === "ja" ? "" : "without JavaScript."}
                       </Typography>
                     </noscript>
                   </>
                 }
               >
-                <MatchupSection player={player} selected={selected} />
+                <MatchupSection
+                  player={player}
+                  selected={selected}
+                  language={language}
+                />
               </Suspense>
             </>
           ) : (
             <Typography sx={{ my: 2 }}>
               {player.ratings.length
-                ? "No ratings for this character. Select another character below."
-                : "No character ratings available."}
+                ? messages.noCharacter
+                : messages.noRatings}
             </Typography>
           )}
         </Box>
@@ -304,11 +368,17 @@ export function PlayerContent({
                 <Comment id={player.id} />
               </Suspense>
             </Box>
-            <PlayerAvatar key={player.id} playerId={player.id} />
+            <PlayerAvatar
+              key={player.id}
+              playerId={player.id}
+              alt={language === "ja" ? messages.avatar : "Player Avatar"}
+            />
           </Box>
           <Box sx={{ gridArea: { xs: "sidebar", lg: "unset" } }}>
             <hr />
-            <Typography sx={{ fontSize: 14 }}>Characters:</Typography>
+            <Typography sx={{ fontSize: 14 }}>
+              {messages.characters}:
+            </Typography>
             {player.ratings.map((rating) => (
               <Box key={rating.char_short}>
                 <LinkButton
@@ -316,13 +386,20 @@ export function PlayerContent({
                   sx={{ textAlign: "left", color: "white" }}
                 >
                   <Box sx={{ fontSize: 12.5, my: 0.3 }}>
-                    {rating.character} {Utils.displayRating(rating.rating)}{" "}
+                    {language === "ja"
+                      ? characterLabel(
+                          rating.char_short,
+                          rating.character,
+                          language,
+                        )
+                      : rating.character}{" "}
+                    {Utils.displayRating(rating.rating)}{" "}
                     {Utils.displayRankIcon(
                       rating.rating,
                       "32px",
                       rating.is_legend,
                     )}
-                    <br />({rating.match_count} games)
+                    <br />({rating.match_count} {messages.games})
                   </Box>
                 </LinkButton>
               </Box>

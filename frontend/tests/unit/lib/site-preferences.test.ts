@@ -1,0 +1,124 @@
+import { getMessages } from "../../../src/lib/i18n";
+import { en } from "../../../src/lib/i18n/en";
+import { ja } from "../../../src/lib/i18n/ja";
+import { ko } from "../../../src/lib/i18n/ko";
+import {
+  activeDesign,
+  parseSitePreferences,
+  readSitePreferences,
+  resolveDesign,
+  SITE_COOKIES,
+  type SitePreferences,
+} from "../../../src/lib/site-preferences";
+
+function read(values: Record<string, string>) {
+  return readSitePreferences((name) => values[name]);
+}
+
+describe("language and design preferences", () => {
+  it("defaults to English and Classic design without using the color theme", () => {
+    expect(read({ "ggst-theme": "Sol", language: "ko" })).toEqual({
+      language: "en",
+      designPreference: "classic",
+    });
+  });
+
+  it.each(["en", "ko", "ja"])(
+    "defaults to Classic independently of language %s",
+    (language) => {
+      expect(read({ [SITE_COOKIES.language]: language }).designPreference).toBe(
+        "classic",
+      );
+    },
+  );
+
+  it.each(["", "KO", "ko-KR", "ja-JP", "<script>"])(
+    "rejects unsupported language cookie %p",
+    (value) => {
+      expect(read({ [SITE_COOKIES.language]: value }).language).toBe("en");
+    },
+  );
+
+  it.each(["", "auto", "Classic", "unknown", "<script>"])(
+    "rejects unsupported design cookie %p",
+    (value) => {
+      expect(read({ [SITE_COOKIES.design]: value }).designPreference).toBe(
+        "classic",
+      );
+    },
+  );
+
+  it.each([
+    ["en", "classic", "classic"],
+    ["ko", "classic", "classic"],
+    ["en", "ladder", "ladder"],
+    ["ko", "ladder", "ladder"],
+    ["ja", "classic", "classic"],
+    ["ja", "ladder", "ladder"],
+  ] as const)(
+    "resolves %s / %s to %s",
+    (language, designPreference, design) => {
+      const preferences = read({
+        [SITE_COOKIES.language]: language,
+        [SITE_COOKIES.design]: designPreference,
+      });
+      expect(resolveDesign(preferences)).toBe(design);
+    },
+  );
+
+  it("keeps the selected design across language changes", () => {
+    for (const designPreference of ["classic", "ladder"] as const) {
+      const preferences: SitePreferences = { language: "en", designPreference };
+      expect(resolveDesign({ ...preferences, language: "ko" })).toBe(
+        designPreference,
+      );
+      expect(activeDesign({ ...preferences, language: "ja" })).toBe(
+        designPreference,
+      );
+    }
+  });
+
+  it.each([
+    [null, "classic"],
+    ["en", "auto"],
+    ["ko", null],
+    ["fr", "classic"],
+    ["ko", "bad"],
+    ["en", { value: "auto" }],
+  ])("rejects invalid submitted values %p / %p", (language, design) => {
+    expect(parseSitePreferences(language, design)).toBeNull();
+  });
+});
+
+describe("translation dictionaries", () => {
+  it("provides the same complete set of nonempty messages in both languages", () => {
+    expect(Object.keys(ko).sort()).toEqual(Object.keys(en).sort());
+    for (const namespace of Object.keys(en) as (keyof typeof en)[]) {
+      expect(Object.keys(ko[namespace]).sort()).toEqual(
+        Object.keys(en[namespace]).sort(),
+      );
+      for (const value of Object.values(ko[namespace]))
+        expect(value.trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it("selects dictionaries independently without changing a previous request's messages", () => {
+    const english = getMessages("en");
+    expect(getMessages("ko").settings.title).toBe("설정");
+    expect(english.settings.title).toBe("Settings");
+  });
+});
+
+it("Japanese messages cover every namespace and retain Japanese selection", () => {
+  expect(read({ [SITE_COOKIES.language]: "ja" }).language).toBe("ja");
+  expect(Object.keys(ja).sort()).toEqual(Object.keys(en).sort());
+  for (const namespace of Object.keys(en) as (keyof typeof en)[]) {
+    expect(Object.keys(ja[namespace]).sort()).toEqual(
+      Object.keys(en[namespace]).sort(),
+    );
+    expect(
+      Object.values(ja[namespace]).every((value) => value.trim().length > 0),
+    ).toBe(true);
+  }
+  expect(getMessages("ja").settings.title).toBe("設定");
+});

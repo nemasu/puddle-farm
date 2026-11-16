@@ -1,0 +1,46 @@
+.settings > div {
+  margin: 0;
+}
+.settings :global(.MuiPaper-root) {
+  border: 3px solid #111;
+  box-shadow: 6px 6px var(--cyan);
+  margin: 0 0 28px;
+  padding: 24px;
+}
+.settings :global(.MuiPaper-root):nth-child(even) {
+  box-shadow: 6px 6px var(--red);
+}
+.settings h1,
+.settings h2 {
+  font-family: var(--display);
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+}
+.settings select {
+  border: 2px solid #111;
+  border-radius: 0;
+  background: white;
+  color: #111;
+}
+.policyPaper {
+  border: 3px solid #111;
+  box-shadow: 6px 6px var(--cyan);
+  padding: 26px;
+  background: white;
+}
+.policyPaper > div {
+  margin: 0;
+}
+.policyPaper :global(.MuiTypography-root) {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 560px) {
+  .settings :global(.MuiPaper-root),
+  .policyPaper {
+    padding: 16px;
+  }
+  .settings h1,
+  .settings h2 {
+    font-size: 1.2rem;
+  }
+}

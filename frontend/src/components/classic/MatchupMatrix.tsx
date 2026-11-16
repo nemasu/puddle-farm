@@ -12,15 +12,23 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import type { MatchupCharResponse } from "../../interfaces/API";
+import { getClassicMessages } from "../../lib/i18n/classic";
+import { characterLabel } from "../../lib/ladder-characters";
+import type { Language } from "../../lib/site-preferences";
 import { PercentChangeLabel } from "../PercentChangeLabel";
 
 const MatchupTable = ({
   data,
   title,
+  language = "en",
 }: {
   data: MatchupCharResponse[];
   title: string;
+  language?: Language;
 }) => {
+  const messages = getClassicMessages(language).matchup;
+  const label = (short: string, name: string) =>
+    language === "ja" ? characterLabel(short, name, language) : name;
   const [hoveredRow, setHoveredRow] = useState<number>();
   const [hoveredCol, setHoveredCol] = useState<number>();
   const [orderBy, setOrderBy] = useState<string>("");
@@ -38,7 +46,10 @@ const MatchupTable = ({
     return [...data].sort((a, b) => {
       // Handle character column sorting
       if (orderBy === "character") {
-        const compareResult = a.char_name.localeCompare(b.char_name);
+        const compareResult = label(a.char_short, a.char_name).localeCompare(
+          label(b.char_short, b.char_name),
+          language,
+        );
         return order === "asc" ? compareResult : -compareResult;
       }
       // Handle matchup column sorting
@@ -74,7 +85,7 @@ const MatchupTable = ({
                   direction={orderBy === "character" ? order : "asc"}
                   onClick={() => handleRequestSort("character")}
                 >
-                  Character
+                  {messages.character}
                 </TableSortLabel>
               </TableCell>
               {data.length > 0 &&
@@ -112,12 +123,16 @@ const MatchupTable = ({
                     zIndex: 1,
                   }}
                 >
-                  {row.char_name} ({row.char_short})
+                  {label(row.char_short, row.char_name)} ({row.char_short})
                 </TableCell>
                 {row.matchups.map((matchup, colIndex) => (
                   <TableCell
                     key={matchup.char_short}
-                    title={`Wins: ${matchup.wins}, Total Games: ${matchup.total_games}`}
+                    title={
+                      language === "ja"
+                        ? `${messages.wins}: ${matchup.wins}, ${messages.games}: ${matchup.total_games}`
+                        : `Wins: ${matchup.wins}, Total Games: ${matchup.total_games}`
+                    }
                     onMouseEnter={() => {
                       setHoveredRow(rowIndex);
                       setHoveredCol(colIndex);

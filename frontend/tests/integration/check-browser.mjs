@@ -1,8 +1,20 @@
 // Run after npm run build. Uses a locally installed Chrome.
+import {checkJapaneseBrowser,checkJapaneseWithoutScripts} from "./lib/japanese.mjs";
+import {checkReviewFixesBrowser} from "./lib/review-fixes.mjs";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import { withChrome } from "./lib/chrome.mjs";
 import { withNextFixture } from "./lib/fixture.mjs";
+import { checkLadderAboutBrowser, checkLadderAboutWithoutScripts } from "./lib/ladder-about.mjs";
+import { checkLadderDistributionBrowser, checkLadderDistributionWithoutScripts } from "./lib/ladder-distribution.mjs";
+import { checkLadderMatchupsBrowser, checkLadderMatchupsWithoutScripts } from "./lib/ladder-matchups.mjs";
+import { checkLadderPopularityBrowser, checkLadderPopularityWithoutScripts } from "./lib/ladder-popularity.mjs";
+import { checkLadderStatsBrowser, checkLadderStatsWithoutScripts } from "./lib/ladder-stats.mjs";
+import { checkLadderPlayerBrowser, checkLadderPlayerWithoutScripts } from "./lib/ladder-player.mjs";
+import { checkLadderRankingsBrowser, checkLadderRankingsWithoutScripts } from "./lib/ladder-rankings.mjs";
+import { checkLadderBrowser, checkLadderWithoutScripts } from "./lib/ladder.mjs";
+import { checkSitePreferencesBrowser, checkSitePreferencesWithoutScripts } from "./lib/site-preferences.mjs";
+import { checkPlayerTransition } from "./lib/player-transition.mjs";
 import { checkPlayerBrowser, checkPlayerWithoutScripts } from "./lib/player-browser.mjs";
 import { checkPublicBrowser, checkPublicWithoutScripts } from "./lib/public-browser.mjs";
 
@@ -57,8 +69,32 @@ await withNextFixture(async ({ baseURL, state }) => withChrome(async ({ call, ev
   const mobile = await call("Page.captureScreenshot", { format: "png" });
   await writeFile("/tmp/puddle-public-rankings-mobile.png", Buffer.from(mobile.data, "base64"));
 
+  await checkPlayerTransition({ call, evaluate, waitFor, navigate }, { baseURL, state });
+
   await checkPublicBrowser({ call, evaluate, waitFor, navigate, requests }, { state, baseURL });
   await checkPlayerBrowser({ call, evaluate, waitFor, navigate, requests }, { state, baseURL });
+
+  await checkSitePreferencesBrowser({ call, evaluate, waitFor, navigate }, { baseURL });
+
+  await checkLadderBrowser({ call, evaluate, waitFor, navigate }, { baseURL });
+
+  await checkLadderRankingsBrowser({ call, evaluate, waitFor, navigate }, { baseURL, state });
+
+  await checkLadderPlayerBrowser({call,evaluate,waitFor,navigate,requests},{baseURL,state});
+
+  await checkLadderStatsBrowser({call,evaluate,waitFor,navigate,requests},{baseURL,state});
+
+  await checkLadderPopularityBrowser({call,evaluate,waitFor,navigate,requests},{baseURL,state});
+
+  await checkLadderMatchupsBrowser({call,evaluate,waitFor,navigate,requests},{baseURL,state});
+
+  await checkLadderDistributionBrowser({call,evaluate,waitFor,navigate},{baseURL});
+
+  await checkLadderAboutBrowser({call,evaluate,waitFor,navigate},{baseURL,state});
+
+  await checkJapaneseBrowser({call,evaluate,navigate,waitFor},{baseURL});
+
+  await checkReviewFixesBrowser({call,evaluate,navigate,waitFor},{baseURL});
 
   // Real browser navigation with JavaScript disabled, including native forms.
   await call("Emulation.setScriptExecutionDisabled", { value: true });
@@ -88,6 +124,16 @@ await withNextFixture(async ({ baseURL, state }) => withChrome(async ({ call, ev
   await waitFor('new URLSearchParams(location.search).get("exact") === "true" && document.querySelector("main tbody a")?.textContent.includes("noscript")');
   await checkPlayerWithoutScripts({ call, evaluate, waitFor, navigate }, { state, baseURL });
   await checkPublicWithoutScripts({ call, evaluate, waitFor, navigate }, { state, baseURL });
+  await checkSitePreferencesWithoutScripts({ call, evaluate, waitFor, navigate }, { baseURL });
+  await checkLadderWithoutScripts({ call, evaluate, waitFor, navigate }, { baseURL });
+  await checkLadderAboutWithoutScripts({call,evaluate,navigate},{baseURL});
+  await checkLadderDistributionWithoutScripts({call,evaluate,navigate},{baseURL});
+  await checkLadderMatchupsWithoutScripts({call,evaluate,waitFor,navigate},{baseURL});
+  await checkLadderPopularityWithoutScripts({call,evaluate,waitFor,navigate},{baseURL,state});
+  await checkLadderStatsWithoutScripts({call,evaluate,navigate},{baseURL});
+  await checkLadderPlayerWithoutScripts({call,evaluate,waitFor,navigate},{baseURL});
+  await checkLadderRankingsWithoutScripts({ call, evaluate, waitFor, navigate }, { baseURL });
+  await checkJapaneseWithoutScripts({call,evaluate,navigate},{baseURL});
   assert.deepEqual(errors, [], "console/hydration errors");
   console.log("Browser checks passed: public/player pages, charts/matrix controls, preferences/theme persistence, client navigation, responsive layout, and JavaScript-disabled content/forms/sorting.");
 }));

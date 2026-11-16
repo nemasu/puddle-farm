@@ -2,8 +2,11 @@ import SearchIcon from "@mui/icons-material/Search";
 import { Box, InputAdornment } from "@mui/material";
 import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
+import { getMessages } from "../lib/i18n";
+import type { Language } from "../lib/site-preferences";
 
 interface SearchBoxProps {
+  language?: Language;
   query: string;
   onQueryChange: (query: string) => void;
   onSearch: (query: string) => void;
@@ -12,12 +15,14 @@ interface SearchBoxProps {
 }
 
 export function SearchBox({
+  language = "en",
   query,
   onQueryChange,
   onSearch,
   action,
   exact,
 }: SearchBoxProps) {
+  const messages = getMessages(language).common;
   const handleSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault();
     onSearch(query);
@@ -40,15 +45,15 @@ export function SearchBox({
         fullWidth
         variant="outlined"
         size="small"
-        label="Search"
-        placeholder="Search Player Names"
+        label={messages.search}
+        placeholder={messages.searchPlayers}
         value={query}
         onChange={(e) => {
           onQueryChange(e.target.value);
         }}
         slotProps={{
           htmlInput: {
-            "aria-label": "Search Player Names",
+            "aria-label": messages.searchPlayers,
             autoComplete: "off",
           },
           input: {
@@ -58,7 +63,7 @@ export function SearchBox({
                   type="submit"
                   edge="end"
                   size="small"
-                  aria-label="search"
+                  aria-label={messages.searchAction}
                 >
                   <SearchIcon fontSize="small" />
                 </IconButton>
