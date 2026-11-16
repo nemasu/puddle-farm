@@ -4,6 +4,7 @@ import { ja } from "../../../src/lib/i18n/ja";
 import { ko } from "../../../src/lib/i18n/ko";
 import {
   activeDesign,
+  detectBrowserLanguage,
   parseSitePreferences,
   readSitePreferences,
   resolveDesign,
@@ -121,4 +122,26 @@ it("Japanese messages cover every namespace and retain Japanese selection", () =
     ).toBe(true);
   }
   expect(getMessages("ja").settings.title).toBe("設定");
+});
+
+it.each([
+  [null, "en"],
+  ["fr-FR,de;q=0.8", "en"],
+  ["ko-KR,ja;q=0.8,en;q=0.5", "ko"],
+  ["JA-jp,en-US;q=0.8", "ja"],
+  ["en-US,ja;q=0.9", "en"],
+  ["ko;q=0.2,ja;q=0.9", "ja"],
+  ["ko;q=0,ja;q=1", "ja"],
+  ["ko;q=NaN,ja;q=2,en;q=0.5", "en"],
+])("negotiates browser languages %p", (header, language) => {
+  expect(detectBrowserLanguage(header)).toBe(language);
+  expect(readSitePreferences(() => undefined, header).language).toBe(language);
+});
+it("explicit language cookies override the browser", () => {
+  expect(
+    readSitePreferences(
+      (name) => (name === SITE_COOKIES.language ? "en" : undefined),
+      "ko-KR",
+    ).language,
+  ).toBe("en");
 });

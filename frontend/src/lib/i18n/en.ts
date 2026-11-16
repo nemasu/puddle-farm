@@ -1,4 +1,10 @@
 export const en = {
+  designInvitation: {
+    title: "Try the new look?",
+    description: "You can switch back to Classic at any time in Settings.",
+    accept: "Try Ladder",
+    decline: "Keep Classic",
+  },
   navigation: {
     legend: "Legend",
     top: "Top",

@@ -8,6 +8,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import type { ReactNode } from "react";
 import { ClassicProvider } from "../components/classic/ClassicProvider";
+import { DesignInvitation } from "../components/DesignInvitation";
 import { readPreferenceSeed } from "../lib/display-preferences";
 import { getRequestPresentation } from "../lib/server/site-preferences";
 import { THEME_COOKIE } from "../lib/theme-preference";
@@ -53,6 +54,10 @@ export default async function RootLayout({
             initialPreferences={preferences}
           >
             {children}
+            <DesignInvitation
+              enabled={!presentation.hasDesignPreference}
+              copy={presentation.messages.designInvitation}
+            />
             <BrowserIntegrations />
           </ClassicProvider>
         </AppRouterCacheProvider>

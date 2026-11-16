@@ -1,6 +1,12 @@
 import type { Messages } from "./en";
 
 export const ko = {
+  designInvitation: {
+    title: "새로운 디자인을 사용해 보시겠어요?",
+    description: "언제든지 설정에서 Classic으로 돌아갈 수 있습니다.",
+    accept: "Ladder 사용하기",
+    decline: "Classic 유지",
+  },
   navigation: {
     legend: "레전드",
     top: "전체 랭킹",

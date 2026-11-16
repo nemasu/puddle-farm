@@ -18,6 +18,10 @@ import { checkSitePreferencesSsr } from "./lib/site-preferences.mjs";
 import { checkMatchupStreaming } from "./lib/matchup-streaming.mjs";
 
 await withNextFixture(async ({ state, baseURL }) => {
+  for (const [acceptLanguage,cookie,expected] of [["ko-KR,en;q=.8","","ko"],["ja-JP,en;q=.8","","ja"],["fr-FR","","en"],["ko-KR","ggst-language=en","en"]]) {
+    const response = await fetch(`${baseURL}/settings`, {headers:{"Accept-Language":acceptLanguage,Cookie:cookie}});
+    assert.match(await response.text(),new RegExp(`<html[^>]*lang="${expected}"`));
+  }
   const healthStart = state.requests.length;
   const health = await fetch(`${baseURL}/health`);
   assert.equal(health.status, 200);

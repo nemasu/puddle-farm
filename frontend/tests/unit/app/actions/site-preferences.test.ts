@@ -1,5 +1,8 @@
 import { cookies } from "next/headers";
-import { saveSitePreferences } from "../../../../src/app/actions/site-preferences";
+import {
+  saveDesignChoice,
+  saveSitePreferences,
+} from "../../../../src/app/actions/site-preferences";
 
 jest.mock("next/headers", () => ({ cookies: jest.fn() }));
 
@@ -50,3 +53,25 @@ it.each([
     expect(set).not.toHaveBeenCalled();
   },
 );
+
+it.each(["classic", "ladder"])(
+  "invitation saves only design %s",
+  async (design) => {
+    const form = new FormData();
+    form.set("design", design);
+    await saveDesignChoice(form);
+    expect(set.mock.calls).toEqual([
+      [
+        "ggst-design",
+        design,
+        { path: "/", maxAge: 31_536_000, sameSite: "lax" },
+      ],
+    ]);
+  },
+);
+it("ignores invalid invitation choices", async () => {
+  const form = new FormData();
+  form.set("design", "auto");
+  await saveDesignChoice(form);
+  expect(set).not.toHaveBeenCalled();
+});

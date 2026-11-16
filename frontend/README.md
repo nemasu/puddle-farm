@@ -14,6 +14,15 @@ Open http://localhost:3000. The development server proxies `/api` to Rust.
 Server-side API requests use `GGST_API_INTERNAL_URL` with the `/api` prefix.
 `NEXT_PUBLIC_GGST_API_ENDPOINT` configures the browser API URL at build time.
 
+## Language and design
+
+Settings saves English, Korean, or Japanese and Classic or Ladder using cookies.
+Without a language cookie, the server reads Accept-Language and selects Korean
+or Japanese when supported, otherwise English. A saved language takes precedence.
+Without a design cookie, visitors see Classic with an invitation to try Ladder.
+Trying Ladder or keeping Classic saves only the design; both preferences can be
+changed in Settings. The Ladder header includes Discord and Patreon links.
+
 ## Verification
 
 All tests live in `tests/`. Unit/component tests in `tests/unit/` mirror `src/`

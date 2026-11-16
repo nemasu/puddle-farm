@@ -123,6 +123,24 @@
 .activeTab {
   background: var(--red);
 }
+.social {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.social a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 36px;
+}
+.social a:hover {
+  background: #333;
+}
+.social img {
+  display: block;
+}
 .settings {
   border: 1px solid #5a5a5a;
   padding: 5px 10px;
@@ -530,10 +548,16 @@
   font-size: 0.8rem;
 }
 .footerBrand {
+  display: inline-block;
   margin: 0 0 14px;
-  color: var(--red);
+  color: white;
+  text-decoration: none;
+  transform: skewX(-8deg);
   font: 400 1.8rem var(--display);
   letter-spacing: 2px;
+}
+.footerBrand span {
+  color: var(--red);
 }
 .footerLinks {
   display: flex;
@@ -585,7 +609,7 @@
     font-size: 1.35rem;
   }
 }
-@media (max-width: 1100px) {
+@media (max-width: 1280px) {
   .topbar {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -595,15 +619,15 @@
     margin-bottom: 4px;
   }
 }
-@media (max-width: 800px) {
+@media (max-width: 1100px) {
   .topbarInner {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     padding-top: 10px;
     gap: 8px;
   }
   .settings {
-    grid-column: 2;
+    grid-column: 3;
     grid-row: 1;
     font-size: 0.7rem;
     padding: 4px 6px;
@@ -621,8 +645,17 @@
     border-left: 0;
     border-top: 1px solid #333;
   }
+  .social {
+    grid-column: 2;
+    grid-row: 1;
+    gap: 2px;
+  }
+  .social a {
+    width: 28px;
+  }
   .games a {
-    padding: 8px 12px;
+    font-size: 0.78rem;
+    padding: 8px;
   }
 }
 @media (max-width: 560px) {

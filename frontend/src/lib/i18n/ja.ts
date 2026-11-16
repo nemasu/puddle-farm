@@ -1,6 +1,12 @@
 import type { Messages } from "./en";
 
 export const ja: Messages = {
+  designInvitation: {
+    title: "新しいデザインを試してみませんか？",
+    description: "設定からいつでもClassicに戻せます。",
+    accept: "Ladderを試す",
+    decline: "Classicを使う",
+  },
   navigation: {
     legend: "レジェンド",
     top: "総合ランキング",

@@ -1,3 +1,4 @@
+import { checkDesignInvitation } from "./lib/design-invitation.mjs";
 // Run after npm run build. Uses a locally installed Chrome.
 import {checkJapaneseBrowser,checkJapaneseWithoutScripts} from "./lib/japanese.mjs";
 import {checkReviewFixesBrowser} from "./lib/review-fixes.mjs";
@@ -20,6 +21,7 @@ import { checkPublicBrowser, checkPublicWithoutScripts } from "./lib/public-brow
 
 await withNextFixture(async ({ baseURL, state }) => withChrome(async ({ call, evaluate, waitFor, navigate, errors, requests }) => {
   await call("Page.addScriptToEvaluateOnNewDocument", { source: 'if (!localStorage.getItem("theme")) localStorage.setItem("theme", "Ky");' });
+  await checkDesignInvitation({call,evaluate,waitFor,navigate}, {baseURL, prefix:"", game:"ggst", design:"ladder"});
   await call("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   await navigate(`${baseURL}/`);
   await waitFor('document.cookie.includes("ggst-theme=Ky") && document.querySelector("main table")?.textContent.includes("SSR <Player>")');

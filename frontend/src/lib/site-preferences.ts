@@ -33,9 +33,12 @@ export function parseSitePreferences(
 
 export function readSitePreferences(
   get: (name: string) => string | undefined,
+  acceptLanguage: string | null = null,
 ): SitePreferences {
   return {
-    language: parseLanguage(get(SITE_COOKIES.language)) ?? "en",
+    language:
+      parseLanguage(get(SITE_COOKIES.language)) ??
+      detectBrowserLanguage(acceptLanguage),
     designPreference:
       parseDesignPreference(get(SITE_COOKIES.design)) ?? "classic",
   };
@@ -48,4 +51,27 @@ export function resolveDesign({ designPreference }: SitePreferences): Design {
 export function activeDesign(preferences: SitePreferences): Design {
   const preferred = resolveDesign(preferences);
   return AVAILABLE_DESIGNS.includes(preferred) ? preferred : "classic";
+}
+
+/** Choose the first supported browser language, respecting quality weights. */
+export function detectBrowserLanguage(
+  acceptLanguage: string | null = null,
+): Language {
+  const preferences = (acceptLanguage ?? "").split(",").map((entry) => {
+    const [tag, ...parameters] = entry.trim().toLowerCase().split(";");
+    const quality = parameters.find((part) => part.trim().startsWith("q="));
+    const weight = quality ? Number(quality.trim().slice(2)) : 1;
+    return { language: parseLanguage(tag.split("-")[0]), weight };
+  });
+  return (
+    preferences
+      .filter(
+        (entry) =>
+          entry.language &&
+          Number.isFinite(entry.weight) &&
+          entry.weight > 0 &&
+          entry.weight <= 1,
+      )
+      .sort((a, b) => b.weight - a.weight)[0]?.language ?? "en"
+  );
 }

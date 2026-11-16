@@ -1,4 +1,5 @@
 import localFont from "next/font/local";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { getMessages } from "../../lib/i18n";
 import { getIngestionStatus } from "../../lib/server/ingestion";
@@ -71,6 +72,34 @@ export async function LadderLayout({
               {messages.navigation.about}
             </Link>
           </nav>
+          <div className={styles.social}>
+            <a
+              href="https://discord.gg/vY4mE8exXB"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={messages.common.discord}
+            >
+              <Image
+                src="/discord-mark-white.svg"
+                width={26}
+                height={20}
+                alt=""
+              />
+            </a>
+            <a
+              href="https://patreon.com/nemasu"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={messages.common.patreon}
+            >
+              <Image
+                src="/patreon-mark-white.svg"
+                width={24}
+                height={24}
+                alt=""
+              />
+            </a>
+          </div>
           <Link
             className={styles.settings}
             href="/settings"
@@ -89,7 +118,9 @@ export async function LadderLayout({
       <IngestionStatus initialMessage={initialMessage} language={language} />
       <main id="ladder-main">{children}</main>
       <footer className={styles.footer}>
-        <p className={styles.footerBrand}>STRIVE LADDER</p>
+        <Link className={styles.footerBrand} href="/">
+          PUDDLE <span>FARM</span>
+        </Link>
         <p>{messages.footer.contribute}</p>
         <div className={styles.footerLinks}>
           <a
