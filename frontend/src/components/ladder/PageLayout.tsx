@@ -10,7 +10,14 @@ export async function LadderPageLayout({
 }: {
   children: ReactNode;
   legend?: boolean;
-  section?: "rankings" | "stats" | "about" | "settings" | "terms" | "missing";
+  section?:
+    | "rankings"
+    | "stats"
+    | "search"
+    | "about"
+    | "settings"
+    | "terms"
+    | "missing";
 }) {
   const presentation = await getRequestPresentation();
   return presentation.design === "ladder" ? (
