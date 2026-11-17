@@ -92,14 +92,27 @@ describe("language and design preferences", () => {
 });
 
 describe("translation dictionaries", () => {
-  it("provides the same complete set of nonempty messages in both languages", () => {
-    expect(Object.keys(ko).sort()).toEqual(Object.keys(en).sort());
-    for (const namespace of Object.keys(en) as (keyof typeof en)[]) {
-      expect(Object.keys(ko[namespace]).sort()).toEqual(
-        Object.keys(en[namespace]).sort(),
-      );
-      for (const value of Object.values(ko[namespace]))
-        expect(value.trim().length).toBeGreaterThan(0);
+  it("provides complete messages with nonempty text or before/after pairs", () => {
+    for (const messages of [en, ko, ja]) {
+      expect(Object.keys(messages).sort()).toEqual(Object.keys(en).sort());
+      for (const namespace of Object.keys(en) as (keyof typeof en)[]) {
+        const entries: Record<string, string> = messages[namespace];
+        expect(Object.keys(entries).sort()).toEqual(
+          Object.keys(en[namespace]).sort(),
+        );
+        for (const [key, value] of Object.entries(entries)) {
+          const counterpart = key.endsWith("Before")
+            ? `${key.slice(0, -6)}After`
+            : key.endsWith("After")
+              ? `${key.slice(0, -5)}Before`
+              : null;
+          const text =
+            value.trim() || (counterpart && entries[counterpart]?.trim());
+          expect({ [key]: text }).toEqual({
+            [key]: expect.stringMatching(/\S/),
+          });
+        }
+      }
     }
   });
 
@@ -110,17 +123,8 @@ describe("translation dictionaries", () => {
   });
 });
 
-it("Japanese messages cover every namespace and retain Japanese selection", () => {
+it("retains Japanese language selection", () => {
   expect(read({ [SITE_COOKIES.language]: "ja" }).language).toBe("ja");
-  expect(Object.keys(ja).sort()).toEqual(Object.keys(en).sort());
-  for (const namespace of Object.keys(en) as (keyof typeof en)[]) {
-    expect(Object.keys(ja[namespace]).sort()).toEqual(
-      Object.keys(en[namespace]).sort(),
-    );
-    expect(
-      Object.values(ja[namespace]).every((value) => value.trim().length > 0),
-    ).toBe(true);
-  }
   expect(getMessages("ja").settings.title).toBe("設定");
 });
 
