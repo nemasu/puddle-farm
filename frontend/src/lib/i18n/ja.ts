@@ -379,7 +379,8 @@ export const ja: Messages = {
     contributors: "GitHub上のすべてのコントリビューター",
     classicDesign: "クラシックデザイン",
     classicOriginal: "原案：",
-    originalRatingUpdate: "オリジナルのRating Update",
+    ratingInspirationBefore: "",
+    ratingInspirationAfter: "のRating Updateから着想を得ました",
     supporters: "支援者 💜",
     thanks: "サイトを支えてくださるPatreonの皆さまに感謝します。",
     supporterError:

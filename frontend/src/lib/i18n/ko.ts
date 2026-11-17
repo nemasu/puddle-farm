@@ -378,7 +378,8 @@ export const ko = {
     contributors: "GitHub의 모든 기여자",
     classicDesign: "클래식 디자인",
     classicOriginal: "원안:",
-    originalRatingUpdate: "오리지널 Rating Update",
+    ratingInspirationBefore: "",
+    ratingInspirationAfter: "의 Rating Update에서 영감을 받았습니다",
     supporters: "후원자 💜",
     thanks: "사이트를 지원해 주시는 Patreon 구독자 여러분께 감사드립니다.",
     supporterError:

@@ -32,8 +32,9 @@ export function Credits({ language }: { language: Language }) {
         <a href="https://x.com/shiburizu">@shiburizu</a>
       </li>
       <li>
-        <strong>{messages.originalRatingUpdate}:</strong>{" "}
+        {messages.ratingInspirationBefore}
         <a href="https://x.com/sov_gott_games">Felix</a>
+        {messages.ratingInspirationAfter}
       </li>
     </ul>
   );
