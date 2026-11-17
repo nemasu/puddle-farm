@@ -24,7 +24,14 @@ export async function LadderLayout({
   children: ReactNode;
   language: Language;
   legend?: boolean;
-  section?: "rankings" | "stats" | "about" | "settings" | "terms" | "missing";
+  section?:
+    | "rankings"
+    | "stats"
+    | "search"
+    | "about"
+    | "settings"
+    | "terms"
+    | "missing";
 }) {
   const messages = getMessages(language);
   const initialMessage = await getIngestionStatus(
@@ -63,7 +70,13 @@ export async function LadderLayout({
             >
               {messages.ladder.characterStats}
             </Link>
-            <Link href="/search">{messages.common.search}</Link>
+            <Link
+              href="/search"
+              className={section === "search" ? styles.activeTab : undefined}
+              aria-current={section === "search" ? "page" : undefined}
+            >
+              {messages.common.search}
+            </Link>
             <Link
               href="/about"
               className={section === "about" ? styles.activeTab : undefined}
