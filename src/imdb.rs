@@ -4,7 +4,61 @@ use bb8_redis::redis;
 use chrono::NaiveDateTime;
 use tracing::warn;
 
-use crate::{DistributionEntry, CHAR_NAMES};
+use crate::{CHAR_NAMES, DistributionEntry};
+
+pub const UPDATE_TIMESTAMP_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
+
+pub fn update_timestamp() -> String {
+    chrono::Utc::now()
+        .format(UPDATE_TIMESTAMP_FORMAT)
+        .to_string()
+}
+
+pub async fn get_last_update(
+    redis: &mut crate::RedisConnection<'_>,
+    key: &str,
+) -> redis::RedisResult<Option<String>> {
+    redis::cmd("GET").arg(key).query_async(&mut **redis).await
+}
+
+pub async fn set_last_update(
+    redis: &mut crate::RedisConnection<'_>,
+    key: &str,
+) -> redis::RedisResult<()> {
+    redis::cmd("SET")
+        .arg(key)
+        .arg(update_timestamp())
+        .query_async(&mut **redis)
+        .await
+}
+
+/// Copy the legacy combined-job timestamps once, before any new stats job updates
+/// them. The marker prevents future stats runs from masquerading as leaderboard refreshes.
+pub async fn seed_leaderboard_timestamps(
+    redis: &mut crate::RedisConnection<'_>,
+) -> redis::RedisResult<()> {
+    redis::cmd("EVAL")
+        .arg(
+            r#"
+        if redis.call('EXISTS', KEYS[1]) == 1 then return 0 end
+        for i = 2, 4, 2 do
+            local value = redis.call('GET', KEYS[i])
+            if value then redis.call('SET', KEYS[i + 1], value, 'NX') end
+        end
+        redis.call('SET', KEYS[1], '1')
+        return 1
+    "#,
+        )
+        .arg(5)
+        .arg("leaderboard_timestamps_seeded_v1")
+        .arg("last_update_hourly")
+        .arg("last_update_legend")
+        .arg("last_update_daily")
+        .arg("last_update_leaderboards")
+        .query_async::<i64>(&mut **redis)
+        .await?;
+    Ok(())
+}
 
 async fn get_string(key: &str, redis: &mut crate::RedisConnection<'_>) -> Result<String, String> {
     match redis::cmd("GET").arg(key).query_async(&mut **redis).await {
@@ -140,7 +194,7 @@ async fn get_matchup(
             }
         };
 
-        let matchups_data: Vec<crate::pull::Matchup> = serde_json::from_str(&value).unwrap();
+        let matchups_data: Vec<crate::stats::Matchup> = serde_json::from_str(&value).unwrap();
         let char_name = CHAR_NAMES[c].1.to_string();
         let char_short = CHAR_NAMES[c].0.to_string();
 
@@ -152,10 +206,9 @@ async fn get_matchup(
                 .enumerate()
                 .map(|(i, char_info)| {
                     // Look for an entry in matchups_data for this character index
-                    let matchup_entry = matchups_data
-                        .iter()
-                        .find(|m| m.opponent_char as usize == i);
-                    
+                    let matchup_entry =
+                        matchups_data.iter().find(|m| m.opponent_char as usize == i);
+
                     match matchup_entry {
                         Some(m) => MatchupEntry {
                             char_name: char_info.1.to_string(),
@@ -205,7 +258,7 @@ pub async fn get_distribution(
     let distribution_rating = get_string("distribution_rating", redis).await?;
 
     //Deserialize distribution_rating
-    let distribution_rating: Vec<crate::pull::DistributionResult> =
+    let distribution_rating: Vec<crate::stats::DistributionResult> =
         serde_json::from_str(&distribution_rating).unwrap();
 
     //Get one_month_players
@@ -258,64 +311,6 @@ pub async fn set_last_successful_replay_pull(
         Err(error) => Err(format!(
             "Failed to set last_successful_replay_pull: {error}"
         )),
-    }
-}
-
-pub async fn get_free_comment(id: i64, redis: &mut crate::RedisConnection<'_>) -> Result<String, String> {
-    let key = format!("comment_{}", id);
-
-    match get_string(&key, redis).await {
-        Ok(comment) => Ok(comment),
-        Err(_) => Err("Failed to get comment".to_string()),
-    }
-}
-
-pub async fn set_free_comment(
-    id: i64,
-    comment: &str,
-    redis: &mut crate::RedisConnection<'_>,
-) -> Result<(), String> {
-    let key = format!("comment_{}", id);
-
-    match redis::cmd("SET")
-        .arg(&key)
-        .arg(comment)
-        .arg("EX")
-        .arg("86400")
-        .query_async::<String>(&mut **redis)
-        .await
-    {
-        Ok(_) => Ok(()),
-        Err(_) => Err("Failed to set comment".to_string()),
-    }
-}
-
-pub async fn get_avatar(id: i64, redis: &mut crate::RedisConnection<'_>) -> Result<String, String> {
-    let key = format!("avatar_{}", id);
-
-    match get_string(&key, redis).await {
-        Ok(avatar) => Ok(avatar),
-        Err(_) => Err("Failed to get avatar".to_string()),
-    }
-}
-
-pub async fn set_avatar(
-    id: i64,
-    avatar: &str,
-    redis: &mut crate::RedisConnection<'_>,
-) -> Result<(), String> {
-    let key = format!("avatar_{}", id);
-
-    match redis::cmd("SET")
-        .arg(&key)
-        .arg(avatar)
-        .arg("EX")
-        .arg("86400")
-        .query_async::<String>(&mut **redis)
-        .await
-    {
-        Ok(_) => Ok(()),
-        Err(_) => Err("Failed to set avatar".to_string()),
     }
 }
 

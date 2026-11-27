@@ -69,6 +69,16 @@ describe("getRatingChangeColor", () => {
     expect(Utils.getRatingChangeColor(11)).toBe("#087F23");
     expect(Utils.getRatingChangeColor(100)).toBe("#087F23");
   });
+
+  test("uses Ladder theme colors for large losses and gains", () => {
+    expect(Utils.getRatingChangeColor(-10, true)).toBe(
+      "var(--ladder-rating-loss)",
+    );
+    expect(Utils.getRatingChangeColor(11, true)).toBe(
+      "var(--ladder-rating-gain)",
+    );
+    expect(Utils.getRatingChangeColor(10, true)).toBe("#4CAF50");
+  });
 });
 
 describe("getPercentChangeColor", () => {

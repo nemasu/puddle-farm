@@ -12,12 +12,16 @@ export class ApiError extends Error {
 }
 
 // The origin is configured at runtime; no backend is contacted during builds.
-export const readApiResponse = cache(async (path: string) => {
+export function fetchApi(path: string): Promise<Response> {
   const origin = process.env.GGST_API_INTERNAL_URL ?? "http://127.0.0.1:8001";
-  const response = await fetch(`${origin.replace(/\/$/, "")}/api${path}`, {
+  return fetch(`${origin.replace(/\/$/, "")}/api${path}`, {
     cache: "no-store",
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
+}
+
+export const readApiResponse = cache(async (path: string) => {
+  const response = await fetchApi(path);
   return {
     ok: response.ok,
     status: response.status,

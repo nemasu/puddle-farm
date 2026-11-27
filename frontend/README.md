@@ -19,9 +19,8 @@ Server-side API requests use `GGST_API_INTERNAL_URL` with the `/api` prefix.
 Settings saves English, Korean, or Japanese and Classic or Ladder using cookies.
 Without a language cookie, the server reads Accept-Language and selects Korean
 or Japanese when supported, otherwise English. A saved language takes precedence.
-Without a design cookie, visitors see Classic with an invitation to try Ladder.
-Trying Ladder or keeping Classic saves only the design; both preferences can be
-changed in Settings. The Ladder header includes Discord and Patreon links.
+Ladder is the default design. Settings also controls the Classic character
+palette and the Ladder theme, which defaults to the device's color scheme.
 
 ## Verification
 
@@ -48,6 +47,7 @@ npm run preview
 ```
 
 The nginx example routes `/api` to Rust and pages/assets to Next.js on port 3000.
+Set `GGST_SITE_URL` to the frontend's public origin to use it in link previews.
 Standalone output is available in `.next/standalone`; copy `public` and
 `.next/static` alongside the generated server when deploying that artifact.
 `/health` reports process health without API calls or page rendering.

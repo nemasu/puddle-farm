@@ -2,7 +2,6 @@
 
 import {
   Box,
-  Button,
   FormControlLabel,
   FormGroup,
   Switch,
@@ -10,12 +9,6 @@ import {
 } from "@mui/material";
 import { getMessages } from "../../lib/i18n";
 import type { Language } from "../../lib/site-preferences";
-import { StorageUtils } from "../../utils/storage";
-import {
-  characterNames,
-  defaultCharacterName,
-  isCharacterName,
-} from "../../utils/themes";
 import { usePreferencesContext } from "../DisplayPreferences";
 
 export function DisplaySettingsControls({
@@ -64,31 +57,5 @@ export function DisplaySettingsControls({
         />
       ))}
     </FormGroup>
-  );
-}
-
-export function ThemeControls({ initialTheme }: { initialTheme?: string }) {
-  return (
-    <Box>
-      {characterNames.map((theme) => (
-        <Button
-          key={theme}
-          variant="outlined"
-          aria-pressed={
-            theme ===
-            (initialTheme && isCharacterName(initialTheme)
-              ? initialTheme
-              : defaultCharacterName)
-          }
-          sx={{ m: 1 }}
-          onClick={() => {
-            StorageUtils.setTheme(theme);
-            window.location.reload();
-          }}
-        >
-          {theme}
-        </Button>
-      ))}
-    </Box>
   );
 }

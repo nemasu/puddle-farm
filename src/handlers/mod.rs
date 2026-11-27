@@ -5,3 +5,4 @@ pub mod top;
 pub mod search;
 pub mod avatar;
 pub mod rating_sync;
+pub mod profile;

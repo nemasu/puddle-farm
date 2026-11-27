@@ -1,18 +1,8 @@
 "use client";
 
 import { Alert, alpha, Box, Button, Paper, Typography } from "@mui/material";
-import {
-  CategoryScale,
-  Chart as ChartJS,
-  Filler,
-  LinearScale,
-  LineElement,
-  PointElement,
-  Tooltip,
-  type TooltipItem,
-} from "chart.js";
+import { hourlyTimeAxis, SvgLineChart } from "@puddle-farm/svg-chart";
 import { useEffect, useState } from "react";
-import { Line } from "react-chartjs-2";
 import type {
   HourlyPlayerPoint,
   HourlyPlayersResponse,
@@ -20,16 +10,8 @@ import type {
 import { API_ENDPOINT } from "../lib/api-endpoint";
 import { getMessages } from "../lib/i18n";
 import type { Design, Language } from "../lib/site-preferences";
-import { usePreferencesContext } from "./DisplayPreferences";
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip,
-);
+import { useDisplayPreferences } from "./DisplayPreferences";
+import { useDarkLadderTheme } from "./ladder/LadderThemeProvider";
 
 const RANGES = [
   ["24h", "24h"],
@@ -55,7 +37,8 @@ export default function HourlyPlayersChart({
   design?: Design;
 }) {
   const messages = getMessages(language).stats;
-  const preferences = usePreferencesContext()?.preferences;
+  const preferences = useDisplayPreferences();
+  const dark = useDarkLadderTheme();
   const [range, setRange] = useState<Range>("30d");
   const [state, setState] = useState<LoadState>(
     initialPoints === undefined
@@ -93,22 +76,13 @@ export default function HourlyPlayersChart({
   }, [range, initialPoints]);
 
   const points = state.status === "loaded" ? state.points : [];
-  const timeZone = preferences
-    ? preferences.useLocalTime
-      ? preferences.timeZone
-      : "UTC"
-    : undefined;
-  const tickFormatter = new Intl.DateTimeFormat(
-    language,
-    range === "24h"
-      ? { hour: "numeric", minute: "2-digit", timeZone }
-      : range === "7d" || range === "30d"
-        ? { month: "short", day: "numeric", timeZone }
-        : { month: "short", year: "numeric", timeZone },
-  );
-  const labels = points.map(({ timestamp }) =>
-    tickFormatter.format(new Date(timestamp * 1000)),
-  );
+  const timeZone = preferences.useLocalTime ? preferences.timeZone : "UTC";
+  const number = new Intl.NumberFormat(language);
+  const date = new Intl.DateTimeFormat(language, {
+    timeZone,
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 
   return (
     <Box sx={{ m: design === "ladder" ? 0 : 4, maxWidth: "1000px" }}>
@@ -168,55 +142,42 @@ export default function HourlyPlayersChart({
           ) : points.length === 0 ? (
             <Typography color="text.secondary">{messages.empty}</Typography>
           ) : (
-            <Box sx={{ height: { xs: 260, sm: 360 }, position: "relative" }}>
-              <Line
-                data={{
-                  labels,
-                  datasets: [
-                    {
-                      label: messages.chartPlayers,
-                      data: points.map(({ players }) => players),
-                      borderColor: "#ef5350",
-                      backgroundColor: "rgba(239, 83, 80, 0.22)",
-                      borderWidth: 2,
-                      fill: true,
-                      pointRadius: 0,
-                      pointHoverRadius: 4,
-                      stepped: "before",
-                      tension: 0,
-                    },
-                  ],
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  interaction: { intersect: false, mode: "index" },
-                  plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                      callbacks: {
-                        title: (items) => {
-                          const point = points[items[0]?.dataIndex];
-                          return point
-                            ? new Date(point.timestamp * 1000).toLocaleString(
-                                language,
-                                { timeZone },
-                              )
-                            : "";
-                        },
-                        label: (item: TooltipItem<"line">) =>
-                          `${Number(item.raw).toLocaleString(language)} ${language === "en" ? "players" : messages.chartPlayers}`,
-                      },
-                    },
-                  },
-                  scales: {
-                    x: {
-                      grid: { display: false },
-                      ticks: { maxTicksLimit: 8, maxRotation: 0 },
-                    },
-                    y: { beginAtZero: true, ticks: { precision: 0 } },
-                  },
-                }}
+            <Box
+              sx={(theme) => ({
+                "--svg-chart-height": "360px",
+                "--svg-chart-mobile-height": "260px",
+                "--svg-chart-axis-text": dark
+                  ? "#b9b4c1"
+                  : theme.palette.text.secondary,
+                "--svg-chart-grid": dark ? "#ffffff26" : theme.palette.divider,
+                "--svg-chart-area": "rgba(239, 83, 80, 0.22)",
+                "--svg-chart-tooltip-bg": theme.palette.background.paper,
+                "--svg-chart-tooltip-text": theme.palette.text.primary,
+              })}
+            >
+              <SvgLineChart
+                key={range}
+                className="hourly-players-plot"
+                points={points.map(({ timestamp, players }) => ({
+                  x: timestamp,
+                  y: players,
+                }))}
+                label={messages.hourly}
+                xAxis={hourlyTimeAxis(language, timeZone)}
+                formatY={number.format}
+                tooltip={({ x, y }) => (
+                  <>
+                    <div>
+                      {date.format(x * 1000)}
+                      {preferences.useLocalTime ? "" : " UTC"}
+                    </div>
+                    <div>
+                      {number.format(y)}{" "}
+                      {language === "en" ? "players" : messages.chartPlayers}
+                    </div>
+                  </>
+                )}
+                stepped
               />
             </Box>
           )}

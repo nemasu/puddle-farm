@@ -7,6 +7,7 @@ import { LadderSearchContent } from "../../components/ladder/SearchContent";
 import { getPageCopy } from "../../lib/i18n/classic";
 import { firstParam, type PageSearchParams } from "../../lib/pagination";
 import { getRequestPresentation } from "../../lib/server/site-preferences";
+import { localizedMetadata } from "../../lib/server-metadata";
 
 const classicMetadata: Metadata = {
   title: "Player Search | Guilty Gear Strive | Puddle Farm",
@@ -16,10 +17,12 @@ const classicMetadata: Metadata = {
 
 export async function generateMetadata(): Promise<Metadata> {
   const presentation = await getRequestPresentation();
-  return getPageCopy<Metadata>(presentation, classicMetadata, (messages) => ({
-    title: `${messages.ladder.searchTitle} | Puddle Farm`,
-    description: messages.ladder.searchDescription,
-  }));
+  return await localizedMetadata(
+    getPageCopy<Metadata>(presentation, classicMetadata, (messages) => ({
+      title: `${messages.ladder.searchTitle} | Puddle Farm`,
+      description: messages.ladder.searchDescription,
+    })),
+  );
 }
 
 export default async function SearchPage({

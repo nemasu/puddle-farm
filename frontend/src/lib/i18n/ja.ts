@@ -1,12 +1,6 @@
 import type { Messages } from "./en";
 
 export const ja: Messages = {
-  designInvitation: {
-    title: "新しいデザインを試してみませんか？",
-    description: "設定からいつでもClassicに戻せます。",
-    accept: "Ladderを試す",
-    decline: "Classicを使う",
-  },
   navigation: {
     legend: "レジェンド",
     top: "総合ランキング",
@@ -40,6 +34,10 @@ export const ja: Messages = {
     save: "保存",
     display: "表示設定",
     themes: "テーマ（Classic）",
+    ladderTheme: "テーマ（Ladder）",
+    ladderTheme_auto: "システム設定",
+    ladderTheme_light: "ライト",
+    ladderTheme_dark: "ダーク",
     localTime: "ローカル時刻",
     localTimeDescription: "UTCではなく、お使いのタイムゾーンで時刻を表示します",
     plainRatings: "レーティング変動を単色で表示",
@@ -102,11 +100,11 @@ export const ja: Messages = {
     allGlobal: "全プレイヤー",
     rankings: "ランキング",
     characterStats: "キャラクター統計",
+    activity: "アクティビティ",
     legendEntries: "レジェンドの人数",
     charactersRepresented: "使用キャラクター数",
     highestRating: "最高レーティング",
     lastUpdated: "更新日時（UTC）",
-    search: "レジェンドプレイヤーを検索",
     character: "キャラクター",
     allCharacters: "すべてのキャラクター",
     apply: "適用",
@@ -117,9 +115,8 @@ export const ja: Messages = {
     rating: "レーティング",
     leaderboard: "レジェンドランキング",
     filterNote:
-      "絞り込みはレジェンド上位100人が対象です。プレイヤーを選ぶと対戦履歴を確認できます。",
+      "キャラクターでの絞り込みはレジェンド上位100件が対象です。プレイヤーを選ぶと対戦履歴を確認できます。",
     empty: "レジェンドプレイヤーがいません。",
-    noMatches: "条件に一致するレジェンドプレイヤーがいません。",
     error: "ランキングを読み込めませんでした。しばらくしてからお試しください。",
     count: "表示中のプレイヤー数",
     backToTop: "ページ上部へ",
@@ -155,6 +152,10 @@ export const ja: Messages = {
     aliases: "別名",
     profile: "プレイヤープロフィール",
     avatar: "プレイヤーアバター",
+    refreshProfile: "アバターとコメントを更新",
+    refreshProfileLimit:
+      "アバターとコメントの更新はプレイヤーごとに24時間に1回までです。",
+    refreshProfileError: "アバターとコメントを更新できませんでした。",
     history: "対戦履歴",
     details: "各試合の詳細",
     timestamp: "日時",
@@ -252,7 +253,6 @@ export const ja: Messages = {
       "時間別グラフの表示にはJavaScriptが必要です。プレイヤー数と試合数は上で確認できます。",
     health: "試合データの更新状況",
     healthLoading: "試合データの更新状況を確認中…",
-    activity: "活動統計",
     popularity: "キャラクター使用率",
     matchup: "キャラクター相性",
     distribution: "レーティング分布",

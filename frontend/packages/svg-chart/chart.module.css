@@ -1,0 +1,53 @@
+.plot {
+  position: relative;
+  width: 100%;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: var(--svg-chart-height, 280px);
+}
+
+.labels {
+  fill: var(--svg-chart-axis-text, #626262);
+  font: 12px system-ui, sans-serif;
+}
+
+.grid {
+  stroke: var(--svg-chart-grid, #dedede);
+}
+
+.line {
+  fill: none;
+  stroke: var(--svg-chart-line, #ef5350);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.area {
+  fill: var(--svg-chart-area, transparent);
+}
+
+.point {
+  fill: var(--svg-chart-line, #ef5350);
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 1;
+  max-width: min(16rem, 100%);
+  padding: .35rem .55rem;
+  border: 1px solid var(--svg-chart-grid, #dedede);
+  border-radius: 5px;
+  background: var(--svg-chart-tooltip-bg, #fff);
+  color: var(--svg-chart-tooltip-text, #222);
+  font: .8rem system-ui, sans-serif;
+  pointer-events: none;
+}
+
+@media (max-width: 520px) {
+  .svg {
+    height: var(--svg-chart-mobile-height, 220px);
+  }
+}

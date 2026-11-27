@@ -114,7 +114,10 @@ export function LadderPlayerHistory({
                     <span className={styles.result}>
                       {group.wins} – {group.losses}
                       <small>
-                        <PlayerRatingChange change={group.ratingChange} />
+                        <PlayerRatingChange
+                          change={group.ratingChange}
+                          ladder
+                        />
                       </small>
                     </span>
                   </summary>

@@ -35,6 +35,24 @@ diesel::table! {
 }
 
 diesel::table! {
+    player_profile_refreshes (player_id) {
+        player_id -> Int8,
+        requested_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    player_profile_values (player_id, kind) {
+        player_id -> Int8,
+        kind -> Text,
+        payload -> Nullable<Bytea>,
+        fetched_at -> Nullable<Timestamptz>,
+        fetch_id -> Nullable<Text>,
+        fetch_until -> Nullable<Timestamptz>,
+    }
+}
+
+diesel::table! {
     player_ratings (id, char_id) {
         id -> Int8,
         char_id -> Int2,
@@ -62,12 +80,16 @@ diesel::table! {
 }
 
 diesel::joinable!(player_names -> players (id));
+diesel::joinable!(player_profile_refreshes -> players (player_id));
+diesel::joinable!(player_profile_values -> players (player_id));
 diesel::joinable!(player_ratings -> players (id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     games,
     hourly_player_counts,
     player_names,
+    player_profile_refreshes,
+    player_profile_values,
     player_ratings,
     players,
     tags,

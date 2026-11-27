@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   basePath: "",
   output: "standalone",
+  transpilePackages: ["@puddle-farm/svg-chart"],
   poweredByHeader: false,
   // Accept request paths without automatic trailing-slash redirects.
   skipTrailingSlashRedirect: true,

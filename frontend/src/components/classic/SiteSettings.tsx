@@ -1,10 +1,19 @@
 import { Box, Button } from "@mui/material";
-import { saveSitePreferences } from "../../app/actions/site-preferences";
+import {
+  saveCharacterTheme,
+  saveSitePreferences,
+} from "../../app/actions/site-preferences";
 import { getMessages } from "../../lib/i18n";
 import {
   resolveDesign,
   type SitePreferences,
 } from "../../lib/site-preferences";
+
+import {
+  characterNames,
+  defaultCharacterName,
+  isCharacterName,
+} from "../../utils/themes";
 
 export function SiteSettings({
   preferences,
@@ -56,6 +65,31 @@ export function SiteSettings({
           {messages.save}
         </Button>
       </Box>
+    </form>
+  );
+}
+
+export function ThemeControls({ initialTheme }: { initialTheme?: string }) {
+  const selected =
+    initialTheme && isCharacterName(initialTheme)
+      ? initialTheme
+      : defaultCharacterName;
+
+  return (
+    <form action={saveCharacterTheme}>
+      {characterNames.map((theme) => (
+        <Button
+          key={theme}
+          type="submit"
+          name="theme"
+          value={theme}
+          variant="outlined"
+          aria-pressed={theme === selected}
+          sx={{ m: 1 }}
+        >
+          {theme}
+        </Button>
+      ))}
     </form>
   );
 }

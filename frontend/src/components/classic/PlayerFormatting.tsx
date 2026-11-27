@@ -14,7 +14,13 @@ export function PlayerDateTime({ value }: { value: string }) {
   );
 }
 
-export function PlayerRatingChange({ change }: { change: number }) {
+export function PlayerRatingChange({
+  change,
+  ladder = false,
+}: {
+  change: number;
+  ladder?: boolean;
+}) {
   const plain = useDisplayPreferences().disableRatingColors;
   return plain ? (
     change
@@ -26,7 +32,7 @@ export function PlayerRatingChange({ change }: { change: number }) {
         pr: "3px",
         display: "inline",
         fontSize: "0.875rem",
-        color: Utils.getRatingChangeColor(change),
+        color: Utils.getRatingChangeColor(change, ladder),
       }}
     >
       {change >= 0 ? "+" : ""}

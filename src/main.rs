@@ -1,7 +1,6 @@
 use axum::extract::{Path, Query};
-use axum::http::header::{self, ACCEPT, AUTHORIZATION, CONTENT_TYPE, ORIGIN};
-use axum::http::{HeaderMap, HeaderValue, Method};
-use axum::response::IntoResponse;
+use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, ORIGIN};
+use axum::http::Method;
 use axum::{extract::State, http::StatusCode, response::Json, routing::get, Router};
 use bb8::PooledConnection;
 use diesel_async::{pooled_connection::AsyncDieselConnectionManager, AsyncPgConnection};
@@ -46,6 +45,7 @@ mod pull;
 mod requests;
 mod responses;
 mod schema;
+mod stats;
 
 pub const CHAR_NAMES: &[(&str, &str)] = &[
     ("SO", "Sol"),
@@ -144,8 +144,9 @@ async fn player(
 async fn player_history(
     State(pools): State<AppState>,
     Path((player_id, char_id)): Path<(i64, String)>,
-    Query(pagination): Query<Pagination>,
+    Query(params): Query<handlers::player_history::PlayerHistoryQuery>,
 ) -> Result<Json<handlers::player_history::PlayerGamesResponse>, (StatusCode, String)> {
+    let date_range = params.date_range().map_err(|e| (StatusCode::BAD_REQUEST, e))?;
     let char_id = match CHAR_NAMES.iter().position(|(c, _)| *c == char_id) {
         Some(id) => id as i16,
         None => {
@@ -155,11 +156,11 @@ async fn player_history(
 
     let mut db = pools.db_pool.get().await.unwrap();
 
-    let count = pagination.count.unwrap_or(100) as i64;
-    let offset = pagination.offset.unwrap_or(0) as i64;
+    let count = params.count.unwrap_or(100) as i64;
+    let offset = params.offset.unwrap_or(0) as i64;
 
     let games: Vec<models::Game> =
-        match db::get_games(player_id, char_id, count, offset, &mut db).await {
+        match db::get_games(player_id, char_id, count, offset, date_range, &mut db).await {
             Ok(games) => games,
             Err(e) => return Err((StatusCode::NOT_FOUND, e)),
         };
@@ -254,24 +255,6 @@ async fn read_leaderboard(
     }
 }
 
-async fn read_last_update_hourly(redis: &mut crate::RedisConnection<'_>) -> Option<String> {
-    use bb8_redis::redis;
-    redis::cmd("GET")
-        .arg("last_update_hourly")
-        .query_async::<String>(&mut **redis)
-        .await
-        .ok()
-}
-
-async fn read_last_update_daily(redis: &mut crate::RedisConnection<'_>) -> Option<String> {
-    use bb8_redis::redis;
-    redis::cmd("GET")
-        .arg("last_update_daily")
-        .query_async::<String>(&mut **redis)
-        .await
-        .ok()
-}
-
 async fn top_legend(
     State(pools): State<AppState>,
     Query(pagination): Query<Pagination>,
@@ -286,7 +269,10 @@ async fn top_legend(
     let offset = pagination.offset.unwrap_or(0);
     let player_ids: HashSet<i64> = entries.iter().skip(offset).take(count)
         .filter_map(|e| e.player_id.parse::<i64>().ok()).collect();
-    let last_update = read_last_update_hourly(&mut redis).await;
+    let last_update = imdb::get_last_update(&mut redis, "last_update_legend")
+        .await
+        .ok()
+        .flatten();
     let mut db = pools.db_pool.get().await.unwrap();
     let player_tags = db::get_tags_from_player_list(player_ids, &mut db).await.unwrap_or_default();
     let mut response = build_rank_response(&entries, &legend_keys, &player_tags, offset, count);
@@ -301,7 +287,10 @@ async fn top(
     let mut redis = pools.redis_pool.get().await.unwrap();
     let entries = read_leaderboard(&mut redis, "leaderboard_all").await?;
     let legend_keys = get_legend_keys(&mut redis).await;
-    let last_update = read_last_update_daily(&mut redis).await;
+    let last_update = imdb::get_last_update(&mut redis, "last_update_leaderboards")
+        .await
+        .ok()
+        .flatten();
     let count = pagination.count.unwrap_or(100);
     let offset = pagination.offset.unwrap_or(0);
     let player_ids: HashSet<i64> = entries.iter().skip(offset).take(count)
@@ -326,7 +315,10 @@ async fn top_char(
     let key = format!("leaderboard_char_{}", char_idx);
     let entries = read_leaderboard(&mut redis, &key).await?;
     let legend_keys = get_legend_keys(&mut redis).await;
-    let last_update = read_last_update_daily(&mut redis).await;
+    let last_update = imdb::get_last_update(&mut redis, "last_update_leaderboards")
+        .await
+        .ok()
+        .flatten();
     let count = pagination.count.unwrap_or(100);
     let offset = pagination.offset.unwrap_or(0);
     let player_ids: HashSet<i64> = entries.iter().skip(offset).take(count)
@@ -815,7 +807,7 @@ struct DistributionResponse {
 #[derive(Serialize)]
 struct DistributionEntry {
     one_month_players: i64,
-    distribution_rating: Vec<crate::pull::DistributionResult>,
+    distribution_rating: Vec<crate::stats::DistributionResult>,
 }
 async fn distribution(
     State(pools): State<AppState>,
@@ -895,82 +887,6 @@ async fn ingestion_health(State(pools): State<AppState>) -> Result<String, (Stat
     Ok("OK".to_string())
 }
 
-async fn comment(Path(player_id): Path<i64>, State(pools): State<AppState>) -> impl IntoResponse {
-    //If token.txt does not exist, return 503
-    if !std::fs::exists("token.txt").unwrap_or(false) {
-        return Err((
-            StatusCode::SERVICE_UNAVAILABLE,
-            "GGST is not connected, patch?".to_string(),
-        ));
-    }
-
-    let mut db = pools.db_pool.get().await.unwrap();
-    let mut redis = pools.redis_pool.get().await.unwrap();
-
-    let exists = match crate::db::player_exists(&mut db, player_id).await {
-        Ok(e) => e,
-        Err(e) => return Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    };
-
-    if !exists {
-        return Err((StatusCode::NOT_FOUND, "Player not found".to_string()));
-    }
-
-    let comment = match crate::imdb::get_free_comment(player_id, &mut redis).await {
-        Ok(comment) => comment,
-        Err(_) => match crate::ggst_api::get_player_comment(player_id.to_string()).await {
-            Ok(comment) => {
-                let _ = crate::imdb::set_free_comment(player_id, &comment, &mut redis).await;
-                comment
-            }
-            Err(e) => return Err((StatusCode::SERVICE_UNAVAILABLE, e)),
-        },
-    };
-
-    Ok(comment)
-}
-
-async fn avatar(Path(player_id): Path<i64>, State(pools): State<AppState>) -> impl IntoResponse {
-    //If token.txt does not exist, return 503
-    if !std::fs::exists("token.txt").unwrap_or(false) {
-        return Err((
-            StatusCode::SERVICE_UNAVAILABLE,
-            "GGST is not connected, patch?".to_string(),
-        ));
-    }
-
-    let mut db = pools.db_pool.get().await.unwrap();
-    let mut redis = pools.redis_pool.get().await.unwrap();
-
-    let exists = match crate::db::player_exists(&mut db, player_id).await {
-        Ok(e) => e,
-        Err(e) => return Err((StatusCode::INTERNAL_SERVER_ERROR, e)),
-    };
-
-    if !exists {
-        return Err((StatusCode::NOT_FOUND, "Player not found".to_string()));
-    }
-
-    let png = match crate::imdb::get_avatar(player_id, &mut redis).await {
-        Ok(avatar) => avatar,
-        Err(_) => match crate::ggst_api::get_player_avatar(player_id.to_string()).await {
-            Ok(png) => {
-                let _ = crate::imdb::set_avatar(player_id, &png, &mut redis).await;
-                png
-            }
-            Err(e) => return Err((StatusCode::SERVICE_UNAVAILABLE, e)),
-        },
-    };
-
-    let output = crate::handlers::avatar::handle_get_avatar(png).await;
-
-    // Create response headers
-    let mut headers = HeaderMap::new();
-    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("image/png"));
-
-    Ok((headers, output))
-}
-
 fn init_tracing(prefix: &str) -> WorkerGuard {
     // Create a rolling file appender
     let file_appender = tracing_appender::rolling::RollingFileAppender::new(
@@ -1013,7 +929,7 @@ fn init_tracing(prefix: &str) -> WorkerGuard {
 }
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 5)]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     dotenv::dotenv().expect("Failed to read .env file");
 
     let cors = CorsLayer::new()
@@ -1046,6 +962,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         db_pool: pool,
         redis_pool,
     };
+
+    {
+        let mut redis = state.redis_pool.get().await?;
+        imdb::seed_leaderboard_timestamps(&mut redis).await?;
+    }
 
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     match args.get(0).map(|r| r.deref()) {
@@ -1080,13 +1001,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tracing_subscriber::fmt()
                 .with_max_level(tracing::Level::INFO)
                 .init();
-            pull::do_hourly_update_once(state).await
+            stats::run(state, stats::StatsJob::Hourly).await?;
         }
         Some("daily") => {
             tracing_subscriber::fmt()
                 .with_max_level(tracing::Level::INFO)
                 .init();
-            pull::do_daily_update_once(state).await
+            stats::run(state, stats::StatsJob::Daily).await?;
         }
         Some("backfill-hourly-players") => {
             tracing_subscriber::fmt()
@@ -1129,8 +1050,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/supporters", get(supporters))
                 .route("/api/distribution", get(distribution))
                 .route("/api/ingestion/health", get(ingestion_health))
-                .route("/api/avatar/:player_id", get(avatar))
-                .route("/api/comment/:player_id", get(comment))
+                .merge(handlers::profile::router())
                 .with_state(state);
 
             let app = if cfg!(debug_assertions) {

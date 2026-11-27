@@ -1,20 +1,20 @@
 .info {
   margin: 0 0 40px;
-  border: 3px solid #111;
-  background: white;
-  box-shadow: 6px 6px var(--cyan);
+  border: 3px solid var(--frame);
+  background: var(--surface);
+  box-shadow: 6px 6px var(--cyan-shadow);
 }
 .info > div {
   display: grid;
   grid-template-columns: 230px minmax(0, 1fr);
-  border-bottom: 1px solid #bdbdb6;
+  border-bottom: 1px solid var(--line);
 }
 .info > div:last-child {
   border-bottom: 0;
 }
 .info dt {
   padding: 22px;
-  background: #111;
+  background: var(--solid);
   color: white;
   font-weight: 900;
 }
@@ -28,10 +28,10 @@
   margin: 0 0 12px;
 }
 .supporters {
-  border: 3px solid #111;
+  border: 3px solid var(--frame);
   padding: 22px;
-  background: white;
-  box-shadow: 6px 6px var(--red);
+  background: var(--surface);
+  box-shadow: 6px 6px var(--red-shadow);
   margin-bottom: 40px;
 }
 .supporters h2,
@@ -55,7 +55,7 @@
   overflow-wrap: anywhere;
 }
 .tag {
-  background: #111;
+  background: var(--solid);
   border: 1px solid currentColor;
   padding: 2px 6px;
   font-size: 0.75rem;
@@ -72,14 +72,14 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  border: 3px solid #111;
+  border: 3px solid var(--frame);
   padding: 10px;
-  background: white;
+  background: var(--surface);
   font-size: 0.8rem;
 }
 .guide small {
   display: block;
-  color: #666660;
+  color: var(--muted);
 }
 @media (max-width: 650px) {
   .info > div {

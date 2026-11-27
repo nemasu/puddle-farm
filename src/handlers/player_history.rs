@@ -1,6 +1,48 @@
 use std::collections::HashMap;
 
-use serde::{Serialize, Serializer};
+use chrono::{NaiveDate, NaiveDateTime};
+use serde::{Deserialize, Serialize, Serializer};
+
+#[derive(Debug, Deserialize)]
+pub struct PlayerHistoryQuery {
+    pub count: Option<usize>,
+    pub offset: Option<usize>,
+    pub from: Option<String>,
+    pub to: Option<String>,
+}
+
+#[derive(Debug, Default, PartialEq)]
+pub struct MatchDateRange {
+    pub from: Option<NaiveDateTime>,
+    pub to_exclusive: Option<NaiveDateTime>,
+}
+
+impl PlayerHistoryQuery {
+    pub fn date_range(&self) -> Result<MatchDateRange, String> {
+        fn parse_date(value: &str, name: &str) -> Result<NaiveDate, String> {
+            let date = NaiveDate::parse_from_str(value, "%Y-%m-%d")
+                .map_err(|_| format!("{name} must be a valid date in YYYY-MM-DD format"))?;
+            if date.format("%Y-%m-%d").to_string() != value || value.len() != 10 {
+                return Err(format!("{name} must be a valid date in YYYY-MM-DD format"));
+            }
+            Ok(date)
+        }
+
+        let from = self.from.as_deref().map(|s| parse_date(s, "from")).transpose()?;
+        let to = self.to.as_deref().map(|s| parse_date(s, "to")).transpose()?;
+        if let (Some(from), Some(to)) = (from, to) {
+            if from > to {
+                return Err("from must be on or before to".to_string());
+            }
+        }
+
+        Ok(MatchDateRange {
+            from: from.map(|date| date.and_hms_opt(0, 0, 0).unwrap()),
+            // Use the following midnight so every match on `to` is included.
+            to_exclusive: to.map(|date| date.succ_opt().unwrap().and_hms_opt(0, 0, 0).unwrap()),
+        })
+    }
+}
 
 fn serialize_i64_as_string<S: Serializer>(v: &i64, s: S) -> Result<S::Ok, S::Error> {
     s.serialize_str(&v.to_string())
@@ -156,6 +198,51 @@ mod tests {
     use super::*;
     use chrono;
     use std::collections::HashSet;
+
+    fn history_query(query: &str) -> PlayerHistoryQuery {
+        let uri = format!("/api/player/1/SO/history{query}").parse().unwrap();
+        axum::extract::Query::<PlayerHistoryQuery>::try_from_uri(&uri).unwrap().0
+    }
+
+    #[test]
+    fn date_filter_is_optional_and_preserves_pagination() {
+        let query = history_query("?count=25&offset=50");
+        assert_eq!(query.count, Some(25));
+        assert_eq!(query.offset, Some(50));
+        assert_eq!(query.date_range().unwrap(), MatchDateRange::default());
+        assert_eq!(history_query("").date_range().unwrap(), MatchDateRange::default());
+    }
+
+    #[test]
+    fn date_filter_includes_the_whole_end_date() {
+        let range = history_query("?from=2024-02-29&to=2024-02-29").date_range().unwrap();
+        assert_eq!(range.from.unwrap().to_string(), "2024-02-29 00:00:00");
+        assert_eq!(range.to_exclusive.unwrap().to_string(), "2024-03-01 00:00:00");
+
+        let range = history_query("?to=2025-12-31").date_range().unwrap();
+        assert_eq!(range.from, None);
+        assert_eq!(range.to_exclusive.unwrap().to_string(), "2026-01-01 00:00:00");
+
+        let range = history_query("?from=2026-09-01").date_range().unwrap();
+        assert_eq!(range.from.unwrap().to_string(), "2026-09-01 00:00:00");
+        assert_eq!(range.to_exclusive, None);
+    }
+
+    #[test]
+    fn date_filter_rejects_invalid_or_reversed_dates() {
+        for query in [
+            "?from=2026-02-29",
+            "?to=2026-09-31",
+            "?from=2026-9-01",
+            "?to=2026-09-1",
+            "?from=invalid",
+            "?to=",
+            "?from=2026-09-01T00:00:00Z",
+            "?from=2026-09-10&to=2026-09-01",
+        ] {
+            assert!(history_query(query).date_range().is_err(), "{query}");
+        }
+    }
 
     #[tokio::test]
     async fn get_player_history_platform_pc() {

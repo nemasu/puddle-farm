@@ -2,13 +2,13 @@
   margin: 0;
 }
 .settings :global(.MuiPaper-root) {
-  border: 3px solid #111;
-  box-shadow: 6px 6px var(--cyan);
+  border: 3px solid var(--frame);
+  box-shadow: 6px 6px var(--cyan-shadow);
   margin: 0 0 28px;
   padding: 24px;
 }
 .settings :global(.MuiPaper-root):nth-child(even) {
-  box-shadow: 6px 6px var(--red);
+  box-shadow: 6px 6px var(--red-shadow);
 }
 .settings h1,
 .settings h2 {
@@ -17,16 +17,16 @@
   margin-bottom: 20px;
 }
 .settings select {
-  border: 2px solid #111;
+  border: 2px solid var(--frame);
   border-radius: 0;
-  background: white;
-  color: #111;
+  background: var(--surface);
+  color: var(--ink);
 }
 .policyPaper {
-  border: 3px solid #111;
-  box-shadow: 6px 6px var(--cyan);
+  border: 3px solid var(--frame);
+  box-shadow: 6px 6px var(--cyan-shadow);
   padding: 26px;
-  background: white;
+  background: var(--surface);
 }
 .policyPaper > div {
   margin: 0;

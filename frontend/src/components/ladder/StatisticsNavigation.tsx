@@ -8,14 +8,13 @@ export function StatisticsNavigation({
   current,
 }: {
   language: Language;
-  current: "stats" | "popularity" | "matchup" | "distribution";
+  current: "popularity" | "matchup" | "distribution";
 }) {
   const messages = getMessages(language).stats;
   return (
     <nav className={styles.routeTabs} aria-label={messages.title}>
       {(
         [
-          ["stats", messages.activity],
           ["popularity", messages.popularity],
           ["matchup", messages.matchup],
           ["distribution", messages.distribution],

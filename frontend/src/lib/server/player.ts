@@ -10,7 +10,7 @@ import type {
 import type { Matchups } from "../../interfaces/PlayerMatchups";
 import type { Pagination } from "../pagination";
 import { buildPlayerHistory, historyRequest, normalizePlayer } from "../player";
-import { readApiResponse, readJson } from "./api";
+import { fetchApi, readApiResponse, readJson } from "./api";
 
 export const getPlayer = cache(async (id: bigint) =>
   normalizePlayer(await readJson<PlayerResponse>(`/player/${id}`)),
@@ -44,6 +44,22 @@ export async function getPlayerComment(id: bigint): Promise<string | null> {
     return null;
   }
 }
+
+export const getPlayerAvatar = cache(
+  async (id: bigint): Promise<string | null> => {
+    try {
+      const response = await fetchApi(`/avatar/${id}`);
+      if (!response.ok || response.headers.get("content-type") !== "image/png")
+        return null;
+      const image = Buffer.from(await response.arrayBuffer());
+      return image.length
+        ? `data:image/png;base64,${image.toString("base64")}`
+        : null;
+    } catch {
+      return null;
+    }
+  },
+);
 
 export async function getPlayerChartData(
   id: bigint,

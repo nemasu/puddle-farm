@@ -1,0 +1,9 @@
+{
+  "name": "@puddle-farm/svg-chart",
+  "version": "0.1.0",
+  "private": true,
+  "exports": "./index.tsx",
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}

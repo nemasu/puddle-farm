@@ -1,10 +1,13 @@
 export const SITE_COOKIES = {
   language: "ggst-language",
   design: "ggst-design",
+  ladderTheme: "ggst-ladder-theme",
 } as const;
 
 export type Language = "en" | "ko" | "ja";
 export type Design = "classic" | "ladder";
+export const LADDER_THEMES = ["auto", "light", "dark"] as const;
+export type LadderTheme = (typeof LADDER_THEMES)[number];
 export type SitePreferences = {
   language: Language;
   designPreference: Design;
@@ -18,6 +21,10 @@ export function parseLanguage(value: unknown): Language | null {
 
 export function parseDesignPreference(value: unknown): Design | null {
   return value === "classic" || value === "ladder" ? value : null;
+}
+
+export function parseLadderTheme(value: unknown): LadderTheme | null {
+  return LADDER_THEMES.find((theme) => theme === value) ?? null;
 }
 
 export function parseSitePreferences(
@@ -40,7 +47,7 @@ export function readSitePreferences(
       parseLanguage(get(SITE_COOKIES.language)) ??
       detectBrowserLanguage(acceptLanguage),
     designPreference:
-      parseDesignPreference(get(SITE_COOKIES.design)) ?? "classic",
+      parseDesignPreference(get(SITE_COOKIES.design)) ?? "ladder",
   };
 }
 
@@ -50,7 +57,7 @@ export function resolveDesign({ designPreference }: SitePreferences): Design {
 
 export function activeDesign(preferences: SitePreferences): Design {
   const preferred = resolveDesign(preferences);
-  return AVAILABLE_DESIGNS.includes(preferred) ? preferred : "classic";
+  return AVAILABLE_DESIGNS.includes(preferred) ? preferred : "ladder";
 }
 
 /** Choose the first supported browser language, respecting quality weights. */

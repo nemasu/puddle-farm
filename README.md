@@ -52,7 +52,11 @@ diesel --database-url "${DATABASE_URL}" migration run
 
 `cargo run` to start the server.
 
-`cargo run pull` will run the timed jobs continuously: grab replay, update ratings, update ranking, update redis, etc.
+`cargo run pull` polls replays every two minutes, refreshes leaderboards, and
+schedules hourly and daily statistics. Run the API and puller from the same
+directory so the API can read the session in `token.txt`. Start the Steam desktop
+client before starting the puller. To retry a paused session after maintenance,
+touch `token.txt`. Remove it to have the puller obtain a new session from Steam.
 
 #### Development database (Docker, optional)
 
@@ -73,7 +77,19 @@ To populate the database with dummy data (players, ratings, matches, rankings)
 so the frontend has something to render without running `cargo run pull`, see
 `scripts/seed/README.md`.
 
-`cargo run hourly` runs the hourly jobs once, then exits.
+`cargo run hourly` and `cargo run daily` run the corresponding database-only
+statistics job once. `cargo run -- backfill-hourly-players <days>` repairs
+historical hourly player counts.
+
+#### Player API
+
+`GET /api/player/{player_id}/{char_id}/history` accepts optional inclusive UTC
+dates `from` and `to` in `YYYY-MM-DD` format. Filtering applies before pagination.
+An invalid date or reversed range returns HTTP 400.
+
+The player page reads saved avatars and comments from PostgreSQL. Use **Refresh
+avatar and comment** to fetch them from GGST. Each player can be refreshed once
+every 24 hours, and the previous value is kept if its fetch fails.
 
 To generate a new model.rs:
 

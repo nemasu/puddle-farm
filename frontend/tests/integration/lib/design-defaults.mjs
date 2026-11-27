@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-export async function checkDesignInvitation(browser, { baseURL, prefix, game, design }) {
+export async function checkDesignDefaults(browser, { baseURL, prefix, game, design }) {
   const { call, navigate, evaluate, waitFor } = browser;
   const url = `${baseURL}${prefix}`;
   async function clear(name) {
@@ -16,20 +16,20 @@ export async function checkDesignInvitation(browser, { baseURL, prefix, game, de
   await clear("language");
   await clear("design");
   await language("ko-KR,ja;q=0.8,en;q=0.5");
-  await call("Emulation.setDeviceMetricsOverride", { width: 320, height: 900, deviceScaleFactor: 1, mobile: true });
   await navigate(`${url}/settings`);
-  await waitFor('!!document.querySelector("dialog[open]")');
+  await waitFor(`${documentDesign} === "${design}"`);
   assert.equal(await evaluate('document.documentElement.lang'), "ko");
-  assert.equal(await evaluate(documentDesign), "classic");
-  assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true);
-  assert.ok(await evaluate('document.querySelector("dialog p").textContent.includes("설정")'));
-  await evaluate(`document.querySelector('dialog button[value="${design}"]').click()`);
-  await waitFor(`!document.querySelector("dialog[open]") && ${documentDesign} === "${design}" && document.cookie.includes("${game}-design=${design}")`);
-  assert.equal(await evaluate(`document.cookie.includes("${game}-language=")`), false, "design choice must not pin the detected language");
+  assert.equal(await evaluate('!!document.querySelector("dialog")'), false);
   await language("ja-JP,en;q=0.8");
   await navigate(`${url}/settings`);
-  await waitFor('document.documentElement.lang === "ja"');
-  assert.equal(await evaluate('!!document.querySelector("dialog[open]")'), false);
+  assert.equal(await evaluate('document.documentElement.lang'), "ja");
+  assert.equal(await evaluate(documentDesign), design);
+  for (const saved of ["classic", design, "invalid"]) {
+    await set("design", saved);
+    await navigate(`${url}/settings`);
+    assert.equal(await evaluate(documentDesign), saved === "invalid" ? design : saved);
+    assert.equal(await evaluate('!!document.querySelector("dialog")'), false);
+  }
   await set("language", "en");
   await language("ko-KR");
   await navigate(`${url}/settings`);
@@ -52,20 +52,11 @@ export async function checkDesignInvitation(browser, { baseURL, prefix, game, de
   await clear("design");
   await language("de-DE,fr;q=0.8");
   await navigate(`${url}/settings`);
-  await waitFor('!!document.querySelector("dialog[open]")');
   assert.equal(await evaluate('document.documentElement.lang'), "en");
-  await evaluate('document.querySelector("dialog button[value=classic]").click()');
-  await waitFor(`!document.querySelector("dialog[open]") && document.cookie.includes("${game}-design=classic")`);
-  await navigate(`${url}/settings`);
-  assert.equal(await evaluate('!!document.querySelector("dialog[open]")'), false);
-  await clear("design");
-  await navigate(`${url}/settings`);
-  await waitFor('!!document.querySelector("dialog[open]")');
-  await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
-  await call("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
-  await waitFor(`!document.querySelector("dialog[open]") && document.cookie.includes("${game}-design=classic")`);
+  assert.equal(await evaluate(documentDesign), design);
+  assert.equal(await evaluate('!!document.querySelector("dialog")'), false);
   await set("language", "en");
   await set("design", "classic");
   await call("Network.setExtraHTTPHeaders", { headers: {} });
-  console.log(`${game}: fresh-visit invitation, accept/decline/Escape persistence, browser language and cookie overrides passed.`);
+  console.log(`${game}: default design, saved choices, no invitation, browser language and cookie overrides passed.`);
 }

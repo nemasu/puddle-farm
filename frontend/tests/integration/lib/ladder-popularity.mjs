@@ -15,6 +15,7 @@ export async function checkLadderPopularitySsr({read,state}) {
    assert.deepEqual(overview.map(row=>row.querySelector('b').textContent),['50.00%','30.00%','20.00%']);
    assert.deepEqual(overview.map(row=>row.querySelector('span[aria-hidden] > span').style.width),['100%','60%','40%']);
    assert.ok(document.querySelector('header nav a[href="/popularity"]'));
+   assert.equal(document.querySelector('main nav a[href="/stats"]'),null);
    assert.ok(document.querySelector('[data-pick-overview]').compareDocumentPosition(document.querySelector('#popularity-details')) & 4);
 
    assert.deepEqual(names(document),['Sol','Ky','May']);

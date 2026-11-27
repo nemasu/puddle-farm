@@ -11,27 +11,26 @@ const entries = [
   { id: 9007199254740995n, name: "Other Player", char_short: "SO", rank: 3 },
 ] as RankingEntry[];
 
-it("combines character and case-insensitive name filters while preserving IDs and ranks", () => {
-  const result = filterLegend(entries, { character: "SO", q: " PLAYER " });
+it("filters by character while preserving IDs and ranks", () => {
+  const result = filterLegend(entries, { character: "SO" });
   expect(result.ranks.map((row) => [row.id, row.rank])).toEqual([
     [9007199254740993n, 1],
     [9007199254740995n, 3],
   ]);
-  expect(result.query).toBe("PLAYER");
+  expect(result.character).toBe("SO");
 });
 
-it("matches Unicode player names and handles empty results", () => {
-  expect(filterLegend(entries, { q: "플레이어" }).ranks).toEqual([entries[1]]);
-  expect(
-    filterLegend(entries, { character: "SO", q: "플레이어" }).ranks,
-  ).toEqual([]);
+it("ignores old name search parameters", () => {
+  expect(filterLegend(entries, { q: "missing-player" }).ranks).toEqual(entries);
 });
 
-it("ignores unknown characters, bounds query input, and uses the first query parameter", () => {
-  expect(
-    filterLegend(entries, { character: "unknown", q: ["One", "Other"] }).ranks,
-  ).toEqual([entries[0]]);
-  expect(filterLegend(entries, { q: "x".repeat(1000) }).query.length).toBe(200);
+it("ignores unknown characters and uses the first character parameter", () => {
+  expect(filterLegend(entries, { character: "unknown" }).ranks).toEqual(
+    entries,
+  );
+  expect(filterLegend(entries, { character: ["KY", "SO"] }).ranks).toEqual([
+    entries[1],
+  ]);
 });
 
 it("uses exact character IDs for art and translated names with an unknown-character fallback", () => {

@@ -13,6 +13,7 @@ export async function LadderPageLayout({
   section?:
     | "rankings"
     | "stats"
+    | "activity"
     | "search"
     | "about"
     | "settings"

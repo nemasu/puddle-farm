@@ -1,13 +1,13 @@
 .panel {
-  border: 3px solid #111;
+  border: 3px solid var(--frame);
   padding: 20px;
   margin: 25px 0 30px;
-  background: #fff;
-  box-shadow: 6px 6px var(--cyan);
+  background: var(--surface);
+  box-shadow: 6px 6px var(--cyan-shadow);
   min-width: 0;
 }
 .panel:nth-of-type(even) {
-  box-shadow: 6px 6px var(--red);
+  box-shadow: 6px 6px var(--red-shadow);
 }
 .panel h2 {
   font: 400 1.5rem / 1.3 var(--display);
@@ -18,15 +18,15 @@
   margin: 28px 0 10px;
 }
 .description {
-  color: #666660;
+  color: var(--muted);
   font-size: 0.85rem;
   max-width: 900px;
 }
 .export {
   display: inline-block;
   padding: 8px 15px;
-  background: #111;
-  border: 2px solid #111;
+  background: var(--solid);
+  border: 2px solid var(--frame);
   text-decoration: none;
   font-weight: 800;
   margin: 10px 0;
@@ -45,7 +45,7 @@
 }
 .legend li {
   padding: 4px 10px;
-  border: 1px solid #bdbdb6;
+  border: 1px solid var(--line);
 }
 .scroll {
   position: relative;
@@ -53,7 +53,7 @@
   max-height: 70vh;
   overflow: auto;
   margin-top: 15px;
-  border: 1px solid #bdbdb6;
+  border: 1px solid var(--line);
 }
 .matrix {
   border-collapse: separate;
@@ -68,13 +68,13 @@
   padding: 12px 10px;
   min-width: 85px;
   text-align: center;
-  border-right: 1px solid #bdbdb6;
-  border-bottom: 1px solid #bdbdb6;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 .matrix thead th {
   position: sticky;
   top: 0;
-  background: #111;
+  background: var(--solid);
   color: #fff;
   z-index: 2;
 }
@@ -87,7 +87,7 @@
 .matrix th:first-child {
   position: sticky;
   left: 0;
-  background: #111;
+  background: var(--solid);
   color: #fff;
   z-index: 1;
   min-width: 145px;
@@ -102,7 +102,7 @@
   background: #515151;
 }
 .matrix td:hover {
-  outline: 3px solid #111;
+  outline: 3px solid var(--frame);
   outline-offset: -3px;
 }
 .opponentName {
@@ -112,20 +112,20 @@
   max-width: 110px;
 }
 .favorable {
-  background: #d9f3e7;
-  color: #095233;
+  background: light-dark(#d9f3e7, #173c34);
+  color: light-dark(#095233, #a3ebd0);
 }
 .neutral {
-  background: #fff8d7;
-  color: #614700;
+  background: light-dark(#fff8d7, #423620);
+  color: light-dark(#614700, #ffe6a2);
 }
 .unfavorable {
-  background: #fce1e3;
-  color: #8a1c23;
+  background: light-dark(#fce1e3, #4a262d);
+  color: light-dark(#8a1c23, #ffc1c7);
 }
 .missing {
-  background: #eee;
-  color: #666;
+  background: var(--surface-muted);
+  color: var(--muted);
 }
 .summaryWrap {
   overflow-x: auto;
@@ -140,17 +140,17 @@
 .summary td {
   padding: 10px;
   text-align: right;
-  border-bottom: 1px solid #bdbdb6;
+  border-bottom: 1px solid var(--line);
 }
 .summary th:first-child {
   text-align: left;
 }
 .summary thead {
-  background: #111;
+  background: var(--solid);
   color: #fff;
 }
 .summary tbody tr:nth-child(even) {
-  background: #f1f1ed;
+  background: var(--paper);
 }
 @media (max-width: 560px) {
   .panel {

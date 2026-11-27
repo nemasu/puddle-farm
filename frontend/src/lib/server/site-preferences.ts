@@ -5,7 +5,7 @@ import { cache } from "react";
 import { getMessages } from "../i18n";
 import {
   activeDesign,
-  parseDesignPreference,
+  parseLadderTheme,
   readSitePreferences,
   resolveDesign,
   SITE_COOKIES,
@@ -20,10 +20,10 @@ export const getRequestPresentation = cache(async () => {
   );
   return {
     ...preferences,
-    hasDesignPreference:
-      parseDesignPreference(store.get(SITE_COOKIES.design)?.value) !== null,
     preferredDesign: resolveDesign(preferences),
     design: activeDesign(preferences),
+    ladderTheme:
+      parseLadderTheme(store.get(SITE_COOKIES.ladderTheme)?.value) ?? "auto",
     messages: getMessages(preferences.language),
   };
 });

@@ -7,7 +7,6 @@ import { Credits } from "../Credits";
 import { PlayerLink } from "../classic/PlayerLink";
 import styles from "./about.module.css";
 import shared from "./ladder.module.css";
-import { PlayerWidgets as LadderWidgets } from "./PlayerWidgets";
 
 export function LadderAboutContent({
   supporters,
@@ -32,7 +31,7 @@ export function LadderAboutContent({
             <p>{messages.whatText}</p>
             <p>{messages.disclaimer}</p>
             <a
-              href="https://www.guiltygear.com/en/"
+              href="https://www.guiltygear.com/ggst/en/"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -75,26 +74,24 @@ export function LadderAboutContent({
         ) : !supporters.length ? (
           <p className={shared.note}>{messages.supporterEmpty}</p>
         ) : (
-          <LadderWidgets>
-            <ul>
-              {supporters.map((supporter) => (
-                <li key={supporter.id}>
-                  <PlayerLink playerId={supporter.id}>
-                    {supporter.name}
-                  </PlayerLink>
-                  {supporter.tags?.map((tag) => (
-                    <span
-                      key={tag.tag}
-                      className={styles.tag}
-                      style={JSON.parse(tag.style)}
-                    >
-                      {tag.tag}
-                    </span>
-                  ))}
-                </li>
-              ))}
-            </ul>
-          </LadderWidgets>
+          <ul>
+            {supporters.map((supporter) => (
+              <li key={supporter.id}>
+                <PlayerLink playerId={supporter.id}>
+                  {supporter.name}
+                </PlayerLink>
+                {supporter.tags?.map((tag) => (
+                  <span
+                    key={tag.tag}
+                    className={styles.tag}
+                    style={JSON.parse(tag.style)}
+                  >
+                    {tag.tag}
+                  </span>
+                ))}
+              </li>
+            ))}
+          </ul>
         )}
       </section>
       <section className={styles.supporters} aria-labelledby="credits-title">

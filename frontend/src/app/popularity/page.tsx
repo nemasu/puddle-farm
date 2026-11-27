@@ -27,6 +27,7 @@ import {
 import { readJson } from "../../lib/server/api";
 import { getCharacters } from "../../lib/server/characters";
 import { getRequestPresentation } from "../../lib/server/site-preferences";
+import { localizedMetadata } from "../../lib/server-metadata";
 import { Utils } from "../../utils/Utils";
 
 const classicMetadata: Metadata = {
@@ -36,10 +37,12 @@ const classicMetadata: Metadata = {
 
 export async function generateMetadata(): Promise<Metadata> {
   const presentation = await getRequestPresentation();
-  return getPageCopy<Metadata>(presentation, classicMetadata, (messages) => ({
-    title: `${messages.popularity.title} | Puddle Farm`,
-    description: messages.popularity.description,
-  }));
+  return await localizedMetadata(
+    getPageCopy<Metadata>(presentation, classicMetadata, (messages) => ({
+      title: `${messages.popularity.title} | Puddle Farm`,
+      description: messages.popularity.description,
+    })),
+  );
 }
 
 export default async function PopularityPage({

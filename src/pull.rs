@@ -1,9 +1,9 @@
-use crate::{ggst_api, schema::{self, player_ratings}, CHAR_NAMES};
+use crate::{ggst_api, schema::player_ratings};
 
 use bb8_redis::redis;
 use diesel::prelude::*;
 use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::time;
 use tracing::{debug, error, info, warn};
 
@@ -15,18 +15,17 @@ use crate::models::*;
 
 use diesel_async::scoped_futures::ScopedFutureExt;
 
-use diesel::sql_types::{BigInt, Integer};
-
 #[derive(Debug)]
 enum ReplayPullError {
-    Pull(String),
+    Transient(String),
+    Session(String),
     Database(diesel::result::Error),
 }
 
 impl std::fmt::Display for ReplayPullError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Pull(message) => formatter.write_str(message),
+            Self::Transient(message) | Self::Session(message) => formatter.write_str(message),
             Self::Database(error) => error.fmt(formatter),
         }
     }
@@ -45,891 +44,495 @@ define_sql_function! {
 }
 
 pub const ONE_MINUTE: u64 = 1 * 60;
+const REPLAY_PULL_INTERVAL_SECONDS: i64 = (ONE_MINUTE * 2) as i64;
+const REPLAY_PULL_STARTUP_MINIMUM_AGE_SECONDS: i64 = 100;
+
+fn initial_replay_pull_is_due(current_time: i64, last_successful_pull: i64) -> bool {
+    current_time >= last_successful_pull.saturating_add(REPLAY_PULL_STARTUP_MINIMUM_AGE_SECONDS)
+}
+
+#[cfg(test)]
+mod replay_schedule_tests {
+    use super::{
+        REPLAY_PULL_STARTUP_MINIMUM_AGE_SECONDS, ReplayStopReason, ggst_api,
+        initial_replay_pull_is_due, replay_page_stop_reason,
+    };
+
+    #[test]
+    fn leaderboard_cadence_survives_restarts_and_handles_missing_timestamps() {
+        use chrono::{Duration, NaiveDate};
+        let current = NaiveDate::from_ymd_opt(2026, 9, 7)
+            .unwrap()
+            .and_hms_opt(11, 0, 0)
+            .unwrap();
+        for interval in [Duration::hours(1), Duration::days(1)] {
+            assert!(super::leaderboard_is_due(None, current, interval));
+            assert!(super::leaderboard_is_due(
+                Some("invalid"),
+                current,
+                interval
+            ));
+            let due = (current - interval)
+                .format(crate::imdb::UPDATE_TIMESTAMP_FORMAT)
+                .to_string();
+            assert!(super::leaderboard_is_due(Some(&due), current, interval));
+            assert!(!super::leaderboard_is_due(
+                Some(&due),
+                current - Duration::seconds(1),
+                interval
+            ));
+            assert!(!super::leaderboard_is_due(
+                Some("2026-09-08 11:00:00"),
+                current,
+                interval
+            ));
+        }
+    }
+
+    #[test]
+    fn startup_skips_until_the_last_success_is_one_hundred_seconds_old() {
+        assert!(!initial_replay_pull_is_due(
+            REPLAY_PULL_STARTUP_MINIMUM_AGE_SECONDS - 1,
+            0
+        ));
+        assert!(initial_replay_pull_is_due(
+            REPLAY_PULL_STARTUP_MINIMUM_AGE_SECONDS,
+            0
+        ));
+    }
+
+    #[test]
+    fn a_future_heartbeat_is_not_due() {
+        assert!(!initial_replay_pull_is_due(0, 1));
+    }
+
+    #[test]
+    fn short_replay_page_stops_at_the_end_of_the_listing() {
+        assert_eq!(
+            replay_page_stop_reason(1, 1, 1),
+            Some(ReplayStopReason::ShortPage)
+        );
+    }
+
+    #[test]
+    fn fully_known_replay_page_stops_after_catching_up() {
+        assert_eq!(
+            replay_page_stop_reason(ggst_api::REPLAYS_PER_PAGE, 127, 127),
+            Some(ReplayStopReason::CaughtUp)
+        );
+    }
+
+    #[test]
+    fn partially_known_replay_page_keeps_catching_up() {
+        assert_eq!(
+            replay_page_stop_reason(ggst_api::REPLAYS_PER_PAGE, 127, 126),
+            None
+        );
+    }
+}
+
+// Safety cap on replay pages fetched in one cycle (30 pages of 127 replays,
+// roughly half an hour of games at typical rates). Steady state stops after a
+// page or two once a fully-known page is reached, so the cap only bounds
+// catch-up depth after downtime and bootstrap cost on an empty database.
+// Catch-up failures past page 0 degrade to a partial fetch instead of a
+// failed cycle.
+const MAX_REPLAY_PAGES: usize = 30;
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ReplayStopReason {
+    ShortPage,
+    CaughtUp,
+    PageLimit,
+    PartialError,
+}
+
+impl ReplayStopReason {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::ShortPage => "short_page",
+            Self::CaughtUp => "caught_up",
+            Self::PageLimit => "page_limit",
+            Self::PartialError => "partial_error",
+        }
+    }
+}
+
+#[derive(Debug)]
+struct ReplayPullStats {
+    pages: usize,
+    entries: usize,
+    known: usize,
+    new_matches: usize,
+    stop_reason: ReplayStopReason,
+    elapsed: Duration,
+    newest: Option<NaiveDateTime>,
+    oldest: Option<NaiveDateTime>,
+}
+
+fn replay_page_stop_reason(
+    page_len: usize,
+    checked: i64,
+    existing: i64,
+) -> Option<ReplayStopReason> {
+    if page_len < ggst_api::REPLAYS_PER_PAGE {
+        Some(ReplayStopReason::ShortPage)
+    } else if checked > 0 && existing == checked {
+        Some(ReplayStopReason::CaughtUp)
+    } else {
+        None
+    }
+}
 
 //TODO move the db stuff from this file into db.rs and imdb.rs
 
 pub async fn pull_and_update_continuous(state: crate::AppState) {
-
-    //check for token.txt and set TOKEN if it exists
-    {
-        use std::fs;
-        if let Ok(token) = fs::read_to_string("token.txt") {
-            let mut token_lock = ggst_api::TOKEN.lock().await;
-            *token_lock = Some(token.trim().to_string());
-            info!("Loaded API token from token.txt");
-        } else {
-            warn!("token.txt not found, trying to initialize with steam authentication");
-        }
-    }
-    
-    // Processing loop
-    let processing_state = state.clone();
+    // Refresh authenticated leaderboards independently of replay polling.
+    let leaderboard_state = state.clone();
     let processing_task = tokio::spawn(async move {
-        let mut interval = time::interval(Duration::from_secs(ONE_MINUTE - 10));
-
+        let mut interval = time::interval(Duration::from_secs(ONE_MINUTE));
+        interval.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
         loop {
             interval.tick().await;
-
-            info!("Processing");
-
-            let mut connection = processing_state.db_pool.get().await.unwrap();
-            let mut redis_connection = processing_state.redis_pool.get().await.unwrap();
-
-            //Get last_update_hourly from redis
-            let last_update_hourly: Result<String, redis::RedisError> = redis::cmd("GET")
-                .arg("last_update_hourly")
-                .query_async(&mut *redis_connection)
-                .await;
-
-            let last_update_hourly = match last_update_hourly {
-                Ok(s) => s,
-                Err(_) => {
-                    //If last_update_hourly doesn't exist, initialize to now minus 2 hours
-                    chrono::DateTime::from_timestamp(
-                        chrono::Utc::now().naive_utc().and_utc().timestamp() - (2 * 60 * 60),
-                        0,
-                    )
-                    .unwrap()
-                    .naive_utc()
-                    .to_string()
-                }
-            };
-
-            //Parse last_update_hourly
-            let last_update_hourly =
-                NaiveDateTime::parse_from_str(&last_update_hourly, "%Y-%m-%d %H:%M:%S").unwrap();
-
-            //Only do this if "last_update_hourly" from redis is more than an hour ago
-            if last_update_hourly < Utc::now().naive_utc() - chrono::Duration::hours(1) {
-                info!("Hourly update");
-                if let Err(e) = connection
-                    .transaction::<_, diesel::result::Error, _>(|conn| {
-                        async move {
-                            do_hourly_update(conn, &mut redis_connection).await.unwrap();
-                            Ok(())
-                        }
-                        .scope_boxed()
-                    })
-                    .await
-                {
-                    error!("Hourly update failed: {e}");
-                } else {
-                    info!("Hourly update - Done");
-                }
+            if let Err(error) = refresh_due_leaderboards(&leaderboard_state).await {
+                error!(%error, "Leaderboard update failed");
             }
-
-            let mut redis_connection = processing_state.redis_pool.get().await.unwrap();
-
-            //Get last_update_daily from redis
-            let last_update_daily: Result<String, redis::RedisError> = redis::cmd("GET")
-                .arg("last_update_daily")
-                .query_async(&mut *redis_connection)
-                .await;
-
-            let last_update_daily = match last_update_daily {
-                Ok(s) => s,
-                Err(_) => {
-                    //If last_update_daily doesn't exist, initialize to now minus 2 days
-                    chrono::DateTime::from_timestamp(
-                        chrono::Utc::now().naive_utc().and_utc().timestamp() - 172800,
-                        0,
-                    )
-                    .unwrap()
-                    .naive_utc()
-                    .to_string()
-                }
-            };
-
-            //Parse last_update_daily
-            let last_update_daily =
-                NaiveDateTime::parse_from_str(&last_update_daily, "%Y-%m-%d %H:%M:%S").unwrap();
-
-            if last_update_daily < Utc::now().naive_utc() - chrono::Duration::days(1) {
-                info!("Daily update");
-                if let Err(e) = connection
-                    .transaction::<_, diesel::result::Error, _>(|conn| {
-                        async move {
-                            do_daily_update(conn, &mut redis_connection).await.unwrap();
-                            Ok(())
-                        }
-                        .scope_boxed()
-                    })
-                    .await
-                {
-                    error!("Daily update failed: {e}");
-                } else {
-                    info!("Daily update - Done");
-                }
-            };
-
-            info!("Processing - done");
         }
     });
 
-    // Replay pulling loop
+    // Replay pulling loop. At a two-minute cadence, the windowed
+    // catch-up fetches however many pages accumulated since the last cycle.
     let pull_state = state.clone();
     let pull_task = tokio::spawn(async move {
-        let mut interval = time::interval(Duration::from_secs(ONE_MINUTE));
+        let mut interval = time::interval(Duration::from_secs(REPLAY_PULL_INTERVAL_SECONDS as u64));
+        interval.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
+        let mut check_startup_heartbeat = true;
 
         loop {
             interval.tick().await;
 
-            info!("Replay pull");
+            let mut redis_connection = match pull_state.redis_pool.get().await {
+                Ok(connection) => connection,
+                Err(error) => {
+                    error!(%error, "Could not get a Redis connection for replay ingestion");
+                    continue;
+                }
+            };
+            if check_startup_heartbeat {
+                check_startup_heartbeat = false;
+                if let Ok(last_successful_pull) =
+                    crate::imdb::get_last_successful_replay_pull(&mut redis_connection).await
+                    && !initial_replay_pull_is_due(Utc::now().timestamp(), last_successful_pull)
+                {
+                    debug!(
+                        last_successful_pull,
+                        "Initial replay pull skipped because the last success was less than 100 seconds ago"
+                    );
+                    continue;
+                }
+            }
 
-            let mut connection = pull_state.db_pool.get().await.unwrap();
-            let mut redis_connection = pull_state.redis_pool.get().await.unwrap();
+            let token = match ggst_api::get_token(true).await {
+                Ok(token) => token,
+                Err(error) => {
+                    error!("Could not get a GGST API session: {error}");
+                    continue;
+                }
+            };
+
+            if ggst_api::session_is_blocked(&token).await {
+                continue;
+            }
+
+            debug!("Replay pull");
+
+            let mut connection = match pull_state.db_pool.get().await {
+                Ok(connection) => connection,
+                Err(error) => {
+                    error!(%error, "Could not get a database connection for replay ingestion");
+                    continue;
+                }
+            };
+            let request_token = token.clone();
 
             let pull_result = connection
                 .transaction::<_, ReplayPullError, _>(|conn| {
-                    async move {
-                        let new_games = grab_games(conn, &mut redis_connection)
-                            .await
-                            .map_err(ReplayPullError::Pull)?;
-                        info!("New games: {:?}", new_games.len());
-                        Ok(())
-                    }
-                    .scope_boxed()
+                    async move { grab_games(conn, &mut redis_connection, &request_token).await }
+                        .scope_boxed()
                 })
                 .await;
 
             match pull_result {
-                Ok(()) => match pull_state.redis_pool.get().await {
+                Ok(stats) => match pull_state.redis_pool.get().await {
                     Ok(mut heartbeat_connection) => {
-                        if let Err(error) = crate::imdb::set_last_successful_replay_pull(
-                            &mut heartbeat_connection,
-                        )
-                        .await
+                        if let Err(error) =
+                            crate::imdb::set_last_successful_replay_pull(&mut heartbeat_connection)
+                                .await
                         {
                             error!(
                                 "Replay pull succeeded but its heartbeat could not be recorded: {error}"
                             );
                         } else {
-                            info!("Replay pull - Done");
+                            log_replay_pull(&stats);
                         }
                     }
                     Err(error) => error!(
                         "Replay pull succeeded but no Redis connection was available to record its heartbeat: {error}"
                     ),
                 },
-                Err(error) => error!("Replay pull failed: {error}"),
+                Err(ReplayPullError::Session(error)) => {
+                    tracing::error!(
+                        error = %error,
+                        "GGST replay pull stopped until a new API session is available"
+                    );
+                    ggst_api::block_session(&token, &error).await;
+                }
+                Err(error) => {
+                    error!("Replay pull failed; the current session will be retried: {error}");
+                }
             }
         }
     });
 
+    let stats_task = tokio::spawn(crate::stats::run_scheduled(state));
     tokio::select! {
+        _ = stats_task => {},
         _ = processing_task => {},
         _ = pull_task => {},
     }
 }
 
-pub async fn do_hourly_update_once(state: crate::AppState) {
-    let mut connection = state.db_pool.get().await.unwrap();
-    let mut redis_connection = state.redis_pool.get().await.unwrap();
-
-    connection
-        .transaction::<_, diesel::result::Error, _>(|conn| {
-            async move {
-                do_hourly_update(conn, &mut redis_connection).await.unwrap();
-                Ok(())
-            }
-            .scope_boxed()
+fn log_replay_pull(stats: &ReplayPullStats) {
+    let newest = stats
+        .newest
+        .map(|timestamp| {
+            timestamp
+                .and_utc()
+                .to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
         })
-        .await
-        .unwrap();
-}
-
-pub async fn do_daily_update_once(state: crate::AppState) {
-    let mut connection = state.db_pool.get().await.unwrap();
-    let mut redis_connection = state.redis_pool.get().await.unwrap();
-
-    connection
-        .transaction::<_, diesel::result::Error, _>(|conn| {
-            async move {
-                do_daily_update(conn, &mut redis_connection).await.unwrap();
-                Ok(())
-            }
-            .scope_boxed()
+        .unwrap_or_else(|| "n/a".into());
+    let newest_age_seconds = stats
+        .newest
+        .map(|timestamp| {
+            Utc::now()
+                .timestamp()
+                .saturating_sub(timestamp.and_utc().timestamp())
+                .max(0)
+                .to_string()
         })
-        .await
-        .unwrap();
-}
+        .unwrap_or_else(|| "n/a".into());
+    let span_minutes = stats
+        .newest
+        .zip(stats.oldest)
+        .map(|(newest, oldest)| newest.signed_duration_since(oldest).num_minutes().max(0))
+        .unwrap_or(0);
 
-async fn do_hourly_update(
-    conn: &mut crate::Connection<'_>,
-    redis_connection: &mut crate::RedisConnection<'_>,
-) -> Result<(), String> {
-    if let Err(e) = sync_legend_leaderboard(redis_connection).await {
-        error!("sync_legend_leaderboard failed: {e}");
-    }
-
-    if let Err(e) = update_stats(conn, redis_connection).await {
-        error!("update_stats failed: {e}");
-    }
-
-    //Now
-    let last_update =
-        chrono::DateTime::from_timestamp(chrono::Utc::now().naive_utc().and_utc().timestamp(), 0)
-            .unwrap()
-            .naive_utc()
-            .to_string();
-
-    redis::cmd("SET")
-        .arg("last_update_hourly")
-        .arg(last_update)
-        .query_async::<String>(&mut **redis_connection)
-        .await
-        .expect("Error setting last_update_hourly");
-    Ok(())
-}
-
-async fn do_daily_update(
-    conn: &mut crate::Connection<'_>,
-    redis_connection: &mut crate::RedisConnection<'_>,
-) -> Result<(), String> {
-
-    if let Err(e) = sync_global_leaderboards(redis_connection).await {
-        error!("sync_global_leaderboards failed: {e}");
-    }
-
-    if let Err(e) = update_popularity(conn, redis_connection).await {
-        error!("update_popularity failed: {e}");
-    }
-
-    if let Err(e) = update_matchups(conn, redis_connection).await {
-        error!("update_matchups failed: {e}");
-    }
-
-    if let Err(e) = update_distribution(conn, redis_connection).await {
-        error!("update_distribution failed: {e}");
-    }
-
-    //Now
-    let last_update =
-        chrono::DateTime::from_timestamp(chrono::Utc::now().naive_utc().and_utc().timestamp(), 0)
-            .unwrap()
-            .naive_utc()
-            .to_string();
-
-    redis::cmd("SET")
-        .arg("last_update_daily")
-        .arg(last_update)
-        .query_async::<String>(&mut **redis_connection)
-        .await
-        .expect("Error setting last_update_daily");
-
-    Ok(())
-}
-
-#[derive(QueryableByName, serde::Serialize, serde::Deserialize)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct DistributionResult {
-    #[diesel(sql_type = diesel::sql_types::Integer)]
-    pub lower_bound: i32,
-    #[diesel(sql_type = diesel::sql_types::Integer)]
-    pub upper_bound: i32,
-    #[diesel(sql_type = diesel::sql_types::BigInt)]
-    pub count: i64,
-    #[diesel(sql_type = diesel::sql_types::Double)]
-    pub percentage: f64,
-    #[diesel(sql_type = diesel::sql_types::Double)]
-    pub percentile: f64,
-}
-async fn update_distribution(
-    conn: &mut crate::Connection<'_>,
-    redis_connection: &mut crate::RedisConnection<'_>,
-) -> Result<(), String> {
-    info!("Updating distribution");
-
-    let distribution_results = diesel::sql_query(
-        "
-        WITH buckets AS (
-            SELECT
-              unnest(ARRAY[-10000000, 1,    1000, 2000, 3000, 4200, 5400, 6600, 8800,  11000, 13200, 15600, 18000, 20400, 24400, 28400, 32400, 36600, 40800, 10000000, 10001600, 10001700, 10001800]) AS lower_bound,
-              unnest(ARRAY[1, 1000, 2000, 3000, 4200, 5400, 6600, 8800, 11000, 13200, 15600, 18000, 20400, 24400, 28400, 32400, 36600, 40800, 10000000, 10001600, 10001700, 10001800, 200000000]) AS upper_bound
-        ),
-        bucket_counts AS (  -- CTE to count values in each bucket
-            SELECT 
-                b.lower_bound, 
-                b.upper_bound, 
-                count(t.value) AS bucket_count
-            FROM player_ratings t
-            LEFT JOIN buckets b ON t.value >= b.lower_bound AND t.value < b.upper_bound
-            GROUP BY b.lower_bound, b.upper_bound
-        ),
-        percentiles AS ( -- CTE to calculate cumulative percentage (excluding placement from percentile)
-            SELECT 
-                lower_bound,
-                upper_bound,
-                bucket_count,
-                SUM(bucket_count) OVER (ORDER BY lower_bound) as cumulative_sum,
-                SUM(bucket_count) OVER () as total_count,
-                SUM(CASE WHEN upper_bound != 1 THEN bucket_count ELSE 0 END) OVER (ORDER BY lower_bound) as cumulative_sum_ranked_only,
-                SUM(bucket_count) FILTER (WHERE upper_bound != 1) OVER () as total_count_excluding_placement
-            FROM bucket_counts        
-        )
-        SELECT 
-            p.lower_bound,
-            p.upper_bound,
-            p.bucket_count AS count,
-            CASE 
-                WHEN p.upper_bound = 1 THEN CAST(ROUND((p.bucket_count * 100.0 / p.total_count), 2) AS FLOAT)  -- Placement percentage includes all players
-                ELSE CAST(ROUND((p.bucket_count * 100.0 / p.total_count_excluding_placement), 2) AS FLOAT)  -- Ranked percentage excludes placement
-            END AS percentage,
-            CASE 
-                WHEN p.upper_bound = 1 THEN 0.0  -- Set percentile to 0 for placement
-                ELSE CAST(ROUND((100.0 - ((p.cumulative_sum_ranked_only - p.bucket_count) * 100.0 / p.total_count_excluding_placement)), 2) AS FLOAT)
-            END AS percentile
-        FROM percentiles p
-        ORDER BY p.lower_bound;
-        ",
+    info!(
+        pages = stats.pages,
+        entries = stats.entries,
+        known = stats.known,
+        new_matches = stats.new_matches,
+        stop_reason = stats.stop_reason.as_str(),
+        elapsed_ms = stats.elapsed.as_millis() as u64,
+        newest = %newest,
+        newest_age_seconds = %newest_age_seconds,
+        span_minutes,
+        "GGST replay pull completed"
     );
-
-    let distribution_results = distribution_results
-        .get_results::<DistributionResult>(conn)
-        .await
-        .unwrap();
-
-    redis::cmd("SET")
-        .arg("distribution_rating")
-        .arg(serde_json::to_string(&distribution_results).unwrap())
-        .query_async::<String>(&mut **redis_connection)
-        .await
-        .expect("Error setting distribution");
-
-    info!("Updating distribution - Done");
-    Ok(())
 }
 
-#[derive(QueryableByName, serde::Serialize, serde::Deserialize)]
-pub struct Matchup {
-    #[diesel(sql_type = diesel::sql_types::SmallInt)]
-    pub opponent_char: i16,
-    #[diesel(sql_type = diesel::sql_types::BigInt)]
-    pub wins: i64,
-    #[diesel(sql_type = diesel::sql_types::BigInt)]
-    pub total_games: i64,
+fn leaderboard_is_due(
+    last_update: Option<&str>,
+    current_time: NaiveDateTime,
+    interval: chrono::Duration,
+) -> bool {
+    last_update
+        .and_then(|value| {
+            NaiveDateTime::parse_from_str(value, crate::imdb::UPDATE_TIMESTAMP_FORMAT).ok()
+        })
+        .is_none_or(|last| current_time >= last + interval)
 }
-async fn update_matchups(
-    conn: &mut crate::Connection<'_>,
-    redis_connection: &mut crate::RedisConnection<'_>,
-) -> Result<(), String> {
-    info!("Updating matchups");
 
-    {
-        let mut all_characters: std::collections::HashMap<i16, Vec<Matchup>> =
-            std::collections::HashMap::new();
+#[derive(Default, serde::Serialize, serde::Deserialize)]
+struct LeaderboardRetry {
+    failures: u32,
+    retry_at: i64,
+}
 
-        for c in 0..CHAR_NAMES.len() {
-            let results = diesel::sql_query(
-                "
-              SELECT 
-                  opponent_char,
-                  SUM(CASE 
-                      WHEN (position = 'a' AND winner = 1) OR (position = 'b' AND winner = 2)
-                      THEN 1 
-                      ELSE 0 
-                  END) as wins,
-                  COUNT(*) as total_games
-              FROM (
-                  SELECT 
-                      char_b as opponent_char, 
-                      winner,
-                      'a' as position
-                  FROM games
-                  WHERE char_a = $1
-                  AND timestamp > now() - interval '1 month'
-                  AND game_floor = 0  -- Only ranked matches
-                  AND value_a > 0
-                  AND value_b > 0
-                  UNION ALL
-                  SELECT 
-                      char_a as opponent_char, 
-                      winner,
-                      'b' as position
-                  FROM games
-                  WHERE char_b = $1
-                  AND timestamp > now() - interval '1 month'
-                  AND game_floor = 0  -- Only ranked matches
-                  AND value_a > 0
-                  AND value_b > 0
-              ) as combined_results
-              GROUP BY opponent_char
-              ORDER BY opponent_char;
-              ",
-            );
-            let results: Vec<Matchup> = results
-                .bind::<Integer, _>(i32::try_from(c).unwrap())
-                .get_results(conn)
-                .await
-                .unwrap();
-
-            all_characters.insert(i16::try_from(c).unwrap(), results);
-        }
-
-        for (char_id, matchups) in all_characters {
-            let char_id = char_id as usize;
-
-            redis::cmd("SET")
-                .arg(format!("matchup_{}", char_id))
-                .arg(serde_json::to_string(&matchups).unwrap())
-                .query_async::<String>(&mut **redis_connection)
-                .await
-                .expect("Error setting matchup");
+impl LeaderboardRetry {
+    fn failed(&self, current_time: i64) -> Self {
+        // Five minutes, doubling to one hour. Persisted so restarts do not reset it.
+        let delay = (300_i64 * (1_i64 << self.failures.min(4))).min(3600);
+        Self {
+            failures: self.failures.saturating_add(1),
+            retry_at: current_time.saturating_add(delay),
         }
     }
 
-    {
-        let mut all_characters: std::collections::HashMap<i16, Vec<Matchup>> =
-            std::collections::HashMap::new();
-
-        for c in 0..CHAR_NAMES.len() {
-            let results = diesel::sql_query(
-                "
-            SELECT 
-                opponent_char,
-                SUM(CASE 
-                    WHEN (position = 'a' AND winner = 1) OR (position = 'b' AND winner = 2)
-                    THEN 1 
-                    ELSE 0 
-                END) as wins,
-                COUNT(*) as total_games
-            FROM (
-                SELECT 
-                    char_b as opponent_char, 
-                    winner,
-                    'a' as position
-                FROM games
-                WHERE char_a = $1
-                AND timestamp > now() - interval '1 month'
-                AND game_floor = 0  -- Only ranked matches
-                AND value_a >= 10001600
-                AND value_b >= 10001600
-                UNION ALL
-                SELECT
-                    char_a as opponent_char,
-                    winner,
-                    'b' as position
-                FROM games
-                WHERE char_b = $1
-                AND timestamp > now() - interval '1 month'
-                AND game_floor = 0  -- Only ranked matches
-                AND value_a >= 10001600
-                AND value_b >= 10001600
-            ) as combined_results
-            GROUP BY opponent_char
-            ORDER BY opponent_char;
-            ",
-            );
-            let results: Vec<Matchup> = results
-                .bind::<Integer, _>(i32::try_from(c).unwrap())
-                .get_results(conn)
-                .await
-                .unwrap();
-
-            all_characters.insert(i16::try_from(c).unwrap(), results);
-        }
-
-        for (char_id, matchups) in all_characters {
-            let char_id = char_id as usize;
-
-            redis::cmd("SET")
-                .arg(format!("matchup_vanq_{}", char_id))
-                .arg(serde_json::to_string(&matchups).unwrap())
-                .query_async::<String>(&mut **redis_connection)
-                .await
-                .expect("Error setting matchup");
-        }
+    fn ready(&self, current_time: i64) -> bool {
+        current_time >= self.retry_at
     }
-
-    info!("Updating matchups - Done");
-    Ok(())
 }
 
-#[derive(QueryableByName)]
-struct PopularityResult {
-    #[diesel(sql_type = diesel::sql_types::SmallInt)]
-    c: i16,
-    #[diesel(sql_type = diesel::sql_types::BigInt)]
-    count: i64,
+async fn refresh_due_leaderboards(state: &crate::AppState) -> Result<(), String> {
+    refresh_due_leaderboards_with(state, &GameLeaderboards).await
 }
-#[derive(QueryableByName)]
-struct PopularityResultTotal {
-    #[diesel(sql_type = diesel::sql_types::BigInt)]
-    count: i64,
-}
-async fn update_popularity(
-    conn: &mut crate::Connection<'_>,
-    redis_connection: &mut crate::RedisConnection<'_>,
+
+async fn refresh_due_leaderboards_with(
+    state: &crate::AppState,
+    source: &impl LeaderboardSource,
 ) -> Result<(), String> {
-    info!("Updating popularity");
-    //We're using subqueries here, so we need to use sql_query
-
-    //Distinct player + character combination counts
-    let results = diesel::sql_query(
-        "
-        SELECT c, COUNT(id) as count
-        FROM (
-            SELECT g.char_a as c, g.id_a as id
-            FROM games g
-            WHERE g.timestamp > now() - interval '1 month'
-        UNION
-            SELECT g.char_b as c, g.id_b as id
-            FROM games g
-            WHERE g.timestamp > now() - interval '1 month'
-        ) as combined_results
-        GROUP BY c;
-    ",
-    );
-
-    let results: Vec<PopularityResult> =
-        results.get_results::<PopularityResult>(conn).await.unwrap();
-
-    for r in results {
-        let char_id = r.c as usize;
-        let count = r.count;
-
-        redis::cmd("SET")
-            .arg(format!("popularity_per_player_{}", CHAR_NAMES[char_id].0))
-            .arg(count)
-            .query_async::<String>(&mut **redis_connection)
+    let mut redis = state
+        .redis_pool
+        .get()
+        .await
+        .map_err(|error| error.to_string())?;
+    for (key, interval, legend) in [
+        ("last_update_legend", chrono::Duration::hours(1), true),
+        ("last_update_leaderboards", chrono::Duration::days(1), false),
+    ] {
+        let last = crate::imdb::get_last_update(&mut redis, key)
             .await
-            .expect("Error setting popularity per player");
-    }
-
-    //Total distinct player + character combination.
-    let results_total_players = diesel::sql_query(
-        "
-        SELECT COUNT(id) as count
-        FROM (
-            SELECT g.id_a as id
-            FROM games g
-            WHERE g.timestamp > now() - interval '1 month'
-        UNION
-            SELECT g.id_b as id
-            FROM games g
-            WHERE g.timestamp > now() - interval '1 month'
-        ) as combined_results;
-        ",
-    );
-
-    let results_total_players: Vec<PopularityResultTotal> = results_total_players
-        .get_results::<PopularityResultTotal>(conn)
-        .await
-        .unwrap();
-
-    redis::cmd("SET")
-        .arg("popularity_per_player_total")
-        .arg(results_total_players[0].count)
-        .query_async::<String>(&mut **redis_connection)
-        .await
-        .expect("Error setting popularity_total");
-
-    //Total game count per character (no total needed, we can use 'one_month_games' from stats)
-    let results = diesel::sql_query(
-        "
-        SELECT c, COUNT(c) as count
-        FROM (
-            SELECT g.char_a as c
-            FROM games g
-            WHERE g.timestamp > now() - interval '1 month'
-        UNION ALL
-            SELECT g.char_b as c
-            FROM games g
-            WHERE g.timestamp > now() - interval '1 month'
-        ) as combined_results
-        GROUP BY c;
-        ",
-    );
-
-    let results: Vec<PopularityResult> =
-        results.get_results::<PopularityResult>(conn).await.unwrap();
-
-    for r in results {
-        let char_id = r.c as usize;
-        let count = r.count;
-
-        redis::cmd("SET")
-            .arg(format!(
-                "popularity_per_character_{}",
-                CHAR_NAMES[char_id].0
-            ))
-            .arg(count)
-            .query_async::<String>(&mut **redis_connection)
-            .await
-            .expect("Error setting popularity per game");
-    }
-
-    info!("Updating popularity - Done");
-    Ok(())
-}
-
-#[derive(QueryableByName, Queryable)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-struct CountResult {
-    #[diesel(sql_type = BigInt)]
-    count: i64,
-}
-async fn update_stats(
-    conn: &mut crate::Connection<'_>,
-    redis_connection: &mut crate::RedisConnection<'_>,
-) -> Result<(), String> {
-    info!("Updating stats");
-
-    crate::hourly_players::update_current_and_previous(conn)
-        .await
-        .map_err(|error| format!("Error updating hourly player counts: {error}"))?;
-
-    // Get total game count
-    let total_games: i64 = schema::games::table
-        .count()
-        .get_result::<i64>(conn)
-        .await
-        .expect("Error loading games");
-
-    // Get one month game count
-    let one_month_games = schema::games::table
-        .filter(
-            schema::games::timestamp
-                .gt(chrono::Utc::now().naive_utc() - chrono::Duration::days(30)),
-        )
-        .count()
-        .get_result::<i64>(conn)
-        .await
-        .expect("Error loading games");
-
-    // Get one week game count
-    let one_week_games = schema::games::table
-        .filter(
-            schema::games::timestamp.gt(chrono::Utc::now().naive_utc() - chrono::Duration::days(7)),
-        )
-        .count()
-        .get_result::<i64>(conn)
-        .await
-        .expect("Error loading games");
-
-    // Get one day game count
-    let one_day_games = schema::games::table
-        .filter(
-            schema::games::timestamp.gt(chrono::Utc::now().naive_utc() - chrono::Duration::days(1)),
-        )
-        .count()
-        .get_result::<i64>(conn)
-        .await
-        .expect("Error loading games");
-
-    // Get one hour game count
-    let one_hour_games = schema::games::table
-        .filter(
-            schema::games::timestamp
-                .gt(chrono::Utc::now().naive_utc() - chrono::Duration::hours(1)),
-        )
-        .count()
-        .get_result::<i64>(conn)
-        .await
-        .expect("Error loading games");
-
-    // Get total player count
-    let total_players = schema::players::table
-        .count()
-        .get_result::<i64>(conn)
-        .await
-        .expect("Error loading players");
-
-    // Get past month player count
-    let one_month_players = diesel::sql_query(
-        "
-        select count(id)
-        from (
-            select id_a as id
-            from games
-            where timestamp > now() - interval '1 month'
-            union
-            select id_b as id
-            from games
-            where timestamp > now() - interval '1 month'
-        ) as combined_result;
-        ",
-    );
-    let one_month_players = one_month_players
-        .get_results::<CountResult>(conn)
-        .await
-        .unwrap();
-    let one_month_players = one_month_players[0].count;
-
-    // Get past month player count
-    let one_week_players = diesel::sql_query(
-        "
-        select count(id)
-        from (
-            select id_a as id
-            from games
-            where timestamp > now() - interval '1 week'
-            union
-            select id_b as id
-            from games
-            where timestamp > now() - interval '1 week'
-        ) as combined_result;
-        ",
-    );
-    let one_week_players = one_week_players
-        .get_results::<CountResult>(conn)
-        .await
-        .unwrap();
-    let one_week_players = one_week_players[0].count;
-
-    // Get past day player count
-    let one_day_players = diesel::sql_query(
-        "
-        select count(id)
-        from (
-            select id_a as id
-            from games
-            where timestamp > now() - interval '1 day'
-            union
-            select id_b as id
-            from games
-            where timestamp > now() - interval '1 day'
-        ) as combined_result;
-        ",
-    );
-    let one_day_players = one_day_players
-        .get_results::<CountResult>(conn)
-        .await
-        .unwrap();
-    let one_day_players = one_day_players[0].count;
-
-    // Get past hour player count
-    let one_hour_players = diesel::sql_query(
-        "
-        select count(id)
-        from (
-            select id_a as id
-            from games
-            where timestamp > now() - interval '1 hour'
-            union
-            select id_b as id
-            from games
-            where timestamp > now() - interval '1 hour'
-        ) as combined_result;
-        ",
-    );
-    let one_hour_players = one_hour_players
-        .get_results::<CountResult>(conn)
-        .await
-        .unwrap();
-    let one_hour_players = one_hour_players[0].count;
-
-    redis::cmd("SET")
-        .arg("total_games")
-        .arg(total_games)
-        .query_async::<String>(&mut **redis_connection)
-        .await
-        .expect("Error setting total_games");
-
-    redis::cmd("SET")
-        .arg("one_month_games")
-        .arg(one_month_games)
-        .query_async::<String>(&mut **redis_connection)
-        .await
-        .expect("Error setting one_month_games");
-
-    redis::cmd("SET")
-        .arg("one_week_games")
-        .arg(one_week_games)
-        .query_async::<String>(&mut **redis_connection)
-        .await
-        .expect("Error setting one_week_games");
-
-    redis::cmd("SET")
-        .arg("one_day_games")
-        .arg(one_day_games)
-        .query_async::<String>(&mut **redis_connection)
-        .await
-        .expect("Error setting one_day_games");
-
-    redis::cmd("SET")
-        .arg("one_hour_games")
-        .arg(one_hour_games)
-        .query_async::<String>(&mut **redis_connection)
-        .await
-        .expect("Error setting one_hour_games");
-
-    redis::cmd("SET")
-        .arg("total_players")
-        .arg(total_players)
-        .query_async::<String>(&mut **redis_connection)
-        .await
-        .expect("Error setting total_players");
-
-    redis::cmd("SET")
-        .arg("one_month_players")
-        .arg(one_month_players)
-        .query_async::<String>(&mut **redis_connection)
-        .await
-        .expect("Error setting one_month_players");
-
-    redis::cmd("SET")
-        .arg("one_week_players")
-        .arg(one_week_players)
-        .query_async::<String>(&mut **redis_connection)
-        .await
-        .expect("Error setting one_week_players");
-
-    redis::cmd("SET")
-        .arg("one_day_players")
-        .arg(one_day_players)
-        .query_async::<String>(&mut **redis_connection)
-        .await
-        .expect("Error setting one_day_players");
-
-    redis::cmd("SET")
-        .arg("one_hour_players")
-        .arg(one_hour_players)
-        .query_async::<String>(&mut **redis_connection)
-        .await
-        .expect("Error setting one_hour_players");
-
-    info!("Updating stats - Done");
-    Ok(())
-}
-
-async fn sync_legend_leaderboard(
-    redis_connection: &mut crate::RedisConnection<'_>,
-) -> Result<(), String> {
-    use crate::responses::LeaderboardEntry;
-
-    info!("Syncing legend leaderboard");
-
-    match crate::ggst_api::get_rank_match_legend().await {
-        Ok(players) => {
-            info!("Legend: {} players", players.len());
-            let entries: Vec<LeaderboardEntry> =
-                players.into_iter().map(LeaderboardEntry::from).collect();
-            let json = serde_json::to_string(&entries).unwrap();
-            redis::cmd("SET")
-                .arg("leaderboard_legend")
-                .arg(json)
-                .query_async::<String>(&mut **redis_connection)
-                .await
-                .map_err(|e| format!("Redis SET leaderboard_legend failed: {e}"))?;
+            .map_err(|error| error.to_string())?;
+        if !leaderboard_is_due(last.as_deref(), Utc::now().naive_utc(), interval) {
+            continue;
         }
-        Err(e) => error!("sync_legend_leaderboard: legend failed: {e}"),
+        let retry_key = format!("{key}:retry");
+        let encoded: Option<String> = redis::cmd("GET")
+            .arg(&retry_key)
+            .query_async(&mut *redis)
+            .await
+            .map_err(|error| error.to_string())?;
+        let retry: LeaderboardRetry = encoded
+            .as_deref()
+            .map(serde_json::from_str)
+            .transpose()
+            .map_err(|error| format!("Invalid leaderboard retry state: {error}"))?
+            .unwrap_or_default();
+        if !retry.ready(Utc::now().timestamp()) {
+            continue;
+        }
+        // Reserve a retry delay before requests as well, covering a process crash.
+        let next = retry.failed(Utc::now().timestamp());
+        redis::cmd("SET")
+            .arg(&retry_key)
+            .arg(serde_json::to_string(&next).map_err(|error| error.to_string())?)
+            .query_async::<()>(&mut *redis)
+            .await
+            .map_err(|error| error.to_string())?;
+        let result = if legend {
+            fetch_legend_leaderboard(source).await
+        } else {
+            fetch_global_leaderboards(source).await
+        };
+        match result {
+            Ok(snapshot) => {
+                // Publish the entire crawl and its timestamp together. A failed page
+                // leaves every key at the previous successful snapshot.
+                let mut publication = redis::pipe();
+                publication.atomic();
+                for (cache_key, json) in snapshot {
+                    publication.set(cache_key, json).ignore();
+                }
+                publication
+                    .set(key, crate::imdb::update_timestamp())
+                    .ignore()
+                    .del(&retry_key)
+                    .ignore()
+                    .query_async::<()>(&mut *redis)
+                    .await
+                    .map_err(|error| error.to_string())?;
+            }
+            Err(error) => {
+                // Start the delay at completion, even if the crawl exceeded a tick.
+                let next = retry.failed(Utc::now().timestamp());
+                redis::cmd("SET")
+                    .arg(&retry_key)
+                    .arg(serde_json::to_string(&next).map_err(|error| error.to_string())?)
+                    .query_async::<()>(&mut *redis)
+                    .await
+                    .map_err(|error| error.to_string())?;
+                error!(%error, key, retry_at = next.retry_at, "Leaderboard refresh failed; backing off");
+            }
+        }
     }
-
     Ok(())
 }
 
-async fn sync_global_leaderboards(
-    redis_connection: &mut crate::RedisConnection<'_>,
-) -> Result<(), String> {
+type LeaderboardSnapshot = Vec<(String, String)>;
+
+async fn fetch_legend_leaderboard(
+    source: &impl LeaderboardSource,
+) -> Result<LeaderboardSnapshot, String> {
+    let entries: Vec<crate::responses::LeaderboardEntry> = source.legend().await?;
+    Ok(vec![(
+        "leaderboard_legend".to_owned(),
+        serde_json::to_string(&entries).map_err(|error| error.to_string())?,
+    )])
+}
+
+trait LeaderboardSource: Sync {
+    async fn legend(&self) -> Result<Vec<crate::responses::LeaderboardEntry>, String>;
+    async fn mr(
+        &self,
+        page: i64,
+        character: i64,
+    ) -> Result<Vec<crate::responses::LeaderboardEntry>, String>;
+    async fn lp(
+        &self,
+        page: i64,
+        character: i64,
+    ) -> Result<Vec<crate::responses::LeaderboardEntry>, String>;
+    async fn pause(&self) {
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+}
+
+struct GameLeaderboards;
+impl LeaderboardSource for GameLeaderboards {
+    async fn legend(&self) -> Result<Vec<crate::responses::LeaderboardEntry>, String> {
+        Ok(ggst_api::get_rank_match_legend()
+            .await?
+            .into_iter()
+            .map(Into::into)
+            .collect())
+    }
+    async fn mr(
+        &self,
+        page: i64,
+        character: i64,
+    ) -> Result<Vec<crate::responses::LeaderboardEntry>, String> {
+        Ok(ggst_api::get_rank_match_mr(page, character)
+            .await?
+            .into_iter()
+            .map(Into::into)
+            .collect())
+    }
+    async fn lp(
+        &self,
+        page: i64,
+        character: i64,
+    ) -> Result<Vec<crate::responses::LeaderboardEntry>, String> {
+        Ok(ggst_api::get_rank_match_lp(page, character)
+            .await?
+            .into_iter()
+            .map(Into::into)
+            .collect())
+    }
+}
+
+async fn fetch_global_leaderboards(
+    source: &impl LeaderboardSource,
+) -> Result<LeaderboardSnapshot, String> {
     use crate::responses::LeaderboardEntry;
 
     info!("Syncing global leaderboards");
+    let mut snapshot = Vec::new();
 
     let mut mr_all: Vec<LeaderboardEntry> = Vec::new();
     let mut page = 0i64;
     loop {
-        match crate::ggst_api::get_rank_match_mr(page, -1).await {
+        match source.mr(page, -1).await {
             Ok(players) => {
                 let n = players.len();
                 if n == 0 {
@@ -943,23 +546,26 @@ async fn sync_global_leaderboards(
                     break;
                 }
                 page += 1;
-                tokio::time::sleep(Duration::from_millis(100)).await;
+                source.pause().await;
             }
             Err(e) => {
-                error!("sync_global_leaderboards: MR page {page} failed: {e}");
-                break;
+                return Err(format!(
+                    "sync_global_leaderboards: MR page {page} failed: {e}"
+                ));
             }
         }
     }
 
-    let mr_keys: std::collections::HashSet<(String, i64)> =
-        mr_all.iter().map(|e| (e.player_id.clone(), e.char_id)).collect();
+    let mr_keys: std::collections::HashSet<(String, i64)> = mr_all
+        .iter()
+        .map(|e| (e.player_id.clone(), e.char_id))
+        .collect();
     let mr_count = mr_all.len();
 
     let mut lp_filtered: Vec<LeaderboardEntry> = Vec::new();
     let mut page = 0i64;
     loop {
-        match crate::ggst_api::get_rank_match_lp(page, -1).await {
+        match source.lp(page, -1).await {
             Ok(players) => {
                 let n = players.len();
                 if n == 0 {
@@ -973,20 +579,28 @@ async fn sync_global_leaderboards(
                         lp_filtered.push(entry);
                     }
                 }
-                info!("LP: page {page} ({n} entries, {} kept after dedup, {} total)", lp_filtered.len() - before, lp_filtered.len());
+                info!(
+                    "LP: page {page} ({n} entries, {} kept after dedup, {} total)",
+                    lp_filtered.len() - before,
+                    lp_filtered.len()
+                );
                 if n < 20 {
                     info!("LP: partial page, done ({} kept)", lp_filtered.len());
                     break;
                 } else if lp_filtered.len() >= 1000 {
-                    info!("LP: reached 1000 kept entries, stopping ({} total)", lp_filtered.len());
+                    info!(
+                        "LP: reached 1000 kept entries, stopping ({} total)",
+                        lp_filtered.len()
+                    );
                     break;
                 }
                 page += 1;
-                tokio::time::sleep(Duration::from_millis(100)).await;
+                source.pause().await;
             }
             Err(e) => {
-                error!("sync_global_leaderboards: LP page {page} failed: {e}");
-                break;
+                return Err(format!(
+                    "sync_global_leaderboards: LP page {page} failed: {e}"
+                ));
             }
         }
     }
@@ -995,16 +609,16 @@ async fn sync_global_leaderboards(
     let mut combined = mr_all;
     combined.extend(lp_filtered);
 
-    if !combined.is_empty() {
-        info!("Combined leaderboard: {} MR + {} LP = {} total", mr_count, lp_count, combined.len());
-        let json = serde_json::to_string(&combined).unwrap();
-        redis::cmd("SET")
-            .arg("leaderboard_all")
-            .arg(json)
-            .query_async::<String>(&mut **redis_connection)
-            .await
-            .map_err(|e| format!("Redis SET leaderboard_all failed: {e}"))?;
-    }
+    info!(
+        "Combined leaderboard: {} MR + {} LP = {} total",
+        mr_count,
+        lp_count,
+        combined.len()
+    );
+    snapshot.push((
+        "leaderboard_all".to_owned(),
+        serde_json::to_string(&combined).map_err(|error| error.to_string())?,
+    ));
 
     for (char_idx, (char_short, _)) in crate::CHAR_NAMES.iter().enumerate() {
         let char_id = char_idx as i64;
@@ -1012,25 +626,32 @@ async fn sync_global_leaderboards(
         let mut mr_char: Vec<LeaderboardEntry> = Vec::new();
         let mut page = 0i64;
         loop {
-            match crate::ggst_api::get_rank_match_mr(page, char_id).await {
+            match source.mr(page, char_id).await {
                 Ok(players) => {
                     let n = players.len();
                     if n == 0 {
-                        info!("Char {char_short} MR: page {page} empty, done ({} total)", mr_char.len());
+                        info!(
+                            "Char {char_short} MR: page {page} empty, done ({} total)",
+                            mr_char.len()
+                        );
                         break;
                     }
                     mr_char.extend(players.into_iter().map(LeaderboardEntry::from));
-                    info!("Char {char_short} MR: page {page} ({n} entries, {} total)", mr_char.len());
+                    info!(
+                        "Char {char_short} MR: page {page} ({n} entries, {} total)",
+                        mr_char.len()
+                    );
                     if n < 20 || mr_char.len() >= 1000 {
                         info!("Char {char_short} MR: done ({} total)", mr_char.len());
                         break;
                     }
                     page += 1;
-                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    source.pause().await;
                 }
                 Err(e) => {
-                    error!("sync_global_leaderboards: char {char_short} MR page {page} failed: {e}");
-                    break;
+                    return Err(format!(
+                        "sync_global_leaderboards: char {char_short} MR page {page} failed: {e}"
+                    ));
                 }
             }
         }
@@ -1043,11 +664,14 @@ async fn sync_global_leaderboards(
         let mut lp_char: Vec<LeaderboardEntry> = Vec::new();
         let mut page = 0i64;
         loop {
-            match crate::ggst_api::get_rank_match_lp(page, char_id).await {
+            match source.lp(page, char_id).await {
                 Ok(players) => {
                     let n = players.len();
                     if n == 0 {
-                        info!("Char {char_short} LP: page {page} empty, done ({} kept)", lp_char.len());
+                        info!(
+                            "Char {char_short} LP: page {page} empty, done ({} kept)",
+                            lp_char.len()
+                        );
                         break;
                     }
                     let before = lp_char.len();
@@ -1057,17 +681,22 @@ async fn sync_global_leaderboards(
                             lp_char.push(entry);
                         }
                     }
-                    info!("Char {char_short} LP: page {page} ({n} entries, {} kept after dedup, {} total)", lp_char.len() - before, lp_char.len());
+                    info!(
+                        "Char {char_short} LP: page {page} ({n} entries, {} kept after dedup, {} total)",
+                        lp_char.len() - before,
+                        lp_char.len()
+                    );
                     if n < 20 || mr_count + lp_char.len() >= 1000 {
                         info!("Char {char_short} LP: done ({} kept)", lp_char.len());
                         break;
                     }
                     page += 1;
-                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    source.pause().await;
                 }
                 Err(e) => {
-                    error!("sync_global_leaderboards: char {char_short} LP page {page} failed: {e}");
-                    break;
+                    return Err(format!(
+                        "sync_global_leaderboards: char {char_short} LP page {page} failed: {e}"
+                    ));
                 }
             }
         }
@@ -1076,23 +705,17 @@ async fn sync_global_leaderboards(
         combined.extend(lp_char);
         combined.truncate(1000);
 
-        if !combined.is_empty() {
-            let key = format!("leaderboard_char_{}", char_idx);
-            info!("Char {char_short}: storing {} entries as {key}", combined.len());
-            let json = serde_json::to_string(&combined).unwrap();
-            redis::cmd("SET")
-                .arg(&key)
-                .arg(json)
-                .query_async::<String>(&mut **redis_connection)
-                .await
-                .map_err(|e| format!("Redis SET {key} failed: {e}"))?;
-        }
+        let key = format!("leaderboard_char_{}", char_idx);
+        snapshot.push((
+            key,
+            serde_json::to_string(&combined).map_err(|error| error.to_string())?,
+        ));
 
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        source.pause().await;
     }
 
     info!("Syncing global leaderboards - Done");
-    Ok(())
+    Ok(snapshot)
 }
 
 async fn update_player_info(
@@ -1157,32 +780,32 @@ async fn update_player_info(
         .await
         .unwrap();
 
-      //Update player rating
-            insert_into(player_ratings::table)
-          .values(&PlayerRating {
-              id: new_game.id_a,
-              char_id: new_game.char_a,
-              value: new_game.value_a,
-          })
-          .on_conflict((player_ratings::id, player_ratings::char_id))
-          .do_update()
-          .set(player_ratings::value.eq(new_game.value_a))
-          .execute(connection)
-          .await
-          .unwrap();
+    //Update player rating
+    insert_into(player_ratings::table)
+        .values(&PlayerRating {
+            id: new_game.id_a,
+            char_id: new_game.char_a,
+            value: new_game.value_a,
+        })
+        .on_conflict((player_ratings::id, player_ratings::char_id))
+        .do_update()
+        .set(player_ratings::value.eq(new_game.value_a))
+        .execute(connection)
+        .await
+        .unwrap();
 
-      insert_into(player_ratings::table)
-          .values(&PlayerRating {
-              id: new_game.id_b,
-              char_id: new_game.char_b,
-              value: new_game.value_b,
-          })
-          .on_conflict((player_ratings::id, player_ratings::char_id))
-          .do_update()
-          .set(player_ratings::value.eq(new_game.value_b))
-          .execute(connection)
-          .await
-          .unwrap();
+    insert_into(player_ratings::table)
+        .values(&PlayerRating {
+            id: new_game.id_b,
+            char_id: new_game.char_b,
+            value: new_game.value_b,
+        })
+        .on_conflict((player_ratings::id, player_ratings::char_id))
+        .do_update()
+        .set(player_ratings::value.eq(new_game.value_b))
+        .execute(connection)
+        .await
+        .unwrap();
 
     Ok(())
 }
@@ -1190,20 +813,95 @@ async fn update_player_info(
 async fn grab_games(
     connection: &mut AsyncPgConnection,
     redis_connection: &mut crate::RedisConnection<'_>,
-) -> Result<Vec<Game>, String> {
-    info!("Grabbing replays");
+    token: &str,
+) -> Result<ReplayPullStats, ReplayPullError> {
+    let started = Instant::now();
+    debug!("Grabbing replays");
 
-    let replays = ggst_api::get_replays().await;
+    let mut replays = Vec::new();
+    let mut pages_fetched = 0;
+    let mut known = 0;
+    let mut stop_reason = ReplayStopReason::PageLimit;
 
-    let mut replays = match replays {
-        Ok(replays) => replays,
-        Err(e) => {
-            return Err(e);
+    for page in 0..MAX_REPLAY_PAGES {
+        let page_replays = match ggst_api::get_replay_page(token, page).await {
+            Ok(r) => r,
+            Err(e) if page > 0 && !e.blocks_session() => {
+                warn!(
+                    "get_replay_page({page}) failed during catch-up, using the {} replays fetched so far: {e}",
+                    replays.len()
+                );
+                stop_reason = ReplayStopReason::PartialError;
+                break;
+            }
+            Err(e) if e.blocks_session() => return Err(ReplayPullError::Session(e.to_string())),
+            Err(e) => return Err(ReplayPullError::Transient(e.to_string())),
+        };
+
+        pages_fetched += 1;
+        let page_len = page_replays.len();
+
+        // Pagination stops when an entire page already exists in the database
+        // (primary-key lookups), which means this fetch has bridged into the
+        // previous cycle's data. Existence is checked per game rather than by
+        // comparing timestamps: client clocks skew in both directions, so a
+        // single stray timestamp must not end pagination early. A partially
+        // known boundary page keeps paginating one more page.
+        let mut existing_query = games::table
+            .filter(sql::<diesel::sql_types::Bool>("FALSE"))
+            .into_boxed();
+        let mut checked: i64 = 0;
+        for r in &page_replays {
+            let (Ok(ts), Ok(id_a), Ok(id_b)) = (
+                NaiveDateTime::parse_from_str(&r.timestamp, "%Y-%m-%d %H:%M:%S"),
+                r.player1.id.parse::<i64>(),
+                r.player2.id.parse::<i64>(),
+            ) else {
+                continue;
+            };
+            checked += 1;
+            existing_query = existing_query.or_filter(
+                games::timestamp
+                    .eq(ts)
+                    .and(games::id_a.eq(id_a))
+                    .and(games::id_b.eq(id_b)),
+            );
         }
-    };
+        let existing: i64 = if checked > 0 {
+            existing_query.count().get_result(connection).await?
+        } else {
+            0
+        };
+        known += usize::try_from(existing).unwrap_or(0);
+
+        replays.extend(page_replays);
+
+        if let Some(reason) = replay_page_stop_reason(page_len, checked, existing) {
+            stop_reason = reason;
+            break;
+        }
+    }
+
+    if stop_reason == ReplayStopReason::PageLimit {
+        warn!(
+            "Catch-up depth exhausted after {pages_fetched} pages without reaching already-stored games; older games in this window are likely lost"
+        );
+    }
 
     let num_replays = replays.len();
-    info!("Got {num_replays} replays.");
+    debug!("Got {num_replays} replays over {pages_fetched} pages.");
+    let newest = replays
+        .iter()
+        .filter_map(|replay| {
+            NaiveDateTime::parse_from_str(&replay.timestamp, "%Y-%m-%d %H:%M:%S").ok()
+        })
+        .max();
+    let oldest = replays
+        .iter()
+        .filter_map(|replay| {
+            NaiveDateTime::parse_from_str(&replay.timestamp, "%Y-%m-%d %H:%M:%S").ok()
+        })
+        .min();
 
     replays.reverse();
 
@@ -1212,9 +910,27 @@ async fn grab_games(
     //Try to keep order if possible
     let mut seconds_offset = 0;
 
+    // A record that fails to parse here came from a response that already
+    // decrypted and deserialized, so the session is healthy and a new one
+    // cannot fix the record; skip it instead of pausing pulling.
+    macro_rules! field_or_skip {
+        ($parse:expr, $field:literal, $value:expr) => {
+            match $parse {
+                Ok(parsed) => parsed,
+                Err(_) => {
+                    warn!("Skipping replay with invalid {}: {}", $field, $value);
+                    continue;
+                }
+            }
+        };
+    }
+
     for r in replays {
-        let game_timestamp =
-            NaiveDateTime::parse_from_str(&r.timestamp, "%Y-%m-%d %H:%M:%S").unwrap();
+        let game_timestamp = field_or_skip!(
+            NaiveDateTime::parse_from_str(&r.timestamp, "%Y-%m-%d %H:%M:%S"),
+            "timestamp",
+            r.timestamp
+        );
 
         let fixed_timestamp;
 
@@ -1233,16 +949,32 @@ async fn grab_games(
         let new_game = Game {
             timestamp: game_timestamp,
             real_timestamp: fixed_timestamp,
-            id_a: r.player1.id.parse::<i64>().unwrap(),
+            id_a: field_or_skip!(r.player1.id.parse::<i64>(), "player 1 id", r.player1.id),
             name_a: r.player1.name.clone(),
-            char_a: i16::try_from(r.player1_character).ok().unwrap(),
-            platform_a: i16::try_from(r.player1.platform).ok().unwrap(),
-            id_b: r.player2.id.parse::<i64>().unwrap(),
+            char_a: field_or_skip!(
+                i16::try_from(r.player1_character),
+                "player 1 character",
+                r.player1_character
+            ),
+            platform_a: field_or_skip!(
+                i16::try_from(r.player1.platform),
+                "player 1 platform",
+                r.player1.platform
+            ),
+            id_b: field_or_skip!(r.player2.id.parse::<i64>(), "player 2 id", r.player2.id),
             name_b: r.player2.name.clone(),
-            char_b: i16::try_from(r.player2_character).ok().unwrap(),
-            platform_b: i16::try_from(r.player2.platform).ok().unwrap(),
-            winner: i16::try_from(r.winner).ok().unwrap(),
-            game_floor: i16::try_from(r.floor).ok().unwrap(),
+            char_b: field_or_skip!(
+                i16::try_from(r.player2_character),
+                "player 2 character",
+                r.player2_character
+            ),
+            platform_b: field_or_skip!(
+                i16::try_from(r.player2.platform),
+                "player 2 platform",
+                r.player2.platform
+            ),
+            winner: field_or_skip!(i16::try_from(r.winner), "winner", r.winner),
+            game_floor: field_or_skip!(i16::try_from(r.floor), "floor", r.floor),
             value_a: r.player1.rating,
             value_b: r.player2.rating,
         };
@@ -1283,6 +1015,196 @@ async fn grab_games(
             .unwrap();
     }
 
-    info!("Grabbing replays - Done");
-    Ok(new_games)
+    debug!("Grabbing replays - Done");
+    Ok(ReplayPullStats {
+        pages: pages_fetched,
+        entries: num_replays,
+        known,
+        new_matches: new_games.len(),
+        stop_reason,
+        elapsed: started.elapsed(),
+        newest,
+        oldest,
+    })
+}
+
+#[cfg(test)]
+mod leaderboard_tests {
+    use super::*;
+    use crate::responses::LeaderboardEntry;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    struct FakeSource {
+        calls: AtomicUsize,
+        fail_character: Option<i64>,
+    }
+    impl FakeSource {
+        fn new(fail_character: Option<i64>) -> Self {
+            Self {
+                calls: AtomicUsize::new(0),
+                fail_character,
+            }
+        }
+    }
+    impl LeaderboardSource for FakeSource {
+        async fn legend(&self) -> Result<Vec<LeaderboardEntry>, String> {
+            Ok(vec![])
+        }
+        async fn mr(&self, page: i64, character: i64) -> Result<Vec<LeaderboardEntry>, String> {
+            self.calls.fetch_add(1, Ordering::SeqCst);
+            if page == 1 && self.fail_character == Some(character) {
+                return Err("HTTP 503 Service Unavailable".into());
+            }
+            if page > 0 {
+                return Ok(vec![]);
+            }
+            Ok((0..20)
+                .map(|i| LeaderboardEntry {
+                    rank: i + 1,
+                    player_id: i.to_string(),
+                    player_name: "Test".into(),
+                    char_id: character.max(0),
+                    rating: 1000,
+                })
+                .collect())
+        }
+        async fn lp(&self, _: i64, _: i64) -> Result<Vec<LeaderboardEntry>, String> {
+            Ok(vec![])
+        }
+        async fn pause(&self) {}
+    }
+
+    #[test]
+    fn retries_back_off_from_completion_and_survive_serialization() {
+        let mut retry = LeaderboardRetry::default();
+        for delay in [300, 600, 1200, 2400, 3600, 3600] {
+            let completed_at = retry.retry_at + 900;
+            retry = retry.failed(completed_at);
+            let persisted = serde_json::to_string(&retry).unwrap();
+            retry = serde_json::from_str(&persisted).unwrap();
+            assert_eq!(retry.retry_at, completed_at + delay);
+            assert!(!retry.ready(retry.retry_at - 1));
+            assert!(retry.ready(retry.retry_at));
+        }
+    }
+
+    #[tokio::test]
+    async fn late_page_failure_produces_no_publishable_snapshot() {
+        let source = FakeSource::new(Some(crate::CHAR_NAMES.len() as i64 - 1));
+        let error = fetch_global_leaderboards(&source).await.unwrap_err();
+        assert!(error.contains("503"));
+        assert!(AtomicUsize::load(&source.calls, Ordering::SeqCst) > crate::CHAR_NAMES.len());
+    }
+
+    #[tokio::test]
+    async fn successful_crawl_contains_every_leaderboard() {
+        let snapshot = fetch_global_leaderboards(&FakeSource::new(None))
+            .await
+            .unwrap();
+        assert_eq!(snapshot.len(), crate::CHAR_NAMES.len() + 1);
+        assert_eq!(snapshot[0].0, "leaderboard_all");
+        for (index, (key, data)) in snapshot.iter().skip(1).enumerate() {
+            assert_eq!(key, &format!("leaderboard_char_{index}"));
+            assert_eq!(
+                serde_json::from_str::<Vec<LeaderboardEntry>>(data)
+                    .unwrap()
+                    .len(),
+                20
+            );
+        }
+    }
+
+    #[tokio::test]
+    #[ignore = "requires migrated disposable TEST_DATABASE_URL and TEST_REDIS_URL"]
+    async fn maintenance_preserves_snapshot_and_persisted_backoff_prevents_recrawl() {
+        let db_pool = bb8::Pool::builder()
+            .build(
+                diesel_async::pooled_connection::AsyncDieselConnectionManager::new(
+                    std::env::var("TEST_DATABASE_URL").unwrap(),
+                ),
+            )
+            .await
+            .unwrap();
+        let redis_pool = bb8::Pool::builder()
+            .build(
+                bb8_redis::RedisConnectionManager::new(std::env::var("TEST_REDIS_URL").unwrap())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let state = crate::AppState {
+            db_pool,
+            redis_pool,
+        };
+        let mut redis = state.redis_pool.get().await.unwrap();
+        let old = "2020-01-01 00:00:00";
+        redis::pipe()
+            .atomic()
+            .set("last_update_legend", crate::imdb::update_timestamp())
+            .ignore()
+            .set("last_update_leaderboards", old)
+            .ignore()
+            .del("last_update_leaderboards:retry")
+            .ignore()
+            .set("leaderboard_all", "old global")
+            .ignore()
+            .set("leaderboard_char_0", "old character")
+            .ignore()
+            .query_async::<()>(&mut *redis)
+            .await
+            .unwrap();
+        let failed = FakeSource::new(Some(crate::CHAR_NAMES.len() as i64 - 1));
+        refresh_due_leaderboards_with(&state, &failed)
+            .await
+            .unwrap();
+        let values: Vec<String> = redis::cmd("MGET")
+            .arg(&[
+                "leaderboard_all",
+                "leaderboard_char_0",
+                "last_update_leaderboards",
+            ])
+            .query_async(&mut *redis)
+            .await
+            .unwrap();
+        assert_eq!(values, vec!["old global", "old character", old]);
+        let replacement = FakeSource::new(None);
+        refresh_due_leaderboards_with(&state, &replacement)
+            .await
+            .unwrap();
+        assert_eq!(AtomicUsize::load(&replacement.calls, Ordering::SeqCst), 0);
+        redis::cmd("DEL")
+            .arg("last_update_leaderboards:retry")
+            .query_async::<()>(&mut *redis)
+            .await
+            .unwrap();
+        refresh_due_leaderboards_with(&state, &replacement)
+            .await
+            .unwrap();
+        let encoded: String = redis::cmd("GET")
+            .arg("leaderboard_all")
+            .query_async(&mut *redis)
+            .await
+            .unwrap();
+        assert_eq!(
+            serde_json::from_str::<Vec<LeaderboardEntry>>(&encoded)
+                .unwrap()
+                .len(),
+            20
+        );
+        assert_ne!(
+            crate::imdb::get_last_update(&mut redis, "last_update_leaderboards")
+                .await
+                .unwrap()
+                .unwrap(),
+            old
+        );
+        assert_eq!(
+            redis::cmd("EXISTS")
+                .arg("last_update_leaderboards:retry")
+                .query_async::<i64>(&mut *redis)
+                .await
+                .unwrap(),
+            0
+        );
+    }
 }

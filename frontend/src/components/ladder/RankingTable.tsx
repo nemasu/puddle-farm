@@ -17,12 +17,12 @@ function CharacterArt({ player }: { player: LadderRow }) {
   const art = getCharacterArt(player.char_short);
   if (!art) return null;
   const focus = {
-    "--fx": art.x,
+    "--fx": art.x + (art.rankingOffsetX ?? 0),
     "--fy": art.y,
     "--k": 1 / art.scale,
   } as CSSProperties;
   return (
-    <span className={styles.rowArt} aria-hidden="true">
+    <>
       <span className={styles.ghost}>{art.en.toUpperCase()}</span>
       <span className={styles.artImage} style={focus}>
         {/* biome-ignore lint/performance/noImgElement: decorative local art has fixed source geometry and no optimizer request. */}
@@ -35,6 +35,18 @@ function CharacterArt({ player }: { player: LadderRow }) {
           decoding="async"
         />
       </span>
+    </>
+  );
+}
+
+// Decorative banner layer painted behind the row's cells.
+function RowBanner({ player }: { player: LadderRow }) {
+  return (
+    <span className={styles.banner} aria-hidden="true">
+      <span className={styles.band} />
+      <span className={styles.slash} />
+      <CharacterArt player={player} />
+      <span className={styles.ratingBlock} />
     </span>
   );
 }
@@ -58,59 +70,33 @@ export function LadderRankingTable({
   return (
     <div className={styles.tableWrap}>
       <table className={styles.ladder} aria-label={label}>
-        <colgroup>
-          {ranked && <col className={styles.rankColumn} />}
-          <col
-            className={ranked ? styles.playerColumn : styles.searchPlayerColumn}
-          />
-          <col className={styles.characterColumn} />
-          <col />
-        </colgroup>
-        <thead>
+        <thead className={styles.visuallyHidden}>
           <tr>
-            {ranked && (
-              <th scope="col">
-                #<span className={styles.visuallyHidden}>{messages.rank}</span>
-              </th>
-            )}
+            {ranked && <th scope="col">{messages.rank}</th>}
             <th scope="col">{messages.player}</th>
             <th scope="col">{messages.character}</th>
-            <th scope="col" className={styles.number}>
-              {messages.rating}
-            </th>
+            <th scope="col">{messages.rating}</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((player) => (
             <tr key={`${player.id}-${player.char_short}`}>
               {ranked && (
-                <td
-                  className={`${styles.rank} ${player.rank != null && player.rank <= 3 ? styles[`place${player.rank}`] : ""}`}
-                >
+                <td className={styles.rank}>
                   <span>{player.rank}</span>
-                  <CharacterArt player={player} />
                 </td>
               )}
-              <td className={!ranked ? styles.playerArtCell : undefined}>
-                <div className={styles.playerCell}>
-                  <span className={styles.rankIcon}>
-                    {Utils.displayRankIcon(
-                      player.rating,
-                      "66px",
-                      legend || player.is_legend === true,
-                    )}
-                  </span>
-                  <div className={styles.playerName}>
-                    <Link
-                      href={`/player/${player.id}/${encodeURIComponent(player.char_short)}`}
-                    >
-                      {player.name}
-                    </Link>
-                    <small>
-                      {legend || player.is_legend
-                        ? messages.tier
-                        : Utils.getRankDisplayName(player.rating)}
-                    </small>
+              <td className={styles.playerCell}>
+                <RowBanner player={player} />
+                <span className={styles.rankIcon}>
+                  {Utils.displayRankIcon(
+                    player.rating,
+                    "84px",
+                    legend || player.is_legend === true,
+                  )}
+                </span>
+                {(player.tags ?? []).length > 0 && (
+                  <span className={styles.tags}>
                     {(player.tags ?? []).map((tag) => (
                       <span
                         className={styles.tag}
@@ -120,9 +106,20 @@ export function LadderRankingTable({
                         {tag.tag}
                       </span>
                     ))}
-                  </div>
-                </div>
-                {!ranked && <CharacterArt player={player} />}
+                  </span>
+                )}
+                <span className={styles.playerName}>
+                  <Link
+                    href={`/player/${player.id}/${encodeURIComponent(player.char_short)}`}
+                  >
+                    <span>{player.name}</span>
+                  </Link>
+                  <small>
+                    {legend || player.is_legend
+                      ? messages.tier
+                      : Utils.getRankDisplayName(player.rating)}
+                  </small>
+                </span>
               </td>
               <td className={styles.character}>
                 <Link href={`/top/${encodeURIComponent(player.char_short)}`}>
@@ -133,16 +130,13 @@ export function LadderRankingTable({
                   )}
                 </Link>
               </td>
-              <td
-                className={`${styles.number} ${styles.rating}`}
-                title={String(player.rating)}
-              >
+              <td className={styles.rating} title={String(player.rating)}>
                 {Utils.displayRating(player.rating)}
               </td>
             </tr>
           ))}
           {rows.length === 0 && (
-            <tr>
+            <tr className={styles.emptyRow}>
               <td colSpan={ranked ? 4 : 3} className={styles.empty}>
                 {emptyMessage}
               </td>

@@ -1,11 +1,35 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import HourlyPlayersChart from "../../../src/components/HourlyPlayersChart";
 
-jest.mock("react-chartjs-2", () => ({
-  Line: () => <div data-testid="hourly-chart" />,
-}));
-
 afterEach(() => jest.restoreAllMocks());
+
+test.each([
+  [700, 1760, ["500", "1,000", "1,500", "2,000"]],
+  [78, 99, ["75", "80", "85", "90", "95", "100"]],
+  [0, 99, ["0", "20", "40", "60", "80", "100"]],
+  [78, 78, ["77", "78", "79"]],
+  [0, 0, ["0", "1"]],
+])(
+  "rounds the Y-axis around a visible range of %i to %i",
+  (low, high, ticks) => {
+    render(
+      <HourlyPlayersChart
+        initialPoints={[
+          { timestamp: 3600, players: low },
+          { timestamp: 7200, players: high },
+        ]}
+      />,
+    );
+
+    const chart = screen.getByRole("img");
+    const labels = chart.querySelectorAll("g > g > text");
+    expect(Array.from(labels, (label) => label.textContent)).toEqual(ticks);
+    const bottom = chart.querySelector("line")?.getAttribute("y1");
+    expect(chart.querySelector("path[d$='Z']")?.getAttribute("d")).toContain(
+      ` V ${bottom} H `,
+    );
+  },
+);
 
 test("starts at 30d and requests a newly selected range", async () => {
   const fetchMock = jest.spyOn(globalThis, "fetch").mockResolvedValue({
@@ -14,7 +38,7 @@ test("starts at 30d and requests a newly selected range", async () => {
   } as Response);
   render(<HourlyPlayersChart />);
 
-  await screen.findByTestId("hourly-chart");
+  await screen.findByRole("img");
   expect(fetchMock).toHaveBeenCalledWith(
     expect.stringContaining("range=30d"),
     expect.anything(),

@@ -16,18 +16,6 @@ export interface GroupedMatch {
   wins: number; // Number of wins in this set of matches
 }
 
-export interface LineChartData {
-  labels: string[];
-  datasets: LineChartDataSet[];
-}
-
-export interface LineChartDataSet {
-  label: string;
-  data: number[];
-  borderColor: string;
-  backgroundColor: string;
-}
-
 export interface ClaimDialogProps {
   playerId: bigint;
   API_ENDPOINT: string;

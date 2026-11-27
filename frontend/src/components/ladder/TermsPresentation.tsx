@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { getMessages } from "../../lib/i18n";
 import type { Design, Language } from "../../lib/site-preferences";
 import shared from "./ladder.module.css";
-import { PlayerWidgets as LadderWidgets } from "./PlayerWidgets";
 import styles from "./settings.module.css";
 export function TermsPresentation({
   children,
@@ -23,9 +22,7 @@ export function TermsPresentation({
           {messages.heading} <span>{messages.accent}</span>
         </h1>
       </div>
-      <div className={styles.policyPaper}>
-        <LadderWidgets>{children}</LadderWidgets>
-      </div>
+      <div className={styles.policyPaper}>{children}</div>
     </section>
   );
 }

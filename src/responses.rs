@@ -18,6 +18,17 @@ pub struct ResponseHeader {
     _string2: String,
 }
 
+impl ResponseHeader {
+    pub fn versions(&self) -> (&str, &str, &str) {
+        (&self._version1, &self._version2, &self._version3)
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ServerStatus {
+    pub code: i64,
+}
+
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 pub struct Login {

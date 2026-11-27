@@ -22,13 +22,18 @@ export async function checkLadderDistributionBrowser({call,evaluate,waitFor,navi
   for(const [name,value] of [['ggst-language',language],['ggst-design','ladder']]) await call('Network.setCookie',{name,value,url:`${baseURL}/`,path:''});
   for(const width of [1440,390,320]) {
    await call('Emulation.setDeviceMetricsOverride',{width,height:1100,deviceScaleFactor:1,mobile:width<600});
-   await navigate(`${baseURL}/distribution`);await waitFor('!!document.querySelector("main canvas")');
+   await navigate(`${baseURL}/distribution`);await waitFor('!!document.querySelector("main .rank-distribution-plot")');
    await evaluate('document.fonts.ready.then(()=>true);scrollTo(0,0)');
    assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true);
    if(language==='ko') await writeFile(`/tmp/puddle-public-ladder-distribution-${width}.png`,Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
   }
+  const bars = 'document.querySelectorAll(".rank-distribution-plot [data-rank-bar]").length';
+  const subdivisions = await evaluate(bars);
+  assert.equal(subdivisions,3);
   await evaluate('document.querySelector("main button[aria-pressed]").click()');
   await waitFor('document.querySelector("main button[aria-pressed]").getAttribute("aria-pressed")==="true"');
+  const combined = await evaluate(bars);
+  assert.ok(combined > 0 && combined < subdivisions);
   assert.ok((await evaluate('document.querySelector("main button[aria-pressed]").textContent')).includes(language==='ko'?'세부 랭크':'Show Subdivisions'));
  }
  for(const [name,value] of [['ggst-language','en'],['ggst-design','ladder']]) await call('Network.setCookie',{name,value,url:`${baseURL}/`,path:''});

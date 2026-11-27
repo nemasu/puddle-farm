@@ -13,19 +13,32 @@ export function respondPlayerFixture(url, response, state) {
     return true;
   }
   if (state.mode === "failure") { response.writeHead(503).end("Unavailable"); return true; }
-  if (path.startsWith("/api/avatar/")) {
-    response.setHeader("Content-Type", "image/png");
-    response.end(Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6X2AAAAAASUVORK5CYII=", "base64"));
-    return true;
-  }
-  if (path.startsWith("/api/alias/") || path.startsWith("/api/comment/")) {
-    const body = path.includes("/alias/") ? JSON.stringify(["Player <SSR>", "Old Alias"]) : "Hello <comment>";
+  const isAvatar = path.startsWith("/api/avatar/");
+  const isComment = path.startsWith("/api/comment/");
+  if (isAvatar || isComment || path.startsWith("/api/alias/")) {
+    if ((isAvatar || isComment) && state.profileMissing) {
+      response.writeHead(404).end("No saved GGST profile value");
+      return true;
+    }
+    const finish = () => {
+      if (isAvatar) {
+        if (state.avatarFailure) { response.writeHead(503).end("Avatar unavailable"); return; }
+        response.setHeader("Content-Type", "image/png");
+        response.end(Buffer.from(state.profileRefreshed
+          ? "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg=="
+          : "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYPj/HwADAgH/5ncLrgAAAABJRU5ErkJggg==", "base64"));
+      } else {
+        response.end(path.includes("/alias/")
+          ? JSON.stringify(["Player <SSR>", "Old Alias"])
+          : state.profileRefreshed ? "Refreshed <comment>" : "Hello <comment>");
+      }
+    };
     if (state.slowProfile) {
       state.pendingProfile++;
-      const finish = () => { state.pendingProfile--; response.end(body); };
-      if (state.profileResponses) state.profileResponses.push(finish);
-      else setTimeout(finish, 500);
-    } else response.end(body);
+      const release = () => { state.pendingProfile--; finish(); };
+      if (state.profileResponses) state.profileResponses.push(release);
+      else setTimeout(release, 500);
+    } else finish();
     return true;
   }
   const id = path.match(/\/player\/(\d+)/)?.[1];

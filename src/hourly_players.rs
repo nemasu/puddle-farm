@@ -2,11 +2,14 @@ use diesel::{
     QueryableByName,
     sql_types::{BigInt, Nullable},
 };
-use diesel_async::{AsyncPgConnection, RunQueryDsl};
+use diesel_async::{
+    AsyncConnection, AsyncPgConnection, RunQueryDsl, scoped_futures::ScopedFutureExt,
+};
 use serde::Serialize;
 
 pub const HOUR_SECONDS: i64 = 60 * 60;
 const BACKFILL_BATCH_HOURS: i64 = 24;
+const REPAIR_HOURS: i64 = 6;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HourlyRange {
@@ -58,11 +61,16 @@ pub fn hour_start(timestamp: i64) -> i64 {
     timestamp.div_euclid(HOUR_SECONDS) * HOUR_SECONDS
 }
 
-pub async fn update_current_and_previous(
+pub async fn update_recent(
     connection: &mut AsyncPgConnection,
 ) -> Result<(), diesel::result::Error> {
     let current = hour_start(chrono::Utc::now().timestamp());
-    upsert_range(connection, current - HOUR_SECONDS, current + HOUR_SECONDS).await
+    upsert_range(
+        connection,
+        current - REPAIR_HOURS * HOUR_SECONDS,
+        current + HOUR_SECONDS,
+    )
+    .await
 }
 
 async fn upsert_range(
@@ -103,10 +111,12 @@ pub async fn points(
 ) -> Result<Vec<HourlyPlayerPoint>, diesel::result::Error> {
     let current = hour_start(chrono::Utc::now().timestamp());
     let start = range.seconds().map(|seconds| current - seconds);
+    // An elapsed hour may still hold a partial count until the next stats update.
     diesel::sql_query(
         "SELECT bucket_start AS timestamp, player_count AS players \
          FROM hourly_player_counts \
          WHERE bucket_start < $1 AND ($2::BIGINT IS NULL OR bucket_start >= $2) \
+           AND updated_at >= TO_TIMESTAMP(bucket_start + 3600) \
          ORDER BY bucket_start ASC",
     )
     .bind::<BigInt, _>(current)
@@ -141,7 +151,14 @@ pub async fn backfill(connection: &mut AsyncPgConnection, days: i64) -> Result<(
             end = batch_end,
             "Backfilling hourly players"
         );
-        upsert_range(connection, batch_start, batch_end)
+        connection
+            .transaction::<_, diesel::result::Error, _>(|conn| {
+                async move {
+                    crate::stats::StatsJob::Hourly.lock(conn).await?;
+                    upsert_range(conn, batch_start, batch_end).await
+                }
+                .scope_boxed()
+            })
             .await
             .map_err(|error| error.to_string())?;
     }

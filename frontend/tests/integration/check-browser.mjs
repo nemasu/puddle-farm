@@ -1,4 +1,4 @@
-import { checkDesignInvitation } from "./lib/design-invitation.mjs";
+import { checkDesignDefaults } from "./lib/design-defaults.mjs";
 // Run after npm run build. Uses a locally installed Chrome.
 import {checkJapaneseBrowser,checkJapaneseWithoutScripts} from "./lib/japanese.mjs";
 import {checkReviewFixesBrowser} from "./lib/review-fixes.mjs";
@@ -14,14 +14,15 @@ import { checkLadderStatsBrowser, checkLadderStatsWithoutScripts } from "./lib/l
 import { checkLadderPlayerBrowser, checkLadderPlayerWithoutScripts } from "./lib/ladder-player.mjs";
 import { checkLadderRankingsBrowser, checkLadderRankingsWithoutScripts } from "./lib/ladder-rankings.mjs";
 import { checkLadderBrowser, checkLadderWithoutScripts } from "./lib/ladder.mjs";
-import { checkSitePreferencesBrowser, checkSitePreferencesWithoutScripts } from "./lib/site-preferences.mjs";
+import { checkLadderThemeBrowser, checkSitePreferencesBrowser, checkSitePreferencesWithoutScripts } from "./lib/site-preferences.mjs";
 import { checkPlayerTransition } from "./lib/player-transition.mjs";
 import { checkPlayerBrowser, checkPlayerWithoutScripts } from "./lib/player-browser.mjs";
 import { checkPublicBrowser, checkPublicWithoutScripts } from "./lib/public-browser.mjs";
 
 await withNextFixture(async ({ baseURL, state }) => withChrome(async ({ call, evaluate, waitFor, navigate, errors, requests }) => {
   await call("Page.addScriptToEvaluateOnNewDocument", { source: 'if (!localStorage.getItem("theme")) localStorage.setItem("theme", "Ky");' });
-  await checkDesignInvitation({call,evaluate,waitFor,navigate}, {baseURL, prefix:"", game:"ggst", design:"ladder"});
+  await checkDesignDefaults({call,evaluate,waitFor,navigate}, {baseURL, prefix:"", game:"ggst", design:"ladder"});
+  await checkLadderThemeBrowser({ call, evaluate, waitFor, navigate }, { baseURL });
   await call("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   await navigate(`${baseURL}/`);
   await waitFor('document.cookie.includes("ggst-theme=Ky") && document.querySelector("main table")?.textContent.includes("SSR <Player>")');

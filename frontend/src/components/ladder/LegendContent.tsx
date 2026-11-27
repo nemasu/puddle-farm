@@ -42,6 +42,9 @@ export async function LadderLegendContent({
         available={result !== null}
       />
       <section className={styles.content} aria-labelledby="legend-title">
+        <Link className={styles.allRankings} href="/top_global">
+          {messages.allRankings} →
+        </Link>
         <div className={styles.sectionHeading}>
           <p>{messages.section}</p>
           <h2 id="legend-title">
@@ -49,18 +52,6 @@ export async function LadderLegendContent({
           </h2>
         </div>
         <form action="/" method="get" className={styles.controls}>
-          <div className={styles.searchField}>
-            <label htmlFor="legend-query">{messages.search}</label>
-            <input
-              id="legend-query"
-              className={styles.search}
-              type="search"
-              name="q"
-              defaultValue={filtered.query}
-              placeholder={messages.search}
-              autoComplete="off"
-            />
-          </div>
           <div className={styles.filterRow}>
             <div className={styles.characterField}>
               <label htmlFor="legend-character">{messages.character}</label>
@@ -81,9 +72,6 @@ export async function LadderLegendContent({
             <Link className={styles.secondaryButton} href="/">
               {messages.clear}
             </Link>
-            <Link className={styles.allRankings} href="/top_global">
-              {messages.allRankings} →
-            </Link>
           </div>
         </form>
         {!result ? (
@@ -95,7 +83,7 @@ export async function LadderLegendContent({
             rows={filtered.ranks}
             language={language}
             label={messages.leaderboard}
-            emptyMessage={entries.length ? messages.noMatches : messages.empty}
+            emptyMessage={messages.empty}
             legend
           />
         )}

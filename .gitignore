@@ -3,4 +3,5 @@
 *.log
 *.rdb
 token.txt
+.token.txt.*.tmp
 /logs

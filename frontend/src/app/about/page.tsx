@@ -9,6 +9,7 @@ import type { Supporter } from "../../interfaces/API";
 import { getPageCopy } from "../../lib/i18n/classic";
 import { readJson } from "../../lib/server/api";
 import { getRequestPresentation } from "../../lib/server/site-preferences";
+import { localizedMetadata } from "../../lib/server-metadata";
 
 const classicMetadata: Metadata = {
   title: "About | Guilty Gear Strive | Puddle Farm",
@@ -16,10 +17,12 @@ const classicMetadata: Metadata = {
 };
 export async function generateMetadata(): Promise<Metadata> {
   const presentation = await getRequestPresentation();
-  return getPageCopy<Metadata>(presentation, classicMetadata, (messages) => ({
-    title: `${messages.about.title} | Puddle Farm`,
-    description: messages.about.description,
-  }));
+  return await localizedMetadata(
+    getPageCopy<Metadata>(presentation, classicMetadata, (messages) => ({
+      title: `${messages.about.title} | Puddle Farm`,
+      description: messages.about.description,
+    })),
+  );
 }
 export default async function AboutPage() {
   const presentation = await getRequestPresentation();
@@ -53,7 +56,7 @@ export default async function AboutPage() {
           ) : (
             <>
               This website collects replay data for the game{" "}
-              <Link href="https://www.guiltygear.com/en/" target="_blank">
+              <Link href="https://www.guiltygear.com/ggst/en/" target="_blank">
                 Guilty Gear Strive
               </Link>{" "}
               and provides statistics and rankings using the game's official

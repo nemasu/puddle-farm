@@ -34,13 +34,22 @@ await withNextFixture(async ({ state, baseURL }) => {
   assert.equal(health.headers.get("x-frame-options"), "SAMEORIGIN");
   assert.equal(health.headers.get("x-content-type-options"), "nosniff");
   assert.equal(health.headers.get("x-accel-buffering"), "no");
+  let defaultDesignCookie = "";
   async function read(path, theme = "Sol", extraCookies = "") {
     const response = await fetch(`${baseURL}${path}`, {
-      headers: { Cookie: `ggst-theme=${theme}; ${extraCookies}` }, redirect: "manual",
+      headers: { Cookie: `ggst-theme=${theme}; ${extraCookies}; ${defaultDesignCookie}` }, redirect: "manual",
       signal: AbortSignal.timeout(15_000),
     });
     const html = await response.text();
-    return { response, html, document: new JSDOM(html).window.document };
+    const document = new JSDOM(html).window.document;
+    if (response.status === 200 && document.querySelector("title")) {
+      assert.ok(document.title.endsWith(" · GGST · Puddle Farm"), path);
+      assert.equal(document.querySelector('meta[property="og:title"]').content, document.title, path);
+      assert.equal(document.querySelector('meta[name="twitter:title"]').content, document.title, path);
+      assert.equal(document.querySelector('meta[property="og:description"]').content, document.querySelector('meta[name="description"]').content, path);
+      assert.equal(document.querySelector('meta[name="twitter:description"]').content, document.querySelector('meta[name="description"]').content, path);
+    }
+    return { response, html, document };
   }
   async function page(path, theme) {
     const result = await read(path, theme);
@@ -65,6 +74,8 @@ await withNextFixture(async ({ state, baseURL }) => {
   await checkLadderDistributionSsr({read,state});
   await checkLadderAboutSsr({read,state});
 
+  // The following assertions exercise the Classic layout explicitly.
+  defaultDesignCookie = "ggst-design=classic;";
   const document = await page("");
   assert.match(document.querySelector("main table").textContent, /SSR <Player>/);
   assert.ok(document.querySelector('main a[href="/player/76561198000000001/SO"]'));
@@ -132,11 +143,22 @@ await withNextFixture(async ({ state, baseURL }) => {
   assert.ok(state.requests.includes("/api/player/search?search_string=first&exact=false"));
 
   const playerId = "9007199254740993";
+  for (const agent of ["Discordbot", "Twitterbot", "facebookexternalhit"]) {
+    const response = await fetch(`${baseURL}/player/${playerId}/SO`, { headers: { "User-Agent": agent } });
+    const html = await response.text();
+    const head = new JSDOM(html).window.document.head;
+    assert.ok(head.querySelector('meta[property="og:title"]').content.includes("Puddle Farm"));
+    assert.equal(head.querySelector('meta[property="og:url"]').content, `https://puddle.farm/player/${playerId}/SO`);
+    assert.equal(head.querySelector('meta[property="og:image"]').content, "https://puddle.farm/logo192.png");
+    assert.equal(head.querySelector('meta[name="twitter:card"]').content, "summary");
+    assert.match(head.querySelector('meta[property="og:description"]').content, /Matches:/);
+  }
+
   await redirects(`/player/${playerId}`, `/player/${playerId}/SO`);
   const beforePlayer = state.requests.length;
   const player = await page(`/player/${playerId}/SO/2/0`);
   assert.equal(player.querySelector("main h1").textContent, "Player <SSR>");
-  assert.match(player.title, /Player <SSR> \(SO\) - 1800 DR/);
+  assert.match(player.title, /Player <SSR> · Sol Badguy · Vanquisher III Vindex · 1,800 DR · GGST · Puddle Farm/);
   const history = player.querySelector('section[aria-label="Match history"]');
   assert.match(history.textContent, /Opponent <1>/);
   assert.match(history.textContent, /Opponent tag/);
@@ -147,7 +169,30 @@ await withNextFixture(async ({ state, baseURL }) => {
   assert.ok(playerRequests.includes(`/api/player/${playerId}/SO/history?count=2&offset=0`));
   assert.ok(playerRequests.includes(`/api/ratings/${playerId}/SO/100`));
   assert.match(player.body.textContent, /Matchup Table/, "completed SSR includes the streamed matchup section");
-  assert.equal(player.querySelector('img[alt="Player Avatar"]').getAttribute("src"), `/api/avatar/${playerId}`);
+  assert.match(player.querySelector('img[alt="Player Avatar"]').getAttribute("src"), /^data:image\/png;base64,/);
+  assert.equal(playerRequests.filter((url) => url === `/api/avatar/${playerId}`).length, 1);
+  assert.match(player.body.textContent, /Hello <comment>/);
+  state.avatarFailure = true;
+  try {
+    const unavailableAvatar = await page(`/player/${playerId}/SO/2/0`);
+    assert.ok(unavailableAvatar.querySelector("[data-avatar-frame]"));
+    assert.equal(unavailableAvatar.querySelector('img[alt="Player Avatar"]'), null);
+    assert.match(unavailableAvatar.body.textContent, /Hello <comment>/);
+  } finally {
+    state.avatarFailure = false;
+  }
+  state.profileMissing = true;
+  try {
+    const missingProfile = await page(`/player/${playerId}/SO/2/0`);
+    assert.equal(missingProfile.querySelector('img[alt="Player Avatar"]'), null);
+    assert.ok(!missingProfile.body.textContent.includes("Hello <comment>"));
+    assert.ok([...missingProfile.querySelectorAll("button")].some(
+      (button) => button.textContent.trim() === "Refresh avatar and comment",
+    ));
+    assert.match(missingProfile.querySelector('section[aria-label="Match history"]').textContent, /Opponent <1>/);
+  } finally {
+    state.profileMissing = false;
+  }
   const older = await page(`/player/${playerId}/SO/2/2`);
   assert.match(older.querySelector('section[aria-label="Match history"]').textContent, /Opponent <2>/);
   assert.ok(state.requests.includes(`/api/player/${playerId}/SO/history?count=3&offset=1`));
@@ -178,7 +223,7 @@ await withNextFixture(async ({ state, baseURL }) => {
   assert.match(historyFailure.querySelector('main [role="alert"]').textContent, /Could not load match history/);
   state.historyFailure = false;
   state.slowProfile = true;
-  const streaming = await fetch(`${baseURL}/player/${playerId}/SO/2/0`, { headers: { Cookie: "ggst-theme=Sol" } });
+  const streaming = await fetch(`${baseURL}/player/${playerId}/SO/2/0`, { headers: { Cookie: "ggst-theme=Sol; ggst-design=classic" } });
   const reader = streaming.body.getReader();
   const decoder = new TextDecoder();
   let initial = "";
@@ -190,7 +235,7 @@ await withNextFixture(async ({ state, baseURL }) => {
   assert.ok(state.pendingProfile > 0, "optional profile calls must not delay core history");
   while (!(await reader.read()).done) { /* consume the remaining optional sections */ }
   state.slowProfile = false;
-  await checkMatchupStreaming({ baseURL, state }, `/player/${playerId}/SO/2/0`);
+  await checkMatchupStreaming({ baseURL, state }, `/player/${playerId}/SO/2/0`, { cookie: "ggst-design=classic" });
 
   await checkPublicSsr({ page, read, baseURL, state });
   state.mode = "empty";

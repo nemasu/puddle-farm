@@ -18,12 +18,15 @@ import type { Language } from "../../lib/site-preferences";
 import { Utils } from "../../utils/Utils";
 import { AppLink as Link } from "../AppLink";
 import { PlayerAvatar } from "../classic/PlayerAvatar";
-import { PlayerAutoRefresh, PlayerSync } from "../classic/PlayerControls";
+import {
+  PlayerAutoRefresh,
+  PlayerProfileRefresh,
+  PlayerSync,
+} from "../classic/PlayerControls";
 import { PlayerDateTime } from "../classic/PlayerFormatting";
 import Matchup from "../PlayerMatchup";
 import RatingChart from "../RatingChart";
 import { LadderPlayerHistory, loadPlayerHistory } from "./PlayerHistory";
-import { PlayerWidgets } from "./PlayerWidgets";
 import styles from "./player.module.css";
 import { WinRateList } from "./WinRateList";
 
@@ -334,9 +337,7 @@ export async function LadderPlayerContent({
                     {characterLabel(character, selected.character, language)} ·{" "}
                     {Utils.displayRating(selected.rating)}
                   </h2>
-                  <PlayerWidgets>
-                    <PlayerSync playerId={player.id} language={language} />
-                  </PlayerWidgets>
+                  <PlayerSync playerId={player.id} language={language} />
                 </div>
                 <div className={styles.records}>
                   {selected.top_rating.value !== 0 && (
@@ -371,27 +372,25 @@ export async function LadderPlayerContent({
                   key={`${player.id}-${character}`}
                   language={language}
                 />
-                <PlayerWidgets>
-                  <section
-                    className={`${styles.panel} ${styles.chart}`}
-                    aria-labelledby="player-chart-title"
+                <section
+                  className={`${styles.panel} ${styles.chart}`}
+                  aria-labelledby="player-chart-title"
+                >
+                  <h2 id="player-chart-title">{messages.chart}</h2>
+                  <Suspense
+                    key={`${player.id}-${character}-chart`}
+                    fallback={<p>{messages.loadingChart}</p>}
                   >
-                    <h2 id="player-chart-title">{messages.chart}</h2>
-                    <Suspense
-                      key={`${player.id}-${character}-chart`}
-                      fallback={<p>{messages.loadingChart}</p>}
-                    >
-                      <Chart
-                        player={player}
-                        selected={selected}
-                        language={language}
-                      />
-                    </Suspense>
-                    <noscript>
-                      <p>{messages.chartNoscript}</p>
-                    </noscript>
-                  </section>
-                </PlayerWidgets>
+                    <Chart
+                      player={player}
+                      selected={selected}
+                      language={language}
+                    />
+                  </Suspense>
+                  <noscript>
+                    <p>{messages.chartNoscript}</p>
+                  </noscript>
+                </section>
                 <section className={styles.panel} aria-label={messages.winRate}>
                   <h2 id="player-winrates-title">{messages.matchups}</h2>
                   <p>{messages.threeMonths}</p>
@@ -415,33 +414,31 @@ export async function LadderPlayerContent({
                   data={history}
                   language={language}
                 />
-                <PlayerWidgets>
-                  <section
-                    className={`${styles.panel} ${styles.matchups}`}
-                    aria-labelledby="player-matchups-title"
+                <section
+                  className={`${styles.panel} ${styles.matchups}`}
+                  aria-labelledby="player-matchups-title"
+                >
+                  <h2 id="player-matchups-title">{messages.matchups}</h2>
+                  <Suspense
+                    key={`${player.id}-${character}-matchups`}
+                    fallback={
+                      <>
+                        <p>{messages.loadingMatchups}</p>
+                        <noscript>
+                          <Link href="/matchup">
+                            {messages.matchupsNoscript}
+                          </Link>
+                        </noscript>
+                      </>
+                    }
                   >
-                    <h2 id="player-matchups-title">{messages.matchups}</h2>
-                    <Suspense
-                      key={`${player.id}-${character}-matchups`}
-                      fallback={
-                        <>
-                          <p>{messages.loadingMatchups}</p>
-                          <noscript>
-                            <Link href="/matchup">
-                              {messages.matchupsNoscript}
-                            </Link>
-                          </noscript>
-                        </>
-                      }
-                    >
-                      <Matchups
-                        player={player}
-                        selected={selected}
-                        language={language}
-                      />
-                    </Suspense>
-                  </section>
-                </PlayerWidgets>
+                    <Matchups
+                      player={player}
+                      selected={selected}
+                      language={language}
+                    />
+                  </Suspense>
+                </section>
               </>
             ) : (
               <p>
@@ -458,10 +455,11 @@ export async function LadderPlayerContent({
                   <Comment id={player.id} />
                 </Suspense>
               </div>
-              <PlayerAvatar
+              <PlayerAvatar playerId={player.id} alt={messages.avatar} />
+              <PlayerProfileRefresh
                 key={player.id}
                 playerId={player.id}
-                alt={messages.avatar}
+                language={language}
               />
             </div>
           </aside>

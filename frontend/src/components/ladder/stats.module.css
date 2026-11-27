@@ -5,16 +5,16 @@
   margin: 0 0 35px;
 }
 .cards > div {
-  border: 3px solid #111;
+  border: 3px solid var(--frame);
   padding: 18px;
-  background: #fff;
-  box-shadow: 5px 5px var(--red);
+  background: var(--surface);
+  box-shadow: 5px 5px var(--red-shadow);
 }
 .cards > div:nth-child(even) {
-  box-shadow: 5px 5px var(--cyan);
+  box-shadow: 5px 5px var(--cyan-shadow);
 }
 .cards dt {
-  color: #666660;
+  color: var(--muted);
   font-size: 0.8rem;
   font-weight: 900;
 }
@@ -24,11 +24,11 @@
   overflow-wrap: anywhere;
 }
 .panel {
-  border: 3px solid #111;
+  border: 3px solid var(--frame);
   padding: 22px;
   margin-bottom: 30px;
-  background: #fff;
-  box-shadow: 6px 6px var(--cyan);
+  background: var(--surface);
+  box-shadow: 6px 6px var(--cyan-shadow);
 }
 .panel h2 {
   font: 400 1.4rem var(--display);
@@ -45,17 +45,17 @@
 .tableWrap td {
   padding: 14px 16px;
   text-align: right;
-  border-bottom: 1px solid #bdbdb6;
+  border-bottom: 1px solid var(--line);
 }
 .tableWrap th:first-child {
   text-align: left;
 }
 .tableWrap thead {
-  background: #111;
+  background: var(--solid);
   color: #fff;
 }
 .tableWrap tbody tr:nth-child(even) {
-  background: #f1f1ed;
+  background: var(--paper);
 }
 .chart {
   min-height: 500px;

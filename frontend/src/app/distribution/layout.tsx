@@ -1,1 +1,1 @@
-export { default } from "../stats/layout";
+export { default } from "../popularity/layout";

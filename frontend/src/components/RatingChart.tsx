@@ -15,37 +15,32 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import {
-  CategoryScale,
-  Chart as ChartJS,
-  Legend,
-  LinearScale,
-  LineElement,
-  PointElement,
-  Title,
-  Tooltip,
-} from "chart.js";
+import { SvgLineChart } from "@puddle-farm/svg-chart";
 import { type ChangeEvent, useEffect, useState } from "react";
-import { Line } from "react-chartjs-2";
 import type { RatingsResponse } from "../interfaces/API";
-import type { LineChartData, RatingChartProps } from "../interfaces/Player";
-import {
-  DEFAULT_DISPLAY_PREFERENCES,
-  formatDisplayTime,
-} from "../lib/display-preferences";
+import type { RatingChartProps } from "../interfaces/Player";
+import { formatDisplayTime } from "../lib/display-preferences";
 import { getMessages } from "../lib/i18n";
 import { Utils } from "../utils/Utils";
 import { usePreferencesContext } from "./DisplayPreferences";
+import { useDarkLadderTheme } from "./ladder/LadderThemeProvider";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-);
+type RatingHistory = {
+  points: { x: number; y: number; timestamp: string }[];
+  thresholds: { label: string; value: number; color: string }[];
+};
+
+const RATING_COLOR = "#ef5350";
+
+const DARK_THRESHOLD_COLORS: Readonly<Record<string, string>> = {
+  "#6820a0": "#9a61cf",
+  "#9050d8": "#b078e5",
+  "#3080c0": "#559acb",
+  "#158060": "#47a88a",
+  "#804018": "#be8052",
+  "#404858": "#74839f",
+  "rgba(54, 162, 235, 0.6)": "#64c0ee",
+};
 
 const RatingChart = ({
   player_id,
@@ -58,12 +53,8 @@ const RatingChart = ({
 }: RatingChartProps) => {
   const messages = getMessages(language).player;
   const preferences = usePreferencesContext()?.preferences;
-  const hasPreferences = preferences !== undefined;
-  const displayLocalTime = preferences?.useLocalTime;
-  const displayTimeZone = preferences?.timeZone;
-  const [lineChartData, setLineChartData] = useState<LineChartData | null>(
-    null,
-  );
+  const dark = useDarkLadderTheme();
+  const [history, setHistory] = useState<RatingHistory | null>(null);
   const initialDuration = String(
     initialHistory === undefined ? 100 : Math.min(100, total_games),
   );
@@ -106,28 +97,6 @@ const RatingChart = ({
   useEffect(() => {
     setShowPreVanquisher(false);
   }, []);
-
-  const lineChartOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: "top" as const,
-      },
-      title: {
-        display: true,
-        text: showPreVanquisher
-          ? messages.preHistory
-          : `${messages.chart} (${duration} ${messages.games})`,
-      },
-    },
-    scales: {
-      x: {
-        ticks: {
-          display: false,
-        },
-      },
-    },
-  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -188,7 +157,7 @@ const RatingChart = ({
 
         if (showPreVanquisher && displayData.length === 0) {
           setNoPreVanquisherData(true);
-          setLineChartData(null);
+          setHistory(null);
           return;
         }
         setNoPreVanquisherData(false);
@@ -200,16 +169,18 @@ const RatingChart = ({
           (item: RatingsResponse) => item.rating <= 10000000,
         );
 
-        const convertedRatings = displayData.map((item: RatingsResponse) =>
-          Utils.convertRating(item.rating),
-        );
-        const minRating = Math.min(...convertedRatings);
-        const maxRating = Math.max(...convertedRatings);
+        let minRating = Infinity;
+        let maxRating = -Infinity;
+        let maxRawRating = -Infinity;
+        const points = displayData.map(({ timestamp, rating }, index) => {
+          const converted = Utils.convertRating(rating);
+          minRating = Math.min(minRating, converted);
+          maxRating = Math.max(maxRating, converted);
+          maxRawRating = Math.max(maxRawRating, rating);
+          return { x: index, y: converted, timestamp };
+        });
 
         const allThresholds = Utils.getRankThresholds();
-        const maxRawRating = Math.max(
-          ...displayData.map((item: RatingsResponse) => item.rating),
-        );
         const currentRankIndex = allThresholds.findIndex(
           (t) => maxRawRating >= t.rating,
         );
@@ -256,67 +227,27 @@ const RatingChart = ({
           }
         }
 
-        const lineChartData = {
-          labels: displayData.map((item: RatingsResponse) =>
-            hasPreferences
-              ? item.timestamp === "Now"
-                ? messages.now
-                : formatDisplayTime(item.timestamp, {
-                    ...DEFAULT_DISPLAY_PREFERENCES,
-                    useLocalTime: !!displayLocalTime,
-                    timeZone: displayTimeZone ?? "UTC",
-                  })
-              : item.timestamp === "Now"
-                ? messages.now
-                : Utils.formatUTCToLocal(item.timestamp),
-          ),
-          datasets: [
-            {
-              label: messages.rating,
-              data: convertedRatings,
-              borderColor: "rgb(75, 192, 192)",
-              backgroundColor: "rgba(75, 192, 192, 0.2)",
-              pointRadius: 3,
-              borderWidth: 2,
-            },
-          ]
-            .concat(
-              allThresholds
-                .filter((rank) => {
-                  if (rawNextRank && rank.rating === rawNextRank.rating)
-                    return false;
-                  const rankIsVanquisher = rank.rating > 10000000;
-                  if (rankIsVanquisher && !hasVanquisher) return false;
-                  if (!rankIsVanquisher && !hasNormal) return false;
-                  const cr = Utils.convertRating(rank.rating);
-                  return cr <= maxRating && cr >= minRating;
-                })
-                .map((rank) => ({
-                  label: rank.name,
-                  data: displayData.map(() => Utils.convertRating(rank.rating)),
-                  borderColor: rank.color,
-                  backgroundColor: rank.color,
-                  pointRadius: 0,
-                  borderWidth: 1,
-                })),
-            )
-            .concat(
-              nextRankLine
-                ? [
-                    {
-                      label: nextRankLine.name,
-                      data: displayData.map(() => nextRankLine.convertedRating),
-                      borderColor: nextRankLine.color,
-                      backgroundColor: nextRankLine.color,
-                      pointRadius: 0,
-                      borderWidth: 1,
-                    },
-                  ]
-                : [],
-            ),
-        };
-
-        setLineChartData(lineChartData);
+        const thresholds = allThresholds
+          .filter((rank) => {
+            if (rawNextRank && rank.rating === rawNextRank.rating) return false;
+            const rankIsVanquisher = rank.rating > 10000000;
+            if (rankIsVanquisher ? !hasVanquisher : !hasNormal) return false;
+            const value = Utils.convertRating(rank.rating);
+            return value >= minRating && value <= maxRating;
+          })
+          .map((rank) => ({
+            label: rank.name,
+            value: Utils.convertRating(rank.rating),
+            color: rank.color,
+          }));
+        if (nextRankLine) {
+          thresholds.push({
+            label: nextRankLine.name,
+            value: nextRankLine.convertedRating,
+            color: nextRankLine.color,
+          });
+        }
+        setHistory({ points, thresholds });
       }
     };
     void fetchChartData().catch((error) => {
@@ -340,11 +271,26 @@ const RatingChart = ({
     tempGames,
     initialHistory,
     initialDuration,
-    hasPreferences,
-    displayLocalTime,
-    displayTimeZone,
     messages,
   ]);
+
+  const chartTitle = showPreVanquisher
+    ? messages.preHistory
+    : `${messages.chart} (${duration} ${messages.games})`;
+  const thresholds = history?.thresholds.map((threshold) => ({
+    ...threshold,
+    color: dark
+      ? (DARK_THRESHOLD_COLORS[threshold.color] ?? threshold.color)
+      : threshold.color,
+  }));
+  const number = new Intl.NumberFormat(language);
+
+  function formatTimestamp(timestamp: string) {
+    if (timestamp === "Now") return messages.now;
+    return preferences
+      ? formatDisplayTime(timestamp, preferences)
+      : Utils.formatUTCToLocal(timestamp);
+  }
 
   return (
     <>
@@ -408,7 +354,7 @@ const RatingChart = ({
             variant="outlined"
             size="small"
             onClick={() => {
-              setLineChartData(null);
+              setHistory(null);
               setNoPreVanquisherData(false);
               setShowPreVanquisher((v) => !v);
             }}
@@ -424,8 +370,66 @@ const RatingChart = ({
         </Typography>
       ) : showPreVanquisher && noPreVanquisherData ? (
         <Typography>{messages.noPreHistory}</Typography>
-      ) : lineChartData ? (
-        <Line options={lineChartOptions} data={lineChartData} />
+      ) : history ? (
+        <Box
+          sx={(theme) => ({
+            "--svg-chart-height": "min(45vw, 440px)",
+            "--svg-chart-mobile-height": "220px",
+            "--svg-chart-line": RATING_COLOR,
+            "--svg-chart-axis-text": dark
+              ? "#f5f2f5"
+              : theme.palette.text.secondary,
+            "--svg-chart-grid": dark ? "#ffffff26" : theme.palette.divider,
+            "--svg-chart-tooltip-bg": theme.palette.background.paper,
+            "--svg-chart-tooltip-text": theme.palette.text.primary,
+          })}
+        >
+          <Typography variant="body2" align="center" sx={{ mt: 2 }}>
+            {chartTitle}
+          </Typography>
+          <Box
+            data-rating-legend=""
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              flexWrap: "wrap",
+              gap: 1.5,
+              mt: 1,
+            }}
+          >
+            {[
+              { label: messages.rating, color: RATING_COLOR },
+              ...(thresholds ?? []),
+            ].map(({ label, color }) => (
+              <Box
+                key={label}
+                sx={{ display: "inline-flex", alignItems: "center", gap: 0.5 }}
+              >
+                <Box
+                  component="span"
+                  sx={{ width: 16, height: 2, backgroundColor: color }}
+                />
+                <Typography variant="caption">{label}</Typography>
+              </Box>
+            ))}
+          </Box>
+          <SvgLineChart
+            className="player-rating-plot"
+            points={history.points}
+            referenceLines={thresholds}
+            label={chartTitle}
+            formatY={number.format}
+            tooltip={({ x, y }) => (
+              <>
+                <div>{formatTimestamp(history.points[x].timestamp)}</div>
+                <div>
+                  {messages.rating} {number.format(y)}
+                </div>
+              </>
+            )}
+            showPoints
+          />
+        </Box>
       ) : (
         <Typography>{messages.loading}</Typography>
       )}

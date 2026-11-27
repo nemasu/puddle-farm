@@ -13,9 +13,10 @@ import {
   Typography,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
-import { useCallback, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { useAutoUpdate } from "../../hooks/useAutoUpdate";
 import { useRatingSync } from "../../hooks/useRatingSync";
+import { API_ENDPOINT } from "../../lib/api-endpoint";
 import { getMessages } from "../../lib/i18n";
 import type { Language } from "../../lib/site-preferences";
 import { usePreferencesContext } from "../DisplayPreferences";
@@ -84,5 +85,64 @@ export function PlayerAutoRefresh({
     <Typography variant="h6" gutterBottom>
       {messages.autoUpdate} {countdown} {messages.seconds}
     </Typography>
+  );
+}
+
+export function PlayerProfileRefresh({
+  playerId,
+  language = "en",
+}: {
+  playerId: bigint;
+  language?: Language;
+}) {
+  const messages = getMessages(language).player;
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function refresh() {
+    setRefreshing(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `${API_ENDPOINT}/profile_refresh/${playerId}`,
+        {
+          method: "POST",
+        },
+      );
+      if (response.status === 429) {
+        setError(messages.refreshProfileLimit);
+        return;
+      }
+      if (!response.ok) {
+        setError(messages.refreshProfileError);
+        if (response.status === 503) startTransition(() => router.refresh());
+        return;
+      }
+      startTransition(() => router.refresh());
+    } catch {
+      setError(messages.refreshProfileError);
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  return (
+    <>
+      <Button
+        size="small"
+        startIcon={<RefreshIcon />}
+        onClick={refresh}
+        disabled={refreshing || pending}
+      >
+        {messages.refreshProfile}
+      </Button>
+      {error && (
+        <Typography role="alert" color="error" variant="body2">
+          {error}
+        </Typography>
+      )}
+    </>
   );
 }

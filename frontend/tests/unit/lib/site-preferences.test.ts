@@ -17,18 +17,18 @@ function read(values: Record<string, string>) {
 }
 
 describe("language and design preferences", () => {
-  it("defaults to English and Classic design without using the color theme", () => {
+  it("defaults to English and Ladder design without using the color theme", () => {
     expect(read({ "ggst-theme": "Sol", language: "ko" })).toEqual({
       language: "en",
-      designPreference: "classic",
+      designPreference: "ladder",
     });
   });
 
   it.each(["en", "ko", "ja"])(
-    "defaults to Classic independently of language %s",
+    "defaults to Ladder independently of language %s",
     (language) => {
       expect(read({ [SITE_COOKIES.language]: language }).designPreference).toBe(
-        "classic",
+        "ladder",
       );
     },
   );
@@ -40,11 +40,11 @@ describe("language and design preferences", () => {
     },
   );
 
-  it.each(["", "auto", "Classic", "unknown", "<script>"])(
+  it.each(["", "auto", "Classic", "Ladder", "unknown", "<script>"])(
     "rejects unsupported design cookie %p",
     (value) => {
       expect(read({ [SITE_COOKIES.design]: value }).designPreference).toBe(
-        "classic",
+        "ladder",
       );
     },
   );

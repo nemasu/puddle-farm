@@ -7,12 +7,12 @@
 .panel {
   min-width: 0;
   padding: 20px;
-  border: 3px solid #111;
-  background: white;
-  box-shadow: 6px 6px var(--cyan);
+  border: 3px solid var(--frame);
+  background: var(--surface);
+  box-shadow: 6px 6px var(--cyan-shadow);
 }
 .panel:nth-child(2) {
-  box-shadow: 6px 6px var(--red);
+  box-shadow: 6px 6px var(--red-shadow);
 }
 .panel h2 {
   margin: 0 0 15px;
@@ -20,7 +20,7 @@
 }
 .explanation {
   font-size: 0.85rem;
-  color: #666660;
+  color: var(--muted);
   margin: 0 0 20px;
 }
 .sample {
@@ -36,14 +36,14 @@
 .tableWrap th,
 .tableWrap td {
   padding: 12px 8px;
-  border-bottom: 1px solid #bdbdb6;
+  border-bottom: 1px solid var(--line);
   text-align: right;
 }
 .tableWrap th:first-child {
   text-align: left;
 }
 .tableWrap thead {
-  background: #111;
+  background: var(--solid);
   color: white;
   font-size: 0.8rem;
 }
@@ -57,7 +57,7 @@
   min-width: 90px;
 }
 .tableWrap tbody tr:nth-child(even) {
-  background: #f1f1ed;
+  background: var(--paper);
 }
 .character {
   display: flex;
@@ -82,7 +82,7 @@
 .track {
   display: block;
   height: 6px;
-  background: #ddd;
+  background: light-dark(#dddddd, #403c48);
   margin-top: 7px;
 }
 .track > span {
@@ -151,8 +151,8 @@
 .pickTrack {
   display: block;
   height: 22px;
-  background: white;
-  border: 2px solid #111;
+  background: var(--surface);
+  border: 2px solid var(--frame);
 }
 .pickTrack > span {
   display: block;

@@ -1,12 +1,6 @@
 import type { Messages } from "./en";
 
 export const ko = {
-  designInvitation: {
-    title: "새로운 디자인을 사용해 보시겠어요?",
-    description: "언제든지 설정에서 Classic으로 돌아갈 수 있습니다.",
-    accept: "Ladder 사용하기",
-    decline: "Classic 유지",
-  },
   navigation: {
     legend: "레전드",
     top: "전체 랭킹",
@@ -45,6 +39,10 @@ export const ko = {
     save: "저장",
     display: "표시 설정",
     themes: "테마 (Classic)",
+    ladderTheme: "테마 (Ladder)",
+    ladderTheme_auto: "시스템 설정",
+    ladderTheme_light: "라이트",
+    ladderTheme_dark: "다크",
     localTime: "현지 시간",
     localTimeDescription: "UTC 대신 현지 시간대로 시간을 표시합니다",
     plainRatings: "레이팅 변동 색상 끄기",
@@ -109,11 +107,11 @@ export const ko = {
     allGlobal: "전체 플레이어",
     rankings: "랭킹",
     characterStats: "캐릭터 통계",
+    activity: "활동",
     legendEntries: "레전드 플레이어",
     charactersRepresented: "랭킹 내 캐릭터",
     highestRating: "최고 레이팅",
     lastUpdated: "갱신 시각 (UTC)",
-    search: "레전드 플레이어 이름 검색",
     character: "캐릭터",
     allCharacters: "전체 캐릭터",
     apply: "적용",
@@ -125,9 +123,8 @@ export const ko = {
     tier: "레전드",
     leaderboard: "레전드 랭킹",
     filterNote:
-      "상위 레전드 100명의 목록을 필터링합니다. 이름을 누르면 대전 기록을 볼 수 있습니다.",
+      "캐릭터 필터는 레전드 상위 100개 항목에 적용됩니다. 플레이어를 선택하면 대전 기록을 볼 수 있습니다.",
     empty: "레전드 플레이어가 없습니다.",
-    noMatches: "조건에 맞는 레전드 플레이어가 없습니다.",
     error: "랭킹을 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.",
     count: "표시 중인 플레이어",
     backToTop: "맨 위로",
@@ -154,6 +151,10 @@ export const ko = {
     aliases: "이전 이름",
     profile: "플레이어 프로필",
     avatar: "플레이어 아바타",
+    refreshProfile: "아바타 및 코멘트 새로고침",
+    refreshProfileLimit:
+      "아바타와 코멘트는 플레이어별로 24시간에 한 번 새로고침할 수 있습니다.",
+    refreshProfileError: "아바타와 코멘트를 새로고침하지 못했습니다.",
     history: "경기 기록",
     details: "개별 경기",
     timestamp: "시각",
@@ -250,7 +251,6 @@ export const ko = {
       "시간별 차트는 JavaScript가 필요합니다. 랭크 플레이어 및 경기 수는 위에서 확인할 수 있습니다.",
     health: "경기 갱신 상태",
     healthLoading: "경기 갱신 상태 확인 중…",
-    activity: "활동 통계",
     popularity: "캐릭터 인기",
     matchup: "캐릭터 상성",
     distribution: "레이팅 분포",

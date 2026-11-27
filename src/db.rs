@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::models::{self, Player, PlayerRating};
-use crate::pull::Matchup;
+use crate::stats::Matchup;
 use crate::{schema, CHAR_NAMES};
 use diesel::sql_types::{BigInt, Integer, Timestamp};
 use diesel::{prelude::*, update};
@@ -341,9 +341,11 @@ pub async fn get_games(
     char_id: i16,
     count: i64,
     offset: i64,
+    date_range: crate::handlers::player_history::MatchDateRange,
     db: &mut crate::Connection<'_>,
 ) -> Result<Vec<models::Game>, String> {
-    match schema::games::table
+    let match_timestamp = crate::pull::coalesce(schema::games::real_timestamp, schema::games::timestamp);
+    let mut query = schema::games::table
         .filter(
             (schema::games::id_a
                 .eq(id)
@@ -353,9 +355,17 @@ pub async fn get_games(
                 .and(schema::games::char_b.eq(char_id))),
         )
         .select(models::Game::as_select())
-        .order(
-            crate::pull::coalesce(schema::games::real_timestamp, schema::games::timestamp).desc(),
-        )
+        .into_boxed();
+
+    if let Some(from) = date_range.from {
+        query = query.filter(match_timestamp.ge(from));
+    }
+    if let Some(to) = date_range.to_exclusive {
+        query = query.filter(match_timestamp.lt(to));
+    }
+
+    match query
+        .order(match_timestamp.desc())
         .limit(count)
         .offset(offset)
         .load(db)
@@ -630,7 +640,7 @@ pub async fn get_matchups(
         .bind::<Integer, _>(i32::try_from(char_id).unwrap())
         .bind::<BigInt, _>(i64::try_from(id).unwrap())
         .bind::<Integer, _>(i32::try_from(duration).unwrap())
-        .get_results::<crate::pull::Matchup>(db)
+        .get_results::<crate::stats::Matchup>(db)
         .await
     {
         Ok(results) => Ok(results),

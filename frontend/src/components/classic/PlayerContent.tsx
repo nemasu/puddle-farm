@@ -21,7 +21,11 @@ import RatingChart from "../RatingChart";
 import { Tag } from "../Tag";
 import { LinkButton } from "./LinkButton";
 import { PlayerAvatar } from "./PlayerAvatar";
-import { PlayerAutoRefresh, PlayerSync } from "./PlayerControls";
+import {
+  PlayerAutoRefresh,
+  PlayerProfileRefresh,
+  PlayerSync,
+} from "./PlayerControls";
 import { PlayerDateTime } from "./PlayerFormatting";
 import { PlayerHistory } from "./PlayerHistory";
 
@@ -369,9 +373,13 @@ export function PlayerContent({
               </Suspense>
             </Box>
             <PlayerAvatar
-              key={player.id}
               playerId={player.id}
               alt={language === "ja" ? messages.avatar : "Player Avatar"}
+            />
+            <PlayerProfileRefresh
+              key={player.id}
+              playerId={player.id}
+              language={language}
             />
           </Box>
           <Box sx={{ gridArea: { xs: "sidebar", lg: "unset" } }}>

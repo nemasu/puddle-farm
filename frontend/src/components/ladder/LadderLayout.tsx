@@ -3,10 +3,12 @@ import Image from "next/image";
 import type { ReactNode } from "react";
 import { getMessages } from "../../lib/i18n";
 import { getIngestionStatus } from "../../lib/server/ingestion";
+import { getRequestPresentation } from "../../lib/server/site-preferences";
 import type { Language } from "../../lib/site-preferences";
 import { FooterExtras } from "../../site";
 import { AppLink as Link } from "../AppLink";
 import { IngestionStatus } from "./IngestionStatus";
+import { LadderThemeProvider } from "./LadderThemeProvider";
 import styles from "./ladder.module.css";
 
 const displayFont = localFont({
@@ -27,6 +29,7 @@ export async function LadderLayout({
   section?:
     | "rankings"
     | "stats"
+    | "activity"
     | "search"
     | "about"
     | "settings"
@@ -34,6 +37,7 @@ export async function LadderLayout({
     | "missing";
 }) {
   const messages = getMessages(language);
+  const { ladderTheme } = await getRequestPresentation();
   const initialMessage = await getIngestionStatus(
     messages.common.ingestionError,
   );
@@ -41,6 +45,7 @@ export async function LadderLayout({
     <div
       className={`${styles.site} ${displayFont.variable}`}
       data-site-design="ladder"
+      data-ladder-theme={ladderTheme}
       id="top"
     >
       <a className={styles.skip} href="#ladder-main">
@@ -76,6 +81,13 @@ export async function LadderLayout({
               aria-current={section === "search" ? "page" : undefined}
             >
               {messages.common.search}
+            </Link>
+            <Link
+              href="/stats"
+              className={section === "activity" ? styles.activeTab : undefined}
+              aria-current={section === "activity" ? "page" : undefined}
+            >
+              {messages.ladder.activity}
             </Link>
             <Link
               href="/about"
@@ -129,7 +141,11 @@ export async function LadderLayout({
         </div>
       </header>
       <IngestionStatus initialMessage={initialMessage} language={language} />
-      <main id="ladder-main">{children}</main>
+      <main id="ladder-main">
+        <LadderThemeProvider preference={ladderTheme}>
+          {children}
+        </LadderThemeProvider>
+      </main>
       <footer className={styles.footer}>
         <Link className={styles.footerBrand} href="/">
           PUDDLE <span>FARM</span>

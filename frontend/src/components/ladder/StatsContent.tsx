@@ -9,8 +9,6 @@ import type { Language } from "../../lib/site-preferences";
 import { PlayerDateTime } from "../classic/PlayerFormatting";
 import HourlyPlayersChart from "../HourlyPlayersChart";
 import shared from "./ladder.module.css";
-import { PlayerWidgets as LadderWidgets } from "./PlayerWidgets";
-import { StatisticsNavigation } from "./StatisticsNavigation";
 import styles from "./stats.module.css";
 
 async function ActivityChart({ language }: { language: Language }) {
@@ -49,7 +47,6 @@ export async function LadderStatsContent({ language }: { language: Language }) {
     : [];
   return (
     <section className={shared.content} aria-labelledby="stats-title">
-      <StatisticsNavigation language={language} current="stats" />
       <div className={shared.sectionHeading}>
         <p>{messages.title}</p>
         <h1 id="stats-title">
@@ -111,18 +108,16 @@ export async function LadderStatsContent({ language }: { language: Language }) {
         className={`${styles.panel} ${styles.chart}`}
         aria-label={messages.hourly}
       >
-        <LadderWidgets>
-          <Suspense
-            fallback={
-              <>
-                <h2>{messages.hourly}</h2>
-                <p>{messages.loading}</p>
-              </>
-            }
-          >
-            <ActivityChart language={language} />
-          </Suspense>
-        </LadderWidgets>
+        <Suspense
+          fallback={
+            <>
+              <h2>{messages.hourly}</h2>
+              <p>{messages.loading}</p>
+            </>
+          }
+        >
+          <ActivityChart language={language} />
+        </Suspense>
         <noscript>
           <p>{messages.noscript}</p>
         </noscript>

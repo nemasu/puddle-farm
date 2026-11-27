@@ -1,7 +1,7 @@
 .hero {
   position: relative;
   overflow: hidden;
-  background: #111;
+  background: var(--solid);
   color: #fff;
   border-bottom: 5px solid var(--red);
   isolation: isolate;
@@ -17,7 +17,7 @@
   content: "";
   position: absolute;
   width: 23%;
-  inset: 0 17% 0 auto;
+  inset: 0 auto 0 17%;
   z-index: -1;
   background: var(--red);
   transform: skewX(-15deg);
@@ -40,8 +40,8 @@
   margin: 12px 0;
   font: 400 clamp(2rem, 5vw, 4.2rem) / 1.2 var(--display);
   overflow-wrap: anywhere;
-  background: white;
-  color: #111;
+  background: var(--surface);
+  color: var(--ink);
   display: inline-block;
   padding: 4px 18px;
   transform: skewX(-5deg);
@@ -52,7 +52,6 @@
   bottom: 0;
   left: 50%;
   right: 0;
-  z-index: -1;
   opacity: 0.75;
 }
 .art img {
@@ -92,17 +91,17 @@
 }
 .heroStats > div,
 .tiles > div {
-  border: 3px solid #111;
-  box-shadow: 5px 5px var(--cyan);
-  background: #fff;
-  color: #111;
+  border: 3px solid var(--frame);
+  box-shadow: 5px 5px var(--cyan-shadow);
+  background: var(--surface);
+  color: var(--ink);
   padding: 14px 16px;
   position: relative;
 }
 .heroStats > div > span,
 .tiles > div > span {
   display: block;
-  color: #666660;
+  color: var(--muted);
   font-size: 0.8rem;
   font-weight: 800;
 }
@@ -150,15 +149,15 @@
   display: flex;
   gap: 10px;
   align-items: center;
-  border: 2px solid #111;
+  border: 2px solid var(--frame);
   padding: 10px 15px;
-  background: #fff;
+  background: var(--surface);
   text-decoration: none;
 }
 .characters a[aria-current] {
-  background: #111;
+  background: var(--solid);
   color: #fff;
-  box-shadow: 4px 4px var(--red);
+  box-shadow: 4px 4px var(--red-shadow);
 }
 .characters small {
   display: block;
@@ -189,9 +188,9 @@
   margin-bottom: 20px;
 }
 .panel {
-  background: #fff;
-  border: 3px solid #111;
-  box-shadow: 6px 6px var(--cyan);
+  background: var(--surface);
+  border: 3px solid var(--frame);
+  box-shadow: 6px 6px var(--cyan-shadow);
   margin-bottom: 28px;
   padding: 18px;
   min-width: 0;
@@ -214,8 +213,8 @@
   padding: 10px 8px;
 }
 .matchups :global(.MuiTableCell-body) {
-  background: #fff;
-  color: #111;
+  background: var(--surface);
+  color: var(--ink);
 }
 .scroll {
   overflow-x: auto;
@@ -230,10 +229,10 @@
 .scroll td {
   padding: 8px;
   text-align: left;
-  border-bottom: 1px solid #bdbdb6;
+  border-bottom: 1px solid var(--line);
 }
 .scroll th {
-  background: #111;
+  background: var(--solid);
   color: #fff;
 }
 .pagination {
@@ -242,13 +241,13 @@
   margin: 12px 0;
 }
 .pagination a {
-  border: 2px solid #111;
+  border: 2px solid var(--frame);
   padding: 4px 14px;
   text-decoration: none;
   font-weight: 900;
 }
 .pagination a:hover {
-  background: #111;
+  background: var(--solid);
   color: #fff;
 }
 .historyGroups {
@@ -256,7 +255,7 @@
   gap: 10px;
 }
 .match {
-  border: 1px solid #bdbdb6;
+  border: 1px solid var(--line);
 }
 .match summary {
   padding: 12px;
@@ -274,8 +273,8 @@
   font-size: 0.65rem;
 }
 .match[open] summary {
-  background: #f1f1ed;
-  border-bottom: 1px solid #bdbdb6;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
 }
 .match[open] summary::before {
   content: "−";
@@ -299,9 +298,9 @@
   padding: 12px;
 }
 .profile {
-  border: 3px solid #111;
-  background: #fff;
-  box-shadow: 6px 6px var(--red);
+  border: 3px solid var(--frame);
+  background: var(--surface);
+  box-shadow: 6px 6px var(--red-shadow);
 }
 .profileFrame {
   min-height: 326.5px;
@@ -312,7 +311,7 @@
   display: flow-root;
 }
 .comment {
-  background: #f1f1ed;
+  background: var(--paper);
   padding: 10px;
   margin: 10px 0;
   font-size: 0.8rem;
@@ -404,12 +403,12 @@
   text-align: right;
 }
 .winRateRow small {
-  color: #666660;
+  color: var(--muted);
 }
 .winRateTrack {
   height: 16px;
-  background: #eee;
-  border: 2px solid #111;
+  background: var(--surface-muted);
+  border: 2px solid var(--frame);
 }
 
 .winRateTrack {
@@ -418,7 +417,7 @@
   border-radius: 0;
 }
 .winRateTrack::-webkit-meter-bar {
-  background: #eee;
+  background: var(--surface-muted);
   border: 0;
   border-radius: 0;
 }
@@ -447,14 +446,14 @@
 }
 .winRateSort button {
   padding: 6px 10px;
-  border: 2px solid #111;
-  background: white;
-  color: #111;
+  border: 2px solid var(--frame);
+  background: var(--surface);
+  color: var(--ink);
   cursor: pointer;
   font: 700 0.75rem var(--body);
 }
 .winRateSort button[aria-pressed="true"] {
-  background: #111;
+  background: var(--solid);
   color: white;
 }
 
@@ -509,7 +508,7 @@
 }
 
 .opponent .badge {
-  background: #111;
+  background: var(--solid);
   font-size: 0.65rem;
   margin: 2px 4px;
   vertical-align: middle;

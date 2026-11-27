@@ -5,7 +5,6 @@ import { Utils } from "../../utils/Utils";
 import { DistributionChart } from "../classic/DistributionChart";
 import { PlayerDateTime } from "../classic/PlayerFormatting";
 import shared from "./ladder.module.css";
-import { PlayerWidgets as LadderWidgets } from "./PlayerWidgets";
 import { StatisticsNavigation } from "./StatisticsNavigation";
 import styles from "./stats.module.css";
 
@@ -49,13 +48,11 @@ export function LadderDistributionContent({
           </p>
           <section className={styles.panel} aria-label={messages.title}>
             {entries.length ? (
-              <LadderWidgets>
-                <DistributionChart
-                  entries={entries}
-                  language={language}
-                  design="ladder"
-                />
-              </LadderWidgets>
+              <DistributionChart
+                entries={entries}
+                language={language}
+                design="ladder"
+              />
             ) : (
               <p>{messages.empty}</p>
             )}

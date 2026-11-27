@@ -23,7 +23,7 @@ export async function checkLadderPlayerSsr({read,state,baseURL}) {
     assert.ok(document.querySelector('[data-player-history] details table'));
     assert.ok(document.querySelector('nav a[aria-current="page"][href$="/SO"]'));
     assert.ok(!document.querySelector("main").textContent.includes("편차"));
-    assert.ok(document.querySelector('main img[src="/api/avatar/9007199254740993"]'));
+    assert.ok(document.querySelector('img[src^="data:image/png;base64,"]'));
     assert.ok(document.querySelector('[data-player-history]').textContent.includes(language==="ko"?"경기 기록":"Match history"));
     assert.ok(document.querySelector('meta[name=description]').content.includes(language==="ko"?"플레이어":"player"));
     assert.equal((await read(`/player/${id}`,"Sol",cookie)).response.headers.get("location"),`/player/${id}/SO`);
@@ -75,20 +75,17 @@ export async function checkLadderPlayerBrowser({call,evaluate,waitFor,navigate,r
   state.slowProfile=true; state.profileResponses=[];
   try {
    await call("Page.navigate",{url:`${baseURL}${path}`});
-   await waitFor('!!document.querySelector("main canvas") && !!document.querySelector("[data-player-history]")');
+   await waitFor('!!document.querySelector("main .player-rating-plot svg") && !!document.querySelector("[data-player-history]")');
    await evaluate('document.fonts.ready.then(()=>true)');
-   const measure=()=>evaluate(`(()=>{const selectors=['#player-history-title','#player-chart-title','main aside','main h1','main aside img'];return selectors.map(selector=>{const el=document.querySelector(selector);const r=el.getBoundingClientRect();return [r.x,r.y+scrollY,r.width,r.height]});})()`);
+   const measure=()=>evaluate(`(()=>{const selectors=['#player-history-title','#player-chart-title','main aside','main h1','main aside [data-avatar-frame]'];return selectors.map(selector=>{const el=document.querySelector(selector);const r=el.getBoundingClientRect();return [r.x,r.y+scrollY,r.width,r.height]});})()`);
    const before=await measure();
    assert.ok(state.pendingProfile>0);
    state.profileResponses.splice(0).forEach(finish=>finish());
-   await waitFor('document.querySelector("main").textContent.includes("Hello <comment>") && document.querySelector("main").textContent.includes("Old Alias")');
+   await waitFor('document.querySelector("main").textContent.includes("Hello <comment>") && document.querySelector("main").textContent.includes("Old Alias") && !!document.querySelector("aside [data-avatar-frame] img")');
    assert.deepEqual(await measure(),before,`no profile shift at ${width}px`);
    assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true,`player overflow ${width}px`);
    await evaluate('scrollTo(0,0)');
    await writeFile(`/tmp/puddle-public-ladder-player-${width}.png`,Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));
-   await evaluate('document.querySelector("main aside img").dispatchEvent(new Event("error"))');
-   await waitFor('!document.querySelector("main aside img")');
-   assert.equal(await evaluate('document.querySelector("main aside > div").getBoundingClientRect().height'),326.5);
   } finally {state.profileResponses.splice(0).forEach(finish=>finish()); delete state.profileResponses;state.slowProfile=false;}
  }
  await waitFor('!!document.querySelector("[data-win-rate-sort=lowest]")');
@@ -100,20 +97,20 @@ export async function checkLadderPlayerBrowser({call,evaluate,waitFor,navigate,r
  await waitFor('document.querySelector("[data-win-rate-sort=most]").getAttribute("aria-pressed")==="true"');
  const start=requests.length;
  await navigate(`${baseURL}${path}`);
- await waitFor('!!document.querySelector("main canvas") && document.querySelector("#player-matchups-title").parentElement.textContent.includes("전체 승률")');
- assert.ok(!requests.slice(start).some(url=>/\/api\/(player|ratings|matchups|alias|comment)\//.test(url)),"no initial browser dataset refetch");
+ await waitFor('!!document.querySelector("main .player-rating-plot svg") && document.querySelector("#player-matchups-title").parentElement.textContent.includes("전체 승률")');
+ assert.ok(!requests.slice(start).some(url=>/\/api\/(player|ratings|matchups|alias|comment|avatar)\//.test(url)),"no initial browser dataset refetch");
  await click(call,evaluate,'[data-player-history] details summary');
  assert.equal(await evaluate('document.querySelector("[data-player-history] details").open'),true);
  await click(call,evaluate,`[data-player-history] nav a[href$="/2/2"]`);
  await waitFor('location.pathname.endsWith("/SO/2/2") && document.querySelector("[data-player-history]").textContent.includes("Opponent <2>")');
  await click(call,evaluate,`nav a[href="/player/${id}/KY"]`);
- await waitFor('location.pathname.endsWith("/KY") && !!document.querySelector("main canvas")');
+ await waitFor('location.pathname.endsWith("/KY") && !!document.querySelector("main .player-rating-plot svg")');
  await evaluate('history.back()');
- await waitFor('location.pathname.endsWith("/SO/2/2") && !!document.querySelector("main canvas")');
+ await waitFor('location.pathname.endsWith("/SO/2/2") && !!document.querySelector("main .player-rating-plot svg")');
  await navigate(`${baseURL}${path}`);
- await waitFor('!!document.querySelector("main canvas")');
+ await waitFor('!!document.querySelector("main .player-rating-plot svg")');
  await evaluate('Array.from(document.querySelectorAll("main button")).find(b=>b.textContent.trim()==="뱅퀴셔 이전 기록 보기").click()');
- await waitFor('Array.from(document.querySelectorAll("main button")).some(b=>b.textContent.trim()==="뱅퀴셔 기록 보기") && !!document.querySelector("main canvas")');
+ await waitFor('Array.from(document.querySelectorAll("main button")).some(b=>b.textContent.trim()==="뱅퀴셔 기록 보기") && !!document.querySelector("main .player-rating-plot svg")');
  assert.ok(state.requests.includes(`/api/ratings/${id}/SO/200?pre_vanquisher=true`));
  await waitFor('Array.from(document.querySelectorAll("main button")).some(b=>b.textContent.trim()==="티어 목록")');
  await evaluate('Array.from(document.querySelectorAll("main button")).find(b=>b.textContent.trim()==="티어 목록").click()');

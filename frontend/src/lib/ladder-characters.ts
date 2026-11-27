@@ -5,11 +5,12 @@ type CharacterArt = {
   ko: string;
   art: string;
   x: number;
+  rankingOffsetX?: number;
   y: number;
   scale: number;
 };
 
-// Korean display names: https://www.guiltygear.com/kr/character/
+// Korean display names: https://www.guiltygear.com/ggst/kr/character/
 const characters: Record<string, CharacterArt> = {
   SO: { en: "Sol Badguy", ko: "솔", art: "sol", x: 818, y: 249, scale: 1 },
   KY: { en: "Ky Kiske", ko: "카이", art: "ky", x: 870, y: 228, scale: 1 },
@@ -67,7 +68,15 @@ const characters: Record<string, CharacterArt> = {
     scale: 1,
   },
   AN: { en: "Anji Mito", ko: "안지", art: "anji", x: 770, y: 265, scale: 1 },
-  IN: { en: "I-No", ko: "이노", art: "ino", x: 700, y: 340, scale: 1 },
+  IN: {
+    en: "I-No",
+    ko: "이노",
+    art: "ino",
+    x: 700,
+    rankingOffsetX: 64,
+    y: 340,
+    scale: 1,
+  },
   GO: {
     en: "Goldlewis Dickinson",
     ko: "골드루이스",
@@ -115,7 +124,15 @@ const characters: Record<string, CharacterArt> = {
     scale: 1,
   },
   AB: { en: "A.B.A", ko: "아바", art: "aba", x: 795, y: 485, scale: 1.4 },
-  SL: { en: "Slayer", ko: "슬레이어", art: "slayer", x: 676, y: 310, scale: 1 },
+  SL: {
+    en: "Slayer",
+    ko: "슬레이어",
+    art: "slayer",
+    x: 676,
+    rankingOffsetX: 64,
+    y: 310,
+    scale: 1,
+  },
   DI: {
     en: "Queen Dizzy",
     ko: "퀸 디지",
@@ -142,7 +159,7 @@ export function getCharacterArt(short: string): CharacterArt | undefined {
   return Object.hasOwn(characters, short) ? characters[short] : undefined;
 }
 
-// Japanese display names: https://www.guiltygear.com/jp/character/
+// Japanese display names: https://www.guiltygear.com/ggst/jp/character/
 const japaneseNames: Record<string, string> = {
   SO: "ソル",
   KY: "カイ",

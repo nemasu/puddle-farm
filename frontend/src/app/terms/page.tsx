@@ -2,13 +2,14 @@ import { Box, Divider, Typography } from "@mui/material";
 import type { Metadata } from "next";
 import { TermsPresentation } from "../../components/ladder/TermsPresentation";
 import { getRequestPresentation } from "../../lib/server/site-preferences";
+import { localizedMetadata } from "../../lib/server-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { messages } = await getRequestPresentation();
-  return {
+  return localizedMetadata({
     title: `${messages.terms.title} | Puddle Farm`,
     description: messages.terms.description,
-  };
+  });
 }
 
 export default async function TermsPage() {

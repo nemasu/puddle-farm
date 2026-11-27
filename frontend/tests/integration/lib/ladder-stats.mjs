@@ -11,7 +11,7 @@ export async function checkLadderStatsSsr({read,state,baseURL}) {
   assert.equal(document.querySelectorAll('main tbody tr').length,5);
   assert.equal(document.querySelectorAll('main tbody tr:first-child td')[0].textContent,'1,234');
   assert.equal(document.querySelectorAll('main tbody tr:first-child td')[1].textContent,'5,678');
-  assert.ok(document.querySelector('main a[href="/stats"][aria-current="page"]'));
+  assert.equal(document.querySelector('header a[href="/stats"][aria-current="page"]').textContent,language==='ko'?'활동':'Activity');
   assert.ok(document.querySelector('main time').dateTime);
   assert.equal(document.querySelector('table[aria-label="Hourly player data"]'),null);
   assert.ok(document.querySelector('main').textContent.includes(language==='ko'?'JavaScript가 필요':'requires JavaScript'));
@@ -47,11 +47,11 @@ export async function checkLadderStatsBrowser({call,evaluate,waitFor,navigate,re
  await choose(call,baseURL);
  const start=requests.length;
  await navigate(`${baseURL}/stats`);
- await waitFor('!!document.querySelector("main canvas")');
+ await waitFor('!!document.querySelector("main .hourly-players-plot svg")');
  assert.ok(!requests.slice(start).some(url=>url.includes('/api/stats')),'initial data is server seeded');
  for(const [label,range] of [['24시간','24h'],['7일','7d'],['1년','1y'],['전체','all'],['30일','30d']]) {
   await evaluate(`Array.from(document.querySelectorAll('main button')).find(button=>button.textContent.trim()===${JSON.stringify(label)}).click()`);
-  await waitFor(`!!document.querySelector('main canvas') && Array.from(document.querySelectorAll('main button')).some(button=>button.textContent.trim()===${JSON.stringify(label)} && button.getAttribute('aria-pressed')==='true')`);
+  await waitFor(`!!document.querySelector('main .hourly-players-plot svg') && Array.from(document.querySelectorAll('main button')).some(button=>button.textContent.trim()===${JSON.stringify(label)} && button.getAttribute('aria-pressed')==='true')`);
   assert.ok(state.requests.includes(`/api/stats/hourly-players?range=${range}`));
  }
  for(const language of ['en','ko']) {
@@ -59,7 +59,7 @@ export async function checkLadderStatsBrowser({call,evaluate,waitFor,navigate,re
   for(const width of [1440,390,320]) {
    await call('Emulation.setDeviceMetricsOverride',{width,height:1100,deviceScaleFactor:1,mobile:width<600});
    await navigate(`${baseURL}/stats`);
-   await waitFor('!!document.querySelector("main canvas")');
+   await waitFor('!!document.querySelector("main .hourly-players-plot svg")');
    await evaluate('document.fonts.ready.then(()=>true); scrollTo(0,0)');
    assert.equal(await evaluate('document.documentElement.scrollWidth<=innerWidth'),true,`${language} stats overflow ${width}px`);
    if(language==='ko') await writeFile(`/tmp/puddle-public-ladder-stats-${width}.png`,Buffer.from((await call('Page.captureScreenshot',{format:'png'})).data,'base64'));

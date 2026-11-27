@@ -23,6 +23,7 @@ import { getCharacterWinRates } from "../../lib/matchups";
 import type { PageSearchParams } from "../../lib/pagination";
 import { readJson } from "../../lib/server/api";
 import { getRequestPresentation } from "../../lib/server/site-preferences";
+import { localizedMetadata } from "../../lib/server-metadata";
 
 const classicMetadata: Metadata = {
   title: "Character Matchup Win Rates | Guilty Gear Strive | Puddle Farm",
@@ -31,10 +32,12 @@ const classicMetadata: Metadata = {
 
 export async function generateMetadata(): Promise<Metadata> {
   const presentation = await getRequestPresentation();
-  return getPageCopy<Metadata>(presentation, classicMetadata, (messages) => ({
-    title: `${messages.matchup.title} | Puddle Farm`,
-    description: messages.matchup.description,
-  }));
+  return await localizedMetadata(
+    getPageCopy<Metadata>(presentation, classicMetadata, (messages) => ({
+      title: `${messages.matchup.title} | Puddle Farm`,
+      description: messages.matchup.description,
+    })),
+  );
 }
 
 export default async function MatchupPage({

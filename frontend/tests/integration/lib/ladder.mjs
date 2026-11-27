@@ -9,7 +9,7 @@ export async function checkLadderSsr({ read, state, baseURL }) {
   assert.equal(home.document.querySelector('[data-site-design]').dataset.siteDesign, "ladder");
   assert.equal(home.document.querySelector('header a').textContent.trim(), 'PUDDLE FARM');
   const menuLinks=[...home.document.querySelectorAll('header nav a')].map(link=>link.getAttribute('href'));
-  assert.deepEqual(menuLinks.slice(-2), ['/search','/about']);
+  assert.deepEqual(menuLinks.slice(-3), ['/search','/stats','/about']);
   assert.equal(home.document.querySelector("main table").getAttribute("aria-label"), "레전드 랭킹");
   assert.equal(home.document.querySelectorAll("main tbody tr").length, 5);
   assert.equal(home.document.querySelectorAll("main thead th").length, 4, "deviation column is removed");
@@ -26,10 +26,9 @@ export async function checkLadderSsr({ read, state, baseURL }) {
   assert.equal(alias.document.querySelector("main table").getAttribute("aria-label"), "Legend leaderboard");
   const classic = await read("/", "Sol", "ggst-language=ko; ggst-design=classic");
   assert.equal(classic.document.querySelector('[data-site-design]').dataset.siteDesign, "classic");
-  const filtered = await read("/?character=KY&q=SSR", "Sol", korean);
+  const filtered = await read("/?character=KY&q=missing-player", "Sol", korean);
   assert.deepEqual([...filtered.document.querySelectorAll("main tbody tr")].map(row => row.cells[0].firstElementChild.textContent.trim()), ["2", "4"]);
-  const noMatches = await read("/?q=missing-player", "Sol", korean);
-  assert.ok(noMatches.document.querySelector("main tbody").textContent.includes("조건에 맞는"));
+  assert.equal(filtered.document.querySelector("main form input[name=q]"), null);
   state.healthWarning = "Fixture ingestion warning";
   const warning = await read("/", "Sol", korean);
   assert.ok(warning.document.querySelector('[role=alert]').textContent.includes(state.healthWarning));
@@ -80,8 +79,6 @@ export async function checkLadderWithoutScripts({ call, evaluate, waitFor, navig
   await navigate(`${baseURL}/`);
   assert.equal(await evaluate('document.querySelectorAll("main tbody tr").length'), 5);
   const { root } = await call("DOM.getDocument");
-  const input = await call("DOM.querySelector", { nodeId: root.nodeId, selector: "#legend-query" });
-  await call("DOM.setAttributeValue", { nodeId: input.nodeId, name: "value", value: "SSR <Player> 2" });
   const selected = await call("DOM.querySelector", { nodeId: root.nodeId, selector: "#legend-character option[selected]" });
   if (selected.nodeId) await call("DOM.removeAttribute", { nodeId: selected.nodeId, name: "selected" });
   const character = await call("DOM.querySelector", { nodeId: root.nodeId, selector: '#legend-character option[value="KY"]' });
@@ -93,7 +90,7 @@ export async function checkLadderWithoutScripts({ call, evaluate, waitFor, navig
   const y = (model.content[1] + model.content[5]) / 2;
   await call("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
   await call("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
-  await waitFor('location.search.includes("character=KY") && document.querySelectorAll("main tbody tr").length === 1');
-  assert.equal(await evaluate('document.querySelector("main tbody tr td").firstElementChild.textContent.trim()'), "2");
+  await waitFor('location.search === "?character=KY" && document.querySelectorAll("main tbody tr").length === 2');
+  assert.deepEqual(await evaluate('Array.from(document.querySelectorAll("main tbody tr td:first-child"), cell => cell.firstElementChild.textContent.trim())'), ["2", "4"]);
   await choose(call, baseURL, "en", "classic");
 }

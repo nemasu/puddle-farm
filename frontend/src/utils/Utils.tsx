@@ -8,8 +8,9 @@ const RATING_CHANGE_STEPS: {
   max: number;
   exclusive?: boolean;
   color: string;
+  ladderColor?: string;
 }[] = [
-  { max: -10, color: "#D32F2F" },
+  { max: -10, color: "#D32F2F", ladderColor: "var(--ladder-rating-loss)" },
   { max: -2, color: "#E57373" },
   { max: 0, exclusive: true, color: "#FF8A80" },
   { max: 2, color: "#A8E6A3" },
@@ -130,13 +131,13 @@ const rankThresholds = [
 
 const Utils = {
   formatNumber: (n: number) => numberFormatter.format(n),
-  getRatingChangeColor: (change: number): string => {
+  getRatingChangeColor: (change: number, ladder = false): string => {
     for (const step of RATING_CHANGE_STEPS) {
       if (step.exclusive ? change < step.max : change <= step.max) {
-        return step.color;
+        return (ladder && step.ladderColor) || step.color;
       }
     }
-    return RATING_CHANGE_FALLBACK_COLOR;
+    return ladder ? "var(--ladder-rating-gain)" : RATING_CHANGE_FALLBACK_COLOR;
   },
   getPercentChangeColor: (percent: number): string => {
     for (const step of PERCENT_CHANGE_STEPS) {

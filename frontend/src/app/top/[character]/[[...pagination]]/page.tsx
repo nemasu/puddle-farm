@@ -8,6 +8,7 @@ import type { PageSearchParams } from "../../../../lib/pagination";
 import { getCharacters } from "../../../../lib/server/characters";
 import { resolveRankingRoute } from "../../../../lib/server/ranking-route";
 import { getRequestPresentation } from "../../../../lib/server/site-preferences";
+import { localizedMetadata } from "../../../../lib/server-metadata";
 
 type Props = {
   params: Promise<{ character: string; pagination?: string[] }>;
@@ -26,17 +27,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const character = (await params).character;
   const name = await characterName(character);
   const presentation = await getRequestPresentation();
-  return getPageCopy<Metadata>(
-    presentation,
-    {
-      title: `${name} Leaderboard | Guilty Gear Strive | Puddle Farm`,
-      description:
-        "Guilty Gear Strive character leaderboards and top player ratings.",
-    },
-    (messages) => ({
-      title: `${characterLabel(character, name, presentation.language)} ${messages.ladder.characterRankings} | Puddle Farm`,
-      description: messages.ladder.characterDescription,
-    }),
+  return await localizedMetadata(
+    getPageCopy<Metadata>(
+      presentation,
+      {
+        title: `${name} Leaderboard | Guilty Gear Strive | Puddle Farm`,
+        description:
+          "Guilty Gear Strive character leaderboards and top player ratings.",
+      },
+      (messages) => ({
+        title: `${characterLabel(character, name, presentation.language)} ${messages.ladder.characterRankings} | Puddle Farm`,
+        description: messages.ladder.characterDescription,
+      }),
+    ),
   );
 }
 

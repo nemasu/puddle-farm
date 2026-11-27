@@ -60,6 +60,18 @@ paths:
             default: 0
           required: false
           description: Number of matches to skip (default 0)
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date
+          description: Inclusive start date in UTC (YYYY-MM-DD)
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date
+          description: Inclusive end date in UTC (YYYY-MM-DD)
       responses:
         '200':
           description: Successfully returned player's match history
@@ -67,6 +79,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlayerGamesResponse'
+        '400':
+          description: Invalid date or reversed range
         '404':
           description: Player or character not found
   /top:
@@ -487,6 +501,7 @@ paths:
   /avatar/{player_id}:
     get:
       summary: Get player's avatar image
+      description: Returns the saved avatar from PostgreSQL.
       parameters:
         - in: path
           name: player_id
@@ -504,9 +519,46 @@ paths:
                 type: string
                 format: binary
         '404':
+          description: No saved avatar for this player
+  /comment/{player_id}:
+    get:
+      summary: Get a player's saved public comment
+      parameters:
+        - in: path
+          name: player_id
+          schema:
+            type: integer
+            format: int64
+          required: true
+      responses:
+        '200':
+          description: The saved comment
+          content:
+            text/plain:
+              schema:
+                type: string
+        '404':
+          description: No saved comment for this player
+  /profile_refresh/{player_id}:
+    post:
+      summary: Refresh a player's stored avatar and comment
+      description: One attempt per player is allowed every 24 hours. Each successful fetch replaces the corresponding stored value.
+      parameters:
+        - in: path
+          name: player_id
+          schema:
+            type: integer
+            format: int64
+          required: true
+      responses:
+        '204':
+          description: Both profile values were refreshed
+        '404':
           description: Player not found
+        '429':
+          description: This player has already requested a refresh in the last 24 hours
         '503':
-          description: GGST is not connected
+          description: One or both values could not be fetched from GGST
 components:
   schemas:
     PlayerResponse:

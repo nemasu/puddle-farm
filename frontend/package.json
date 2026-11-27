@@ -11,10 +11,9 @@
     "@mui/icons-material": "^9.2.0",
     "@mui/material": "^9.2.0",
     "@mui/material-nextjs": "9.5.0",
-    "chart.js": "^4.5.1",
+    "@puddle-farm/svg-chart": "file:packages/svg-chart",
     "next": "16.4.6",
     "react": "^19.2.7",
-    "react-chartjs-2": "^5.3.1",
     "react-dom": "^19.2.7",
     "server-only": "0.0.1"
   },

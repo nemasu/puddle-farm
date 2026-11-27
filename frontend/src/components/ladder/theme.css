@@ -1,0 +1,32 @@
+[data-site-design="ladder"][data-ladder-theme] {
+  color-scheme: light dark;
+  --paper: light-dark(#f1f1ed, #151419);
+  --surface: light-dark(#ffffff, #24232b);
+  --surface-muted: light-dark(#eeeeee, #302e37);
+  --ink: light-dark(#111111, #f5f2f5);
+  --muted: light-dark(#666660, #b9b4c1);
+  --line: light-dark(#bdbdb6, #4c4854);
+  --frame: light-dark(#111111, #625c6a);
+  --shadow: light-dark(#111111, #0a090c);
+  --solid: light-dark(#111111, #100f14);
+  --black: #080808;
+  --red: #e8282f;
+  --red-ink: light-dark(#c8151c, #ff7b83);
+  --red-fill: light-dark(#e8282f, #be2938);
+  --red-shadow: light-dark(var(--red), #7a4047);
+  --cyan: #25e7d4;
+  --cyan-shadow: light-dark(var(--cyan), #24595b);
+  --warning-surface: light-dark(#fff0d0, #3b2d21);
+  --warning-text: light-dark(#602900, #ffcf90);
+  --warning-line: light-dark(#ad5a00, #d8964a);
+  --ladder-rating-loss: light-dark(#d32f2f, #ff7b83);
+  --ladder-rating-gain: light-dark(#087f23, #72d78a);
+}
+
+[data-site-design="ladder"][data-ladder-theme="light"] {
+  color-scheme: light;
+}
+
+[data-site-design="ladder"][data-ladder-theme="dark"] {
+  color-scheme: dark;
+}

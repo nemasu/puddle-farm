@@ -18,6 +18,7 @@ import type { DistributionResponse } from "../../interfaces/API";
 import { getPageCopy } from "../../lib/i18n/classic";
 import { readJson } from "../../lib/server/api";
 import { getRequestPresentation } from "../../lib/server/site-preferences";
+import { localizedMetadata } from "../../lib/server-metadata";
 import { Utils } from "../../utils/Utils";
 
 const classicMetadata: Metadata = {
@@ -27,10 +28,12 @@ const classicMetadata: Metadata = {
 
 export async function generateMetadata(): Promise<Metadata> {
   const presentation = await getRequestPresentation();
-  return getPageCopy<Metadata>(presentation, classicMetadata, (messages) => ({
-    title: `${messages.distribution.title} | Puddle Farm`,
-    description: messages.distribution.description,
-  }));
+  return await localizedMetadata(
+    getPageCopy<Metadata>(presentation, classicMetadata, (messages) => ({
+      title: `${messages.distribution.title} | Puddle Farm`,
+      description: messages.distribution.description,
+    })),
+  );
 }
 export default async function DistributionPage() {
   const presentation = await getRequestPresentation();

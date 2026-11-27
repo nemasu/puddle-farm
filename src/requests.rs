@@ -1,16 +1,12 @@
-use serde_derive::{Deserialize, Serialize};
-use tracing::{info, error};
-use std::sync::Arc;
-use steamworks::{Client, TicketForWebApiResponse};
-use tokio::sync::Mutex;
 use lazy_static::lazy_static;
+use serde_derive::{Deserialize, Serialize};
+use steamworks::{Client, TicketForWebApiResponse};
 
 lazy_static! {
     static ref STEAM_ID: String = dotenv::var("STEAM_ID").expect("STEAM_ID must be set.");
     static ref STEAM_HEX: String = dotenv::var("STEAM_HEX").expect("STEAM_HEX must be set.");
     static ref VERSION: String = dotenv::var("API_VERSION").expect("API_VERSION must be set.");
     static ref PLAYER_ID: String = dotenv::var("PLAYER_ID").expect("PLAYER_ID must be set.");
-    pub static ref STEAM_TOKEN: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(Option::None));
 }
 
 const STEAM_APP_ID: u32 = 1384160;
@@ -66,11 +62,14 @@ pub struct PlayerStatsRequest {
     int6: i64,
 }
 
-pub fn generate_player_stats_request(player_id: String) -> Request<PlayerStatsRequest> {
+pub fn generate_player_stats_request(
+    player_id: String,
+    token: &str,
+) -> Request<PlayerStatsRequest> {
     Request {
         header: RequestHeader {
             player_id: PLAYER_ID.to_owned(),
-            token: std::fs::read_to_string("token.txt").unwrap(),
+            token: token.to_owned(),
             int1: 2,
             version: VERSION.to_owned(),
             platform: 3, //PC
@@ -93,11 +92,14 @@ pub struct PlayerAvatarRequest {
     int1: i64,
 }
 
-pub fn generate_player_avatar_request(player_id: String) -> Request<PlayerAvatarRequest> {
+pub fn generate_player_avatar_request(
+    player_id: String,
+    token: &str,
+) -> Request<PlayerAvatarRequest> {
     Request {
         header: RequestHeader {
             player_id: PLAYER_ID.to_owned(),
-            token: std::fs::read_to_string("token.txt").unwrap(),
+            token: token.to_owned(),
             int1: 2,
             version: VERSION.to_owned(),
             platform: 3, //PC
@@ -130,7 +132,7 @@ pub fn generate_replay_request(
             query: ReplayQuery {
                 int1: -1,
                 int2: 0,
-                min_rank: 0, // No Rank
+                min_rank: 0,  // No Rank
                 max_rank: 22, // Currently 22 for Vanquisher 3 Vindex
                 min_floor: 0,
                 max_floor: 99,
@@ -245,56 +247,58 @@ pub fn generate_rank_match_lp_request(
     }
 }
 
-pub async fn generate_login_request() -> Request<LoginRequest> {
-    let client = Client::init_app(STEAM_APP_ID).unwrap();
-    let user = client.user();
-
-    let token = STEAM_TOKEN.clone();
-    if !token.clone().try_lock().unwrap().is_some() {
-        let _cb = client.register_callback(move |v: TicketForWebApiResponse| {
-            //println!("Got webapi auth response: {:?}", v)
-            let hex: String = v
-                .ticket
-                .iter()
-                .map(|b| format!("{:02X}", b).to_string())
-                .collect::<Vec<String>>()
-                .join("");
-            info!("Login steam token for strive {}", hex);
-            *token.try_lock().unwrap() = Some(hex);
-        });
-    } else {
-        info!("Already have steam token.");
+pub async fn generate_login_request()
+-> Result<(Request<LoginRequest>, Client<steamworks::ClientManager>), String> {
+    let (steam_token, client) = tokio::task::spawn_blocking(steam_gui_ticket)
+        .await
+        .map_err(|error| format!("Steam authentication task failed: {error}"))??;
+    let request = Request {
+        header: RequestHeader {
+            player_id: String::new(),
+            token: String::new(),
+            int1: 2,
+            version: VERSION.to_owned(),
+            platform: 3,
+        },
+        body: LoginRequest {
+            int1: 1,
+            steam_id: STEAM_ID.to_owned(),
+            steam_hex: STEAM_HEX.to_owned(),
+            int2: 256,
+            steam_token,
+        },
     };
+    Ok((request, client))
+}
 
-    user.authentication_session_ticket_for_webapi("ggst-game.guiltygear.com");
+fn steam_gui_ticket() -> Result<(String, Client<steamworks::ClientManager>), String> {
+    use std::{sync::mpsc, thread, time::Duration};
+
+    let client = Client::init_app(STEAM_APP_ID)
+        .map_err(|error| format!("Could not connect to the Steam desktop client: {error}"))?;
+    let user = client.user();
+    let (send, receive) = mpsc::channel();
+    let _callback = client.register_callback(move |response: TicketForWebApiResponse| {
+        let _ = send.send(response);
+    });
+    let ticket = user.authentication_session_ticket_for_webapi("ggst-game.guiltygear.com");
 
     for _ in 0..50 {
         client.run_callbacks();
-        std::thread::sleep(::std::time::Duration::from_millis(100));
-
-        let steam_token = STEAM_TOKEN.try_lock().unwrap();
-
-        if steam_token.is_some() {
-            let steam_token = steam_token.clone().unwrap();
-            return Request {
-                header: RequestHeader {
-                    player_id: "".to_owned(),
-                    token: "".to_owned(),
-                    int1: 2,
-                    version: VERSION.to_owned(),
-                    platform: 3,
-                },
-                body: LoginRequest {
-                    int1: 1,
-                    steam_id: STEAM_ID.to_owned(),
-                    steam_hex: STEAM_HEX.to_owned(),
-                    int2: 256,
-                    steam_token,
-                },
-            };
+        while let Ok(response) = receive.try_recv() {
+            if response.ticket_handle == ticket {
+                response
+                    .result
+                    .map_err(|error| format!("Could not generate a Steam ticket: {error}"))?;
+                if response.ticket.is_empty() {
+                    return Err("Steam returned an empty authentication ticket".to_owned());
+                }
+                // Keep Steam initialized until the GGST login consumes the ticket.
+                return Ok((hex::encode_upper(response.ticket), client));
+            }
         }
+        thread::sleep(Duration::from_millis(100));
     }
 
-    error!("Timed out waiting for steam token");
-    panic!();
+    Err("Timed out waiting for a Steam authentication ticket".to_owned())
 }

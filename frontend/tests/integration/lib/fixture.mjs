@@ -29,6 +29,11 @@ export async function withNextFixture(check) {
   const fixture = createServer((request, response) => {
     state.requests.push(request.url);
     const url = new URL(request.url, "http://fixture");
+    if (request.method === "POST" && /^\/api\/profile_refresh\/\d+$/.test(url.pathname)) {
+      state.profileRefreshed = true;
+      response.writeHead(204).end();
+      return;
+    }
     response.setHeader("Content-Type", "application/json");
     if (url.pathname === "/api/ingestion/health") {
       response.setHeader("Content-Type", "text/plain");

@@ -6,7 +6,7 @@ export async function checkPublicSsr({ page, read, baseURL, state }) {
   assert.match(stats.querySelector("main").textContent, /Ranked Players/);
   assert.match(stats.querySelector("main").textContent, /1,234/);
   assert.match(stats.querySelector("main").textContent, /5,678/);
-  assert.equal(stats.querySelectorAll('table[aria-label="Hourly player data"] tbody tr').length, 2);
+  assert.equal(stats.querySelector('table[aria-label="Hourly player data"]'), null);
   assert.equal(state.requests.slice(beforeStats).filter((url) => url === "/api/stats/hourly-players?range=30d").length, 1);
   const names = (doc, kind) => Array.from(doc.querySelectorAll(`section[aria-label="Popularity per ${kind}"] tbody tr`), (row) => row.cells[0].textContent);
   assert.deepEqual(names(await page("/popularity"), "player"), ["Sol", "Ky", "May"]);
@@ -35,7 +35,7 @@ export async function checkPublicSsr({ page, read, baseURL, state }) {
   const settings = await read("/settings", "Ky", flags);
   assert.equal(settings.response.status, 200);
   for (const name of ["useLocalTime", "disableRatingColors", "autoUpdate"]) assert.ok(settings.document.querySelector(`input[name="${name}"]`).checked);
-  assert.ok(settings.document.querySelector('button[aria-pressed="true"]').textContent.includes("Ky"));
+  assert.ok(settings.document.querySelector('button[name="theme"][aria-pressed="true"]').textContent.includes("Ky"));
   assert.ok(!settings.html.includes("not-for-html"));
   const player = await read("/player/9007199254740993/SO/2/0", "Sol", flags);
   assert.ok(Array.from(player.document.querySelectorAll("main time")).some((time) => time.textContent === "2026-11-13 19:00:00"));

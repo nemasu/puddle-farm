@@ -4,6 +4,8 @@ import { notFound, redirect } from "next/navigation";
 import { PlayerContent } from "../../../../components/classic/PlayerContent";
 import { LadderPlayerContent } from "../../../../components/ladder/PlayerContent";
 import { getPageCopy } from "../../../../lib/i18n/classic";
+import { characterLabel } from "../../../../lib/ladder-characters";
+import { playerMetadata } from "../../../../lib/metadata";
 import { parsePlayerRoute } from "../../../../lib/player";
 import { ApiError } from "../../../../lib/server/api";
 import { getPlayer } from "../../../../lib/server/player";
@@ -13,6 +15,7 @@ import {
   findHighestRatedChar,
   isEmptyPlayer,
 } from "../../../../utils/playerUtils";
+import { Utils } from "../../../../utils/Utils";
 
 type Props = { params: Promise<{ id: string; segments?: string[] }> };
 
@@ -20,24 +23,32 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const route = await params;
   const parsed = parsePlayerRoute(route.id, route.segments);
   const presentation = await getRequestPresentation();
-  const base = {
-    title: getPageCopy(
-      presentation,
-      "Player | Guilty Gear Strive | Puddle Farm",
-      (messages) =>
-        `${messages.player.title} | Guilty Gear Strive | Puddle Farm`,
-    ),
-    description: presentation.messages.player.description,
-  };
+  const base = playerMetadata({ language: presentation.language });
   if (!parsed) return base;
   try {
     const player = await getPlayer(parsed.id);
-    const character = parsed.character;
+    const character = parsed.character ?? findHighestRatedChar(player.ratings);
     const selected = character ? findCharData(player.ratings, character) : null;
-    return {
-      ...base,
-      title: `${player.name}${selected ? ` (${character}) - ${selected.rating > 10000000 ? `${selected.rating - 10000000} DR` : `${selected.rating} RP`}` : ""} | Guilty Gear Strive | Puddle Farm`,
-    };
+    if (isEmptyPlayer(player)) return base;
+    return playerMetadata({
+      language: presentation.language,
+      name: player.name,
+      character: selected
+        ? characterLabel(
+            selected.char_short,
+            selected.character,
+            presentation.language,
+          )
+        : undefined,
+      rank: selected ? Utils.getRankDisplayName(selected.rating) : undefined,
+      rating: selected
+        ? `${(selected.rating >= 10000000 ? selected.rating - 10000000 : selected.rating).toLocaleString(presentation.language)} ${selected.rating >= 10000000 ? "DR" : "RP"}`
+        : undefined,
+      globalPosition: player.top_global,
+      characterPosition: selected?.top_char,
+      games: selected?.match_count,
+      url: `/player/${parsed.id}${selected ? `/${character}` : ""}`,
+    });
   } catch {
     return base;
   }

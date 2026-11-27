@@ -7,11 +7,11 @@ export async function checkPublicBrowser({ call, evaluate, waitFor, navigate, re
   await call("Emulation.setDeviceMetricsOverride", { width: 1280, height: 1000, deviceScaleFactor: 1, mobile: false });
   const beforeStats = requests.length;
   await navigate(`${baseURL}/stats`);
-  await waitFor('document.cookie.includes("ggst-timezone=Asia%2FTokyo") && !!document.querySelector("main canvas")');
+  await waitFor('document.cookie.includes("ggst-timezone=Asia%2FTokyo") && !!document.querySelector("main .hourly-players-plot svg")');
   await delay(200);
   assert.ok(!requests.slice(beforeStats).some((url) => url.includes("/api/stats")), "hourly chart must use its server seed");
   await evaluate('Array.from(document.querySelectorAll("main button")).find(button => button.textContent.trim() === "24h").click()');
-  await waitFor('document.querySelector("main button[aria-pressed=true]")?.textContent === "24h" && !!document.querySelector("main canvas")');
+  await waitFor('document.querySelector("main button[aria-pressed=true]")?.textContent === "24h" && !!document.querySelector("main .hourly-players-plot svg")');
   assert.ok(state.requests.includes("/api/stats/hourly-players?range=24h"));
 
   await navigate(`${baseURL}/popularity`);
@@ -21,7 +21,7 @@ export async function checkPublicBrowser({ call, evaluate, waitFor, navigate, re
   await evaluate('document.querySelector("section table th [role=button]").click()');
   await waitFor('document.querySelector("section table tbody th")?.textContent.includes("Ky Kiske")');
   await navigate(`${baseURL}/distribution`);
-  await waitFor('!!document.querySelector("main canvas")');
+  await waitFor('!!document.querySelector("main .rank-distribution-plot")');
   await evaluate('Array.from(document.querySelectorAll("main button")).find(button => button.textContent.trim() === "Combine Ranks").click()');
   await waitFor('Array.from(document.querySelectorAll("main button")).some(button => button.textContent.trim() === "Show Subdivisions")');
 
@@ -33,7 +33,7 @@ export async function checkPublicBrowser({ call, evaluate, waitFor, navigate, re
   await evaluate('document.querySelector("input[name=autoUpdate]").click()');
   await waitFor('document.cookie.includes("ggst-auto-update=false")');
   await evaluate('Array.from(document.querySelectorAll("main button")).find(button => button.textContent === "Sol").click()');
-  await waitFor('document.readyState === "complete" && document.cookie.includes("ggst-theme=Sol") && document.querySelector("main button[aria-pressed=true]")?.textContent === "Sol"');
+  await waitFor('document.readyState === "complete" && document.cookie.includes("ggst-theme=Sol") && document.querySelector(\'main button[name="theme"][aria-pressed="true"]\')?.textContent === "Sol"');
   assert.ok(await evaluate('document.querySelector("input[name=useLocalTime]").checked && document.querySelector("input[name=disableRatingColors]").checked'));
   await navigate(`${baseURL}/player/9007199254740993/SO/2/0`);
   await waitFor('Array.from(document.querySelectorAll("main time")).some(time => time.textContent === "2026-11-13 19:00:00")');
